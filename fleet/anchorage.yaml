@@ -1,0 +1,35 @@
+id: anchorage
+name: Anchorage
+class_name: station
+tailscale_name: anchorage
+resources:
+  - id: ANC-C0
+    kind: cpu
+    model: Ryzen 7700-class
+    architecture: x86_64
+    notes: Host CPU and system-memory execution domain.
+  - id: ANC-G0
+    kind: gpu
+    model: NVIDIA GTX 1070
+    architecture: Pascal
+    memory_mb: 8192
+    notes: Primary GPU; higher-bandwidth motherboard path.
+  - id: ANC-G1
+    kind: gpu
+    model: NVIDIA GTX 1070
+    architecture: Pascal
+    memory_mb: 8192
+    notes: Secondary GPU; motherboard topology constrains host/PCIe bandwidth relative to ANC-G0.
+  - id: ANC-M0
+    kind: memory
+    model: system RAM
+    memory_mb: 24576
+links:
+  - source: ANC-C0
+    target: ANC-G0
+    kind: pcie
+    notes: Measure actual topology/read/write bandwidth before scheduling assumptions.
+  - source: ANC-C0
+    target: ANC-G1
+    kind: pcie
+    notes: Explicitly asymmetric with ANC-G0; benchmark independently.
