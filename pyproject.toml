@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "long-haul"
+version = "0.1.0"
+description = "Heterogeneous local inference crew and topology-aware scheduler"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.8",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
