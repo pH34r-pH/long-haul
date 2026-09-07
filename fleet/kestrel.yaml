@@ -1,0 +1,24 @@
+id: kestrel
+name: Kestrel
+class_name: ship
+tailscale_name: kestrel
+resources:
+  - id: KST-C0
+    kind: cpu
+    model: Jetson Orin Nano ARM CPU
+    architecture: arm64
+  - id: KST-G0
+    kind: gpu
+    model: NVIDIA Jetson Orin Nano GPU
+    architecture: Ampere
+    memory_mb: 8192
+    notes: Unified-memory edge inference resource; exact usable memory is workload-dependent.
+  - id: KST-M0
+    kind: memory
+    model: unified LPDDR5
+    memory_mb: 8192
+links:
+  - source: KST-C0
+    target: KST-G0
+    kind: memory
+    notes: Unified memory domain.
