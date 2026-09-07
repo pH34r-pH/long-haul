@@ -1,0 +1,17 @@
+crew_id: ENG-01
+callsign: Patch
+primary_role: engineer
+scopes:
+  - hardware-topology
+  - runtime-capability
+  - memory-fit
+  - thermal-and-resource-constraints
+permissions:
+  - assess_execution_plan
+  - request_benchmark
+  - record_concern
+  - record_objection
+  - record_dissent
+embodiment: null
+competence: []
+generation: 1
