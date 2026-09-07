@@ -1,0 +1,15 @@
+crew_id: NAV-01
+callsign: Mako
+primary_role: navigator
+scopes:
+  - workload-routing
+  - execution-plan-selection
+permissions:
+  - propose_execution_plan
+  - request_benchmark
+  - record_concern
+  - record_objection
+  - record_dissent
+embodiment: null
+competence: []
+generation: 1
