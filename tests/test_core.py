@@ -15,6 +15,7 @@ from long_haul.models import (
     Position,
 )
 from long_haul.registry import load_crew, load_vessel
+from long_haul.runtime import ProfileValidation, RuntimeIdentity, ValidationState
 from long_haul.scheduler import MissionRequirements, Scheduler
 
 
@@ -48,7 +49,9 @@ def test_decision_protocol_blocks_erasure_and_preference_veto():
 def test_scheduler_respects_link_and_measured_evidence():
     resident=profile("resident",["ANC-G0"]); split=profile("split",["ANC-G0","KST-G0"],"pipeline_parallel")
     observation=BenchmarkObservation(profile=resident,plan_mode=ExecutionMode.LOCAL,resources=["ANC-G0"],workload={"name":"fixture"},provenance="measured",decode_tps=9)
-    scheduler=Scheduler([anchorage(),kestrel()],[tailscale("relay")],[observation])
+    validation=ProfileValidation(runtime=RuntimeIdentity(runtime_id="fixture"),profile_id="resident",artifact_key=resident.artifact.key,resources=resident.participating_resources,strategy="resident",state=ValidationState.SUPPORTED,rationale="fixture")
+    split_validation=ProfileValidation(runtime=RuntimeIdentity(runtime_id="fixture"),profile_id="split",artifact_key=split.artifact.key,resources=split.participating_resources,strategy="pipeline_parallel",state=ValidationState.SUPPORTED,rationale="fixture")
+    scheduler=Scheduler([anchorage(),kestrel()],[tailscale("relay")],[observation],[validation,split_validation])
     mission=MissionRequirements(id="m",requires_synchronous_cross_node=True)
     results=[scheduler.evaluate(mission,p,resident if p.inference_profile_id=="resident" else split) for p in scheduler.generate([resident,split])]
     assert any(any("no comparable benchmark evidence" in reason for reason in r.reasons) for r in results)
