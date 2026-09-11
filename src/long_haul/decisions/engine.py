@@ -14,6 +14,7 @@ class DecisionRecord(BaseModel):
     initial_positions: list[DecisionPosition] = Field(default_factory=list)
     final_positions: list[DecisionPosition] = Field(default_factory=list)
     resolution: Resolution | None = None; action: str | None = None; authority_holder: str | None = None
+    authority_scope: str | None = None; authority_scopes: dict[str, set[str]] = Field(default_factory=dict)
     @model_validator(mode="after")
     def validate_blocks(self) -> DecisionRecord:
         for position in self.initial_positions + self.final_positions:
@@ -31,6 +32,7 @@ class DecisionEngine:
             raise ValueError("consequential decision requires independent initial positions")
         blocks = [p for p in record.initial_positions if p.position is Position.BLOCK]
         if blocks and resolution not in ("escalation", "experiment"): raise ValueError("unresolved block cannot be bypassed")
-        if resolution == "scoped_authority" and not authority_holder: raise ValueError("scoped authority requires an authority holder")
+        if resolution == "scoped_authority" and (not authority_holder or authority_holder not in record.participants or not record.authority_scope or record.authority_scope not in record.authority_scopes.get(authority_holder, set())):
+            raise ValueError("scoped authority requires a participating holder with the declared scope")
         record.resolution, record.action, record.authority_holder = resolution, action, authority_holder
         return record
