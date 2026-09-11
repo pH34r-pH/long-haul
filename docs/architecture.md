@@ -7,11 +7,13 @@ Long Haul separates institutional identity from hardware and model embodiment.
 - **Crew member**: persistent operational identity, role, authority scope, competence history, relationships, and continuity record.
 - **Embodiment**: current model/runtime/vessel/resource combination implementing a crew member.
 - **Vessel**: physical device or host such as Anchorage or Kestrel.
-- **Resource**: CPU, GPU, NPU, memory, or sensor within a vessel.
+- **Resource**: CPU, GPU, NPU, memory, storage, sensor, or other individually addressable component. Capacity is typed; unlike capacities are never summed implicitly.
 - **Link**: measured relationship between resources or vessels (PCIe, memory, Tailscale, Ethernet, etc.).
 - **Mission**: unit of work with objectives, constraints, and outcome metrics.
 - **Decision**: structured proposal with independently captured positions and an explicit resolution mode.
 - **Execution plan**: mapping from a mission to crew, vessels, resources, runtimes, and execution mode.
+- **Model artifact**: compositional foundation/revision/quantization plus optional adapters and auxiliary artifacts; never crew identity.
+- **Inference profile**: validated runtime + strategy + artifact + named resources. Resident, split, offloaded, parallel, and streaming approaches are strategies, not execution modes.
 
 ## Hard invariants
 
@@ -25,6 +27,7 @@ Long Haul separates institutional identity from hardware and model embodiment.
 8. Cross-node PIPELINE execution is eligible only when the measured network path meets policy requirements.
 9. Tailscale is the authenticated transport plane; application protocols remain ordinary network services.
 10. Every material decision and embodiment transition is provenance-bearing and replayable.
+11. Model feasibility follows a validated inference profile over measured topology, not nominal size or aggregate VRAM.
 
 ## Initial fleet topology
 
@@ -69,4 +72,8 @@ The MVP experiment compares this two-role consent/dissent architecture against s
 
 ## Persistence
 
-The MVP should use append-only event records plus materialized YAML/JSON views. SQLite is acceptable initially for indexes and query convenience; event provenance should remain exportable and human-readable.
+The MVP uses append-only JSONL events plus materialized views. SQLite remains an optional future index; event provenance remains exportable and human-readable.
+
+## Hardware boundary
+
+The core consumes normalized vessel, resource, link, and benchmark records. Discovery and runtime adapters are edge protocols; fixture data is conspicuously marked simulated and is never a measurement. Hardware access therefore validates probes and produces evidence without redesigning the core.

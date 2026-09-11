@@ -24,6 +24,14 @@ resources:
     kind: memory
     model: system RAM
     memory_mb: 24576
+  - id: ANC-S0
+    kind: storage
+    model: local NVMe
+    capacities:
+      - kind: storage
+        amount: 2048
+        unit: GiB
+    notes: Configuration declaration, not a measured benchmark.
 links:
   - source: ANC-C0
     target: ANC-G0
@@ -33,3 +41,7 @@ links:
     target: ANC-G1
     kind: pcie
     notes: Explicitly asymmetric with ANC-G0; benchmark independently.
+  - source: ANC-S0
+    target: ANC-M0
+    kind: storage_bus
+    notes: Measure practical storage throughput before using offload.

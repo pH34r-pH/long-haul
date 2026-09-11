@@ -36,3 +36,10 @@ See `docs/architecture.md`, `docs/articles.md`, and `docs/experiments.md`.
 ## Status
 
 MVP scaffold. No production scheduler yet.
+# Long Haul
+
+Long Haul is a hardware-agnostic core for a small, heterogeneous local inference
+crew. The shared schema, provenance/event log, consent protocol, fixture-backed
+topology adapters, benchmark store, and scheduler are implementable without
+physical fleet access. See [architecture](docs/architecture.md) and the
+[hardware-validation runbook](docs/hardware-validation.md).

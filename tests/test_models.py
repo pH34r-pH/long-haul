@@ -1,4 +1,11 @@
-from long_haul.models import CrewMember, Decision, DecisionPosition, Position, Resource, Vessel
+from long_haul.models import (
+    CrewMember,
+    Decision,
+    DecisionPosition,
+    Position,
+    Resource,
+    Vessel,
+)
 
 
 def test_crew_identity_is_distinct_from_embodiment():

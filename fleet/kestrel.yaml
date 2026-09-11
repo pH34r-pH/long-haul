@@ -17,6 +17,14 @@ resources:
     kind: memory
     model: unified LPDDR5
     memory_mb: 8192
+  - id: KST-S0
+    kind: storage
+    model: local storage
+    capacities:
+      - kind: storage
+        amount: 128
+        unit: GiB
+    notes: Must be probed on-device before use in a benchmark.
 links:
   - source: KST-C0
     target: KST-G0
