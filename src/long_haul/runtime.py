@@ -15,6 +15,9 @@ class ValidationState(str, Enum):
     UNSUPPORTED = "UNSUPPORTED"
     UNKNOWN = "UNKNOWN"
 
+class ValidationDepth(str, Enum):
+    STRUCTURAL = "STRUCTURAL"; PREFLIGHT = "PREFLIGHT"; EXECUTION = "EXECUTION"; BENCHMARK = "BENCHMARK"
+
 
 class FailureClass(str, Enum):
     SYSTEM = "FAIL_SYSTEM"; RUNTIME = "FAIL_RUNTIME"; ARTIFACT = "FAIL_ARTIFACT"
@@ -42,6 +45,7 @@ class ProfileValidation(BaseModel):
     strategy: str
     options: dict[str, object] = Field(default_factory=dict)
     state: ValidationState
+    depth: ValidationDepth = ValidationDepth.PREFLIGHT
     rationale: str
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     provenance: Literal["measured", "probe", "simulated"] = "probe"

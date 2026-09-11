@@ -14,6 +14,7 @@ from ..runtime import (
     ProfileValidation,
     RuntimeIdentity,
     Timing,
+    ValidationDepth,
     ValidationState,
 )
 
@@ -34,7 +35,7 @@ class LlamaCppAdapter:
         elif not profile.options.get("model_path"): state,rationale=ValidationState.UNKNOWN,"profile has no adapter model_path option"
         elif not Path(str(profile.options["model_path"])).is_file(): state,rationale=ValidationState.UNSUPPORTED,"GGUF model artifact is missing"
         else: state,rationale=ValidationState.SUPPORTED,"CPU llama.cpp resident profile and GGUF are available"
-        return ProfileValidation(runtime=runtime,profile_id=profile.id,artifact_key=profile.artifact.key,resources=profile.participating_resources,strategy=profile.strategy,options=profile.options,state=state,rationale=rationale,provenance="probe")
+        return ProfileValidation(runtime=runtime,profile_id=profile.id,artifact_key=profile.artifact.key,resources=profile.participating_resources,strategy=profile.strategy,options=profile.options,state=state,depth=ValidationDepth.PREFLIGHT,rationale=rationale,provenance="probe")
     def execute(self, request: ExecutionRequest) -> ExecutionResult:
         validation=self.validate(request.profile); runtime=validation.runtime
         if validation.state is not ValidationState.SUPPORTED:

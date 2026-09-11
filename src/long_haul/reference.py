@@ -10,7 +10,7 @@ from .benchmarks import BenchmarkObservation, BenchmarkStore, Workload
 from .discovery.linux import GenericLinuxDiscovery
 from .events import Event, EventStore, materialize
 from .models import ExecutionMode, InferenceProfile, ModelArtifact
-from .runtime import ExecutionRequest, ValidationState
+from .runtime import ExecutionRequest, ValidationDepth, ValidationState
 from .scheduler import MissionRequirements, Scheduler
 from .validation import LayerState, ReferenceReport
 
@@ -30,9 +30,18 @@ def run(binary: str, model: str, output_dir: str) -> ReferenceReport:
     direct=adapter.execute(request)
     if not direct.success:
         report.record(5,LayerState.FAIL_RUNTIME,direct.error_detail or "inference failed"); report.save(out/"reference-report.json"); return report
-    report.record(5,LayerState.PASS,"normalized inference succeeded")
+    validation.depth=ValidationDepth.EXECUTION; validation.provenance="measured"; report.artifact["validation"]=validation.model_dump(mode="json")
+    report.record(5,LayerState.PASS,"normalized inference and model load succeeded")
     benchmark=BenchmarkObservation(profile=profile,plan_mode=ExecutionMode.LOCAL,resources=profile.participating_resources,workload=Workload(name="exact-string",cold=True),provenance="measured",load_seconds=direct.timings.load_seconds,ttft_seconds=direct.timings.ttft_seconds,prefill_tps=direct.timings.prefill_tps,decode_tps=direct.timings.decode_tps)
-    store=BenchmarkStore(out/"benchmarks.jsonl"); store.append(benchmark); report.record(6,LayerState.PASS,"measured benchmark persisted and queried" if store.query(profile.id) else "benchmark query failed")
+    store=BenchmarkStore(out/"benchmarks.jsonl")
+    try:
+        store.append(benchmark); queried=store.query(profile.id)
+    except (OSError, ValueError) as exc:
+        report.record(6,LayerState.FAIL_SYSTEM,f"benchmark persistence/query failed: {exc}"); report.save(out/"reference-report.json"); return report
+    if not queried:
+        report.record(6,LayerState.FAIL_SYSTEM,"benchmark persistence/query returned no observation"); report.save(out/"reference-report.json"); return report
+    validation.depth=ValidationDepth.BENCHMARK; report.artifact["validation"]=validation.model_dump(mode="json")
+    report.record(6,LayerState.PASS,"measured benchmark persisted and queried")
     scheduler=Scheduler([vessel],benchmarks=store.query(profile.id),validations=[validation]); selected=scheduler.select(MissionRequirements(id="reference",allow_modes={ExecutionMode.LOCAL}),[profile]); report.artifact["selected_plan"]=selected.plan.model_dump(); report.record(7,LayerState.PASS,"scheduler selected validated LOCAL resident plan")
     scheduled=adapter.execute(ExecutionRequest(request_id=str(uuid4()),profile=profile,prompt="Say hello.",max_tokens=8)); report.record(8,LayerState.PASS if scheduled.success else LayerState.FAIL_RUNTIME,"selected plan executed" if scheduled.success else (scheduled.error_detail or "failed"))
     events.append(Event(event_type="request",source="reference",payload={"request_id":request.request_id})); events.append(Event(event_type="decision",source="scheduler",payload={"plan_id":selected.plan.plan_id})); events.append(Event(event_type="observation",source="runtime",payload={"success":scheduled.success,"output":scheduled.output})); report.record(9,LayerState.PASS,"execution events persisted")
