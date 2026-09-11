@@ -6,13 +6,14 @@ from dataclasses import dataclass, field
 
 from ..benchmarks import BenchmarkObservation
 from ..models import ExecutionMode, ExecutionPlan, InferenceProfile, Link, Vessel
+from ..runtime import ProfileValidation, ValidationState
 
 
 @dataclass(frozen=True)
 class MissionRequirements:
     id: str; required_resources: set[str] = field(default_factory=set)
     requires_synchronous_cross_node: bool = False; allow_modes: set[ExecutionMode] = field(default_factory=lambda: set(ExecutionMode))
-    safety_ok: bool = True; cooperation_ok: bool = True; minimum_memory_mib: float = 0
+    safety_ok: bool = True; cooperation_ok: bool = True; minimum_memory_mib: float = 0; allow_unknown_runtime: bool = False
 
 @dataclass
 class CandidateResult:
@@ -21,9 +22,10 @@ class CandidateResult:
     rank: tuple[int, int, int, int, int, float] | None = None
 
 class Scheduler:
-    def __init__(self, vessels: Iterable[Vessel], links: Iterable[Link] = (), benchmarks: Iterable[BenchmarkObservation] = ()):
+    def __init__(self, vessels: Iterable[Vessel], links: Iterable[Link] = (), benchmarks: Iterable[BenchmarkObservation] = (), validations: Iterable[ProfileValidation] = ()):
         self.vessels = list(vessels); self.links = list(links); self.benchmarks = list(benchmarks)
         self.resources = {r.id: r for v in self.vessels for r in v.resources}
+        self.validations = {v.profile_id: v for v in validations}
     def generate(self, profiles: Iterable[InferenceProfile]) -> list[ExecutionPlan]:
         output = []
         for profile in profiles:
@@ -34,6 +36,10 @@ class Scheduler:
         return output
     def evaluate(self, mission: MissionRequirements, plan: ExecutionPlan, profile: InferenceProfile) -> CandidateResult:
         reasons: list[str] = []
+        validation = self.validations.get(profile.id)
+        if validation is None: reasons.append("no runtime feasibility validation")
+        elif validation.state is ValidationState.UNSUPPORTED: reasons.append(f"runtime profile unsupported: {validation.rationale}")
+        elif validation.state is ValidationState.UNKNOWN and not mission.allow_unknown_runtime: reasons.append(f"runtime profile unknown outside exploration policy: {validation.rationale}")
         if not mission.safety_ok: reasons.append("hard safety constraint failed")
         if not mission.cooperation_ok: reasons.append("hard cooperation-integrity constraint failed")
         if plan.mode not in mission.allow_modes: reasons.append("mode is outside mission constraints")
