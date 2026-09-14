@@ -16,5 +16,13 @@ class ReferenceReport(BaseModel):
     long_haul_commit: str | None = None; environment: dict[str, object] = Field(default_factory=dict)
     layers: list[LayerResult] = Field(default_factory=list); artifact: dict[str, object] = Field(default_factory=dict)
     def record(self, layer: int, state: LayerState, detail: str) -> None: self.layers.append(LayerResult(layer=layer,state=state,detail=detail))
+    def set_layer(self, layer: int, state: LayerState, detail: str) -> None:
+        """Replace a provisional layer result without discarding lower-layer evidence."""
+        result = LayerResult(layer=layer, state=state, detail=detail)
+        for index, existing in enumerate(self.layers):
+            if existing.layer == layer:
+                self.layers[index] = result
+                return
+        self.layers.append(result)
     def save(self, path: str | Path) -> None:
         path=Path(path); path.parent.mkdir(parents=True,exist_ok=True); path.write_text(self.model_dump_json(indent=2))
