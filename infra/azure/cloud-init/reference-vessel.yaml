@@ -43,8 +43,7 @@ write_files:
       /opt/long-haul/venv/bin/python -m long_haul validate-reference \
         --binary /opt/long-haul/llama.cpp/build/bin/llama-cli \
         --model /opt/long-haul/models/reference.gguf \
-        --output "/opt/long-haul/runs/$stamp" \
-        --cold-timeout 900
+        --output "/opt/long-haul/runs/$stamp"
       EOF
       chmod 0755 "$install_root/run-reference"
 runcmd:
