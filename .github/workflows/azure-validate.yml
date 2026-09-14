@@ -24,6 +24,9 @@ jobs:
           azcliversion: 2.65.0
           inlineScript: |
             az bicep install
+            # The minimal azure-cli container has no ICU package; Bicep can run
+            # safely in invariant globalization mode for template compilation.
+            export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
             az bicep build --file infra/azure/main.bicep
       - name: Reject unsafe reference defaults and committed credential material
         run: |
