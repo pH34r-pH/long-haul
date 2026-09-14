@@ -1,0 +1,51 @@
+#cloud-config
+package_update: true
+packages:
+  - build-essential
+  - ca-certificates
+  - cmake
+  - curl
+  - git
+  - ninja-build
+  - python3
+  - python3-pip
+  - python3-venv
+write_files:
+  - path: /opt/long-haul/bootstrap-reference-vessel
+    permissions: '0755'
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      config="$(printf '%s' '__LONG_HAUL_BOOTSTRAP__' | base64 --decode)"
+      read_config() { printf '%s' "$config" | python3 -c "import json,sys; print(json.load(sys.stdin)['$1'])"; }
+      long_haul_revision="$(read_config longHaulRevision)"
+      llama_cpp_revision="$(read_config llamaCppRevision)"
+      model_url="$(read_config modelUrl)"
+      model_sha256="$(read_config modelSha256)"
+      install_root=/opt/long-haul
+      mkdir -p "$install_root"
+      git clone https://github.com/pH34r-pH/long-haul.git "$install_root/repository"
+      git -C "$install_root/repository" checkout --detach "$long_haul_revision"
+      python3 -m venv "$install_root/venv"
+      "$install_root/venv/bin/pip" install --upgrade pip
+      "$install_root/venv/bin/pip" install "$install_root/repository"
+      git clone https://github.com/ggml-org/llama.cpp.git "$install_root/llama.cpp"
+      git -C "$install_root/llama.cpp" checkout --detach "$llama_cpp_revision"
+      cmake -S "$install_root/llama.cpp" -B "$install_root/llama.cpp/build" -G Ninja -DGGML_NATIVE=OFF
+      cmake --build "$install_root/llama.cpp/build" --target llama-cli --parallel 2
+      mkdir -p "$install_root/models" "$install_root/runs"
+      curl --fail --location --retry 3 --output "$install_root/models/reference.gguf" "$model_url"
+      printf '%s  %s\n' "$model_sha256" "$install_root/models/reference.gguf" | sha256sum --check --strict
+      cat > "$install_root/run-reference" <<'EOF'
+      #!/usr/bin/env bash
+      set -euo pipefail
+      stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+      /opt/long-haul/venv/bin/python -m long_haul validate-reference \
+        --binary /opt/long-haul/llama.cpp/build/bin/llama-cli \
+        --model /opt/long-haul/models/reference.gguf \
+        --output "/opt/long-haul/runs/$stamp" \
+        --cold-timeout 900
+      EOF
+      chmod 0755 "$install_root/run-reference"
+runcmd:
+  - [ bash, /opt/long-haul/bootstrap-reference-vessel ]
