@@ -12,7 +12,7 @@ on:
       location:
         description: 'Region to price and deploy.'
         required: true
-        default: eastus
+        default: westus2
 
 permissions:
   contents: read
