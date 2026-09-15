@@ -1,0 +1,112 @@
+name: Azure reference operations
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: 'Operation to perform on the reference vessel.'
+        required: true
+        type: choice
+        default: status
+        options:
+          - status
+          - bootstrap-diagnostics
+          - run-reference
+          - show-reference-report
+          - start
+          - restart
+          - deallocate
+      location:
+        description: 'Reference vessel region.'
+        required: true
+        default: westus2
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  operate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: azure-reference
+    env:
+      VM_NAME: longhaul-reference-vm
+      TARGET_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Verify protected target
+        env:
+          EXPECTED_SUBSCRIPTION: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$TARGET_RESOURCE_GROUP"
+          test "$(az account show --query id --output tsv)" = "$EXPECTED_SUBSCRIPTION"
+          test "$(az group show --name "$TARGET_RESOURCE_GROUP" --query name --output tsv)" = "$TARGET_RESOURCE_GROUP"
+          test "$(az vm show --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --query location --output tsv)" = '${{ inputs.location }}'
+          test "$(az vm show --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --query tags.project --output tsv)" = 'long-haul'
+          test "$(az vm show --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --query tags.purpose --output tsv)" = 'reference-vessel'
+      - name: Vessel status
+        if: inputs.operation == 'status'
+        run: |
+          set -euo pipefail
+          az vm get-instance-view --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" \
+            --query '{name:name,location:location,powerState:instanceView.statuses[?starts_with(code, `PowerState/`)]|[0].displayStatus,provisioningState:provisioningState,vmAgent:instanceView.vmAgent.statuses[0].displayStatus}' --output yaml
+      - name: Bootstrap diagnostics
+        if: inputs.operation == 'bootstrap-diagnostics'
+        run: |
+          set -euo pipefail
+          az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript --scripts '
+            set -u
+            echo "=== cloud-init ==="
+            cloud-init status --long || true
+            echo "=== swap ==="
+            swapon --show || true
+            free -h || true
+            echo "=== expected paths ==="
+            for p in /opt/long-haul /opt/llama.cpp /opt/models /opt/long-haul/run-reference; do
+              if [ -e "$p" ]; then ls -ld "$p"; else echo "MISSING $p"; fi
+            done
+            echo "=== llama binaries ==="
+            find /opt/llama.cpp -maxdepth 3 -type f \( -name llama-cli -o -name main \) -ls 2>/dev/null || true
+            echo "=== models ==="
+            find /opt/models -maxdepth 2 -type f -printf "%p %s bytes\n" 2>/dev/null || true
+            echo "=== cloud-init log tail ==="
+            tail -n 120 /var/log/cloud-init-output.log 2>/dev/null || true
+          ' --output json
+      - name: Run Long Haul reference experiment
+        if: inputs.operation == 'run-reference'
+        run: |
+          set -euo pipefail
+          az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript --scripts '
+            set -euo pipefail
+            test -x /opt/long-haul/run-reference
+            /opt/long-haul/run-reference
+          ' --output json
+      - name: Show retained reference report
+        if: inputs.operation == 'show-reference-report'
+        run: |
+          set -euo pipefail
+          az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript --scripts '
+            set -u
+            echo "=== candidate reports ==="
+            find /opt/long-haul /var/lib/long-haul /tmp -maxdepth 4 -type f \( -name "*reference*.json" -o -name "*report*.json" \) -print 2>/dev/null | head -50
+            report=$(find /opt/long-haul /var/lib/long-haul /tmp -maxdepth 4 -type f \( -name "*reference*.json" -o -name "*report*.json" \) -print 2>/dev/null | head -1 || true)
+            if [ -n "$report" ]; then echo "=== $report ==="; cat "$report"; else echo "No retained JSON report found"; exit 2; fi
+          ' --output json
+      - name: Start vessel
+        if: inputs.operation == 'start'
+        run: az vm start --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --no-wait
+      - name: Restart vessel
+        if: inputs.operation == 'restart'
+        run: az vm restart --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --no-wait
+      - name: Deallocate vessel
+        if: inputs.operation == 'deallocate'
+        run: az vm deallocate --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --no-wait

@@ -1,0 +1,62 @@
+name: Azure reference destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type DESTROY-LONG-HAUL-REFERENCE to remove only the reference vessel stack.'
+        required: true
+        type: string
+      location:
+        description: 'Reference vessel region.'
+        required: true
+        default: westus2
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  destroy:
+    if: github.ref == 'refs/heads/main' && inputs.confirmation == 'DESTROY-LONG-HAUL-REFERENCE'
+    runs-on: ubuntu-latest
+    environment: azure-reference
+    env:
+      TARGET_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      VM_NAME: longhaul-reference-vm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Verify protected target
+        env:
+          EXPECTED_SUBSCRIPTION: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$TARGET_RESOURCE_GROUP"
+          test "$(az account show --query id --output tsv)" = "$EXPECTED_SUBSCRIPTION"
+          test "$TARGET_RESOURCE_GROUP" = 'rg-long-haul-reference'
+          test "$(az group show --name "$TARGET_RESOURCE_GROUP" --query name --output tsv)" = "$TARGET_RESOURCE_GROUP"
+          test "$(az vm show --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --query location --output tsv)" = '${{ inputs.location }}'
+          test "$(az vm show --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --query tags.project --output tsv)" = 'long-haul'
+          test "$(az vm show --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --query tags.purpose --output tsv)" = 'reference-vessel'
+      - name: Preview deletion boundary
+        run: |
+          set -euo pipefail
+          az resource list --resource-group "$TARGET_RESOURCE_GROUP" --query "[?tags.project=='long-haul' && tags.purpose=='reference-vessel'].{name:name,type:type,location:location}" --output table
+          echo 'The pre-existing GitHub deployment managed identity and the resource group itself are intentionally retained.'
+      - name: Delete reference vessel stack in dependency order
+        run: |
+          set -euo pipefail
+          os_disk=$(az vm show --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --query storageProfile.osDisk.name --output tsv)
+          az vm delete --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --yes
+          az network nic delete --resource-group "$TARGET_RESOURCE_GROUP" --name longhaul-reference-nic
+          az network public-ip delete --resource-group "$TARGET_RESOURCE_GROUP" --name longhaul-reference-egress-ip
+          az network vnet delete --resource-group "$TARGET_RESOURCE_GROUP" --name longhaul-reference-vnet
+          az network nsg delete --resource-group "$TARGET_RESOURCE_GROUP" --name longhaul-reference-nsg
+          if [ -n "$os_disk" ]; then az disk delete --resource-group "$TARGET_RESOURCE_GROUP" --name "$os_disk" --yes; fi
