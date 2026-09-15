@@ -7,12 +7,15 @@ on:
         description: 'Operation to perform on the reference vessel.'
         required: true
         type: choice
-        default: status
+        default: reference-status
         options:
           - status
           - bootstrap-diagnostics
-          - run-reference
+          - start-reference
+          - reference-status
+          - reference-log
           - show-reference-report
+          - stop-reference
           - start
           - restart
           - deallocate
@@ -63,66 +66,78 @@ jobs:
         if: inputs.operation == 'bootstrap-diagnostics'
         run: |
           set -euo pipefail
-          guest_script=$(cat <<'GUEST'
-          set -u
-          echo "=== cloud-init ==="
-          cloud-init status --long || true
-          echo "=== swap ==="
-          swapon --show || true
-          free -h || true
-          echo "=== expected paths ==="
-          for p in /opt/long-haul /opt/llama.cpp /opt/models /opt/long-haul/run-reference; do
-            if [ -e "$p" ]; then ls -ld "$p"; else echo "MISSING $p"; fi
-          done
-          echo "=== llama binaries ==="
-          find /opt/llama.cpp -maxdepth 3 -type f \( -name llama-cli -o -name main \) -ls 2>/dev/null || true
-          echo "=== models ==="
-          find /opt/models -maxdepth 2 -type f -printf "%p %s bytes\n" 2>/dev/null || true
-          echo "=== cloud-init log tail ==="
-          tail -n 120 /var/log/cloud-init-output.log 2>/dev/null || true
-          GUEST
-          )
-          encoded=$(printf '%s' "$guest_script" | base64 -w0)
-          az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript \
-            --scripts "printf '%s' '$encoded' | base64 -d > /tmp/long-haul-op.sh; /bin/bash /tmp/long-haul-op.sh; rc=\$?; rm -f /tmp/long-haul-op.sh; exit \$rc" --output json
-      - name: Run Long Haul reference experiment
-        if: inputs.operation == 'run-reference'
+          az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript --scripts '
+            echo "=== cloud-init ==="; cloud-init status --long || true
+            echo "=== swap ==="; swapon --show || true; free -h || true
+            echo "=== expected paths ==="; ls -ld /opt/long-haul /opt/llama.cpp /opt/models /opt/long-haul/run-reference 2>&1 || true
+            echo "=== llama-cli ==="; find /opt/llama.cpp -maxdepth 3 -type f -name llama-cli -ls 2>/dev/null || true
+            echo "=== models ==="; find /opt/models -maxdepth 2 -type f -printf "%p %s bytes\n" 2>/dev/null || true
+            echo "=== cloud-init tail ==="; tail -n 80 /var/log/cloud-init-output.log 2>/dev/null || true
+          ' --output json
+      - name: Start Long Haul reference experiment asynchronously
+        if: inputs.operation == 'start-reference'
         run: |
           set -euo pipefail
-          guest_script=$(cat <<'GUEST'
-          set -euo pipefail
-          test -x /opt/long-haul/run-reference
-          /opt/long-haul/run-reference
-          GUEST
-          )
-          encoded=$(printf '%s' "$guest_script" | base64 -w0)
-          result=$(az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript \
-            --scripts "printf '%s' '$encoded' | base64 -d > /tmp/long-haul-op.sh; /bin/bash /tmp/long-haul-op.sh; rc=\$?; rm -f /tmp/long-haul-op.sh; echo __LONG_HAUL_EXIT_CODE__=\$rc; exit 0" --output json)
+          result=$(az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript --scripts '
+            set -eu
+            if systemctl is-active --quiet long-haul-reference.service; then echo "reference already running"; exit 3; fi
+            systemd-run --unit=long-haul-reference --property=WorkingDirectory=/opt/long-haul --property=StandardOutput=append:/var/log/long-haul-reference.log --property=StandardError=append:/var/log/long-haul-reference.log /bin/bash -lc "/opt/long-haul/run-reference"
+            echo "reference launched"
+          ' --output json)
           printf '%s\n' "$result"
-          message=$(printf '%s' "$result" | jq -r '.value[0].message // ""')
-          rc=$(printf '%s\n' "$message" | sed -n 's/.*__LONG_HAUL_EXIT_CODE__=\([0-9][0-9]*\).*/\1/p' | tail -1)
-          test -n "$rc"
-          test "$rc" -eq 0
+      - name: Reference status
+        if: inputs.operation == 'reference-status'
+        run: |
+          set -euo pipefail
+          az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript --scripts '
+            echo "=== service ==="
+            systemctl status long-haul-reference.service --no-pager -l 2>&1 || true
+            echo "=== process ==="
+            pgrep -af "run-reference|reference_runtime|llama-cli" || true
+            echo "=== runs ==="
+            find /opt/long-haul/runs -mindepth 1 -maxdepth 1 -type d -printf "%T@ %p\n" 2>/dev/null | sort -nr | sed -n "1,10p"
+            latest=$(find /opt/long-haul/runs -mindepth 1 -maxdepth 1 -type d -printf "%T@ %p\n" 2>/dev/null | sort -nr | sed -n "1s/^[^ ]* //p")
+            if [ -n "$latest" ]; then
+              echo "=== latest: $latest ==="
+              find "$latest" -maxdepth 2 -type f -printf "%TY-%Tm-%TdT%TH:%TM:%TS %s %p\n" 2>/dev/null | sort
+              if [ -f "$latest/reference-report.json" ]; then echo "=== report ==="; cat "$latest/reference-report.json"; fi
+            fi
+            echo "=== log tail ==="
+            tail -n 100 /var/log/long-haul-reference.log 2>/dev/null || true
+          ' --output json
+      - name: Reference log
+        if: inputs.operation == 'reference-log'
+        run: |
+          set -euo pipefail
+          az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript --scripts '
+            echo "=== systemd journal ==="
+            journalctl -u long-haul-reference.service --no-pager -n 200 2>&1 || true
+            echo "=== retained log ==="
+            tail -n 300 /var/log/long-haul-reference.log 2>/dev/null || true
+          ' --output json
       - name: Show retained reference report
         if: inputs.operation == 'show-reference-report'
         run: |
           set -euo pipefail
-          guest_script=$(cat <<'GUEST'
-          set -euo pipefail
-          echo "=== candidate reports ==="
-          find /opt/long-haul /var/lib/long-haul /tmp -maxdepth 4 -type f \( -name "*reference*.json" -o -name "*report*.json" \) -print 2>/dev/null | head -50
-          report=$(find /opt/long-haul /var/lib/long-haul /tmp -maxdepth 4 -type f \( -name "*reference*.json" -o -name "*report*.json" \) -print 2>/dev/null | head -1 || true)
-          if [ -n "$report" ]; then echo "=== $report ==="; cat "$report"; else echo "No retained JSON report found"; exit 2; fi
-          GUEST
-          )
-          encoded=$(printf '%s' "$guest_script" | base64 -w0)
-          result=$(az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript \
-            --scripts "printf '%s' '$encoded' | base64 -d > /tmp/long-haul-op.sh; /bin/bash /tmp/long-haul-op.sh; rc=\$?; rm -f /tmp/long-haul-op.sh; echo __LONG_HAUL_EXIT_CODE__=\$rc; exit 0" --output json)
+          result=$(az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript --scripts '
+            latest=$(find /opt/long-haul/runs -mindepth 1 -maxdepth 1 -type d -printf "%T@ %p\n" 2>/dev/null | sort -nr | sed -n "1s/^[^ ]* //p")
+            if [ -z "$latest" ]; then echo "No Long Haul run directories found"; exit 2; fi
+            report="$latest/reference-report.json"
+            echo "=== $report ==="
+            if [ ! -f "$report" ]; then echo "No retained JSON report found in latest run"; exit 2; fi
+            cat "$report"
+          ' --output json)
           printf '%s\n' "$result"
           message=$(printf '%s' "$result" | jq -r '.value[0].message // ""')
-          rc=$(printf '%s\n' "$message" | sed -n 's/.*__LONG_HAUL_EXIT_CODE__=\([0-9][0-9]*\).*/\1/p' | tail -1)
-          test -n "$rc"
-          test "$rc" -eq 0
+          printf '%s\n' "$message" | grep -q 'reference-report.json'
+      - name: Stop Long Haul reference experiment
+        if: inputs.operation == 'stop-reference'
+        run: |
+          set -euo pipefail
+          az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript --scripts '
+            systemctl stop long-haul-reference.service 2>/dev/null || true
+            systemctl status long-haul-reference.service --no-pager -l 2>&1 || true
+          ' --output json
       - name: Start vessel
         if: inputs.operation == 'start'
         run: az vm start --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --no-wait
