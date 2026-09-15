@@ -26,6 +26,9 @@ param osDiskSizeGb int = 32
 @description('Non-secret local account name. No inbound management path is created.')
 param adminUsername string = 'longhaul'
 
+@description('Ephemeral SSH public key required by the Azure Linux VM profile. No inbound SSH rule is created.')
+param adminSshPublicKey string
+
 @description('Public, non-secret bootstrap configuration written into cloud-init.')
 param bootstrap object
 
@@ -49,6 +52,7 @@ module referenceVm './modules/reference-vm.bicep' = {
     vmSize: vmSize
     osDiskSizeGb: osDiskSizeGb
     adminUsername: adminUsername
+    adminSshPublicKey: adminSshPublicKey
     customData: loadTextContent('cloud-init/reference-vessel.yaml')
     bootstrap: bootstrap
   }
