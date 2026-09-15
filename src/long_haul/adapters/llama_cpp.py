@@ -24,7 +24,8 @@ class LlamaCppAdapter:
     def __init__(self, binary: str | Path): self.binary = Path(binary)
     def identity(self) -> RuntimeIdentity:
         if not self.binary.is_file(): return RuntimeIdentity(runtime_id=self.runtime_id,binary_path=str(self.binary))
-        version = subprocess.run([str(self.binary),"--version"],capture_output=True,text=True,check=False).stdout.strip()
+        version_probe = subprocess.run([str(self.binary),"--version"],capture_output=True,text=True,check=False)
+        version = (version_probe.stdout or version_probe.stderr).strip()
         digest = hashlib.sha256(self.binary.read_bytes()).hexdigest()[:16]
         return RuntimeIdentity(runtime_id=self.runtime_id,version=version or None,build_id=digest,binary_path=str(self.binary),backends=["cpu"],capabilities={"resident":True})
     def validate(self, profile: InferenceProfile) -> ProfileValidation:
@@ -46,6 +47,8 @@ class LlamaCppAdapter:
             run=subprocess.run(command,capture_output=True,text=True,timeout=request.timeout_seconds,check=False)
         except subprocess.TimeoutExpired:
             return ExecutionResult(request_id=request.request_id,runtime=runtime,success=False,error_class=FailureClass.TIMEOUT,error_detail="llama.cpp timed out",timings=Timing(total_seconds=time.monotonic()-started))
+        except OSError as exc:
+            return ExecutionResult(request_id=request.request_id,runtime=runtime,success=False,error_class=FailureClass.RESOURCE,error_detail=f"llama.cpp process could not start: {exc}",timings=Timing(total_seconds=time.monotonic()-started))
         if run.returncode:
             return ExecutionResult(request_id=request.request_id,runtime=runtime,success=False,error_class=FailureClass.EXECUTION,error_detail=run.stderr[-1000:],raw_exit_code=run.returncode,timings=Timing(total_seconds=time.monotonic()-started))
         output=run.stdout.removeprefix(request.prompt).strip()
