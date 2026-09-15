@@ -9,7 +9,7 @@ hours_per_month=730
 case "$sku" in Standard_B1ms) ;; *) echo "refusing non-reference or oversized SKU: $sku" >&2; exit 2;; esac
 
 api='https://prices.azure.com/api/retail/prices'
-query() { curl --fail --silent --show-error --retry 4 --retry-all-errors --retry-delay 3 --get "$api" --data-urlencode "\$filter=$1"; }
+query() { curl --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 4 --retry-all-errors --retry-delay 3 --get "$api" --data-urlencode "\$filter=$1"; }
 min_price() { jq -er "$1 | min"; }
 
 vm="$(query "serviceName eq 'Virtual Machines' and armRegionName eq '$region' and armSkuName eq '$sku' and priceType eq 'Consumption'")"
