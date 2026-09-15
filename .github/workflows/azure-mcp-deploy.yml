@@ -1,0 +1,87 @@
+name: Azure MCP deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Review changes with what-if, or apply the MCP auth-spike stack.'
+        required: true
+        type: choice
+        default: what-if
+        options: [what-if, apply]
+      location:
+        description: 'MCP control-plane region.'
+        required: true
+        default: westus2
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: azure-reference
+    env:
+      TARGET_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      MCP_SERVER_CLIENT_ID: ${{ vars.LONG_HAUL_MCP_SERVER_CLIENT_ID }}
+      MCP_SCOPE: ${{ vars.LONG_HAUL_MCP_SCOPE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Verify protected MCP target
+        env:
+          EXPECTED_SUBSCRIPTION: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$TARGET_RESOURCE_GROUP"
+          test -n "$MCP_SERVER_CLIENT_ID"
+          test -n "$MCP_SCOPE"
+          test "$(az account show --query id --output tsv)" = "$EXPECTED_SUBSCRIPTION"
+          test "$(az group show --name "$TARGET_RESOURCE_GROUP" --query name --output tsv)" = "$TARGET_RESOURCE_GROUP"
+          case "$MCP_SCOPE" in "api://$MCP_SERVER_CLIENT_ID/"*) ;; *) echo 'MCP scope does not belong to configured server app' >&2; exit 2;; esac
+      - name: Derive deterministic name suffix
+        id: names
+        run: |
+          set -euo pipefail
+          suffix=$(printf '%s' '${{ secrets.AZURE_SUBSCRIPTION_ID }}' | sha256sum | cut -c1-10)
+          echo "suffix=$suffix" >> "$GITHUB_OUTPUT"
+      - name: MCP infrastructure what-if
+        env:
+          TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          NAME_SUFFIX: ${{ steps.names.outputs.suffix }}
+        run: |
+          set -euo pipefail
+          az deployment group what-if --resource-group "$TARGET_RESOURCE_GROUP" --name longhaul-mcp-whatif \
+            --template-file infra/azure/mcp/main.bicep \
+            --parameters location='${{ inputs.location }}' mcpServerClientId="$MCP_SERVER_CLIENT_ID" tenantId="$TENANT_ID" nameSuffix="$NAME_SUFFIX"
+      - name: Apply MCP infrastructure
+        if: inputs.mode == 'apply'
+        env:
+          TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          NAME_SUFFIX: ${{ steps.names.outputs.suffix }}
+        run: |
+          set -euo pipefail
+          az deployment group create --resource-group "$TARGET_RESOURCE_GROUP" --name longhaul-mcp-apply \
+            --template-file infra/azure/mcp/main.bicep \
+            --parameters location='${{ inputs.location }}' mcpServerClientId="$MCP_SERVER_CLIENT_ID" tenantId="$TENANT_ID" nameSuffix="$NAME_SUFFIX" \
+            --query properties.outputs --output json
+      - name: Package and deploy harmless MCP Function host
+        if: inputs.mode == 'apply'
+        env:
+          NAME_SUFFIX: ${{ steps.names.outputs.suffix }}
+        run: |
+          set -euo pipefail
+          function_name="longhaul-mcp-$NAME_SUFFIX"
+          package="$RUNNER_TEMP/longhaul-mcp.zip"
+          (cd infra/azure/mcp/function_app && zip -qr "$package" .)
+          az functionapp deployment source config-zip --resource-group "$TARGET_RESOURCE_GROUP" --name "$function_name" --src "$package"
+          echo "MCP endpoint: https://$function_name.azurewebsites.net/runtime/webhooks/mcp"
+          echo "Protected resource metadata: https://$function_name.azurewebsites.net/.well-known/oauth-protected-resource"
