@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, ClassVar, Protocol
 
 
 @dataclass(frozen=True)
@@ -28,7 +28,7 @@ class CapabilityGateway:
     provider conditionals. #16 will supply the contextual policy engine.
     """
 
-    _operations = {
+    _operations: ClassVar[dict[str, str]] = {
         "vessel.status": "vessel_status",
         "execution.start": "execution_start",
         "execution.status": "execution_status",
