@@ -5,6 +5,7 @@ param expectedResourceGroupName = 'replace-with-dedicated-long-haul-resource-gro
 param vmSize = 'Standard_B1ms'
 param osDiskSizeGb = 32
 param adminUsername = 'longhaul'
+param adminSshPublicKey = 'ssh-ed25519 replace-with-ephemeral-or-local-public-key'
 param bootstrap = {
   longHaulRevision: 'cab1293e6e8012cabb8b8e3450efa9b146134875'
   llamaCppRevision: 'b78a39a2f93b13a79a3e01aff3f14274efb43afc'
