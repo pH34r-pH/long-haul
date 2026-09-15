@@ -5,6 +5,7 @@ param publicIpId string
 param vmSize string
 param osDiskSizeGb int
 param adminUsername string
+param adminSshPublicKey string
 param customData string
 param bootstrap object
 
@@ -53,6 +54,14 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-09-01' = {
       linuxConfiguration: {
         disablePasswordAuthentication: true
         provisionVMAgent: true
+        ssh: {
+          publicKeys: [
+            {
+              path: '/home/${adminUsername}/.ssh/authorized_keys'
+              keyData: adminSshPublicKey
+            }
+          ]
+        }
       }
       customData: base64(replace(customData, '__LONG_HAUL_BOOTSTRAP__', base64(string(bootstrap))))
     }
