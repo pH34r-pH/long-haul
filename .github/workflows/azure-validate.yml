@@ -1,0 +1,30 @@
+name: Azure IaC validation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -e '.[dev]'
+      - run: python -m ruff check src tests
+      - run: python -m pytest -q
+      - uses: azure/CLI@v2
+        with:
+          azcliversion: 2.65.0
+          inlineScript: |
+            az bicep install
+            export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+            az bicep build --file infra/azure/main.bicep
+      - name: Check public IaC safety
+        run: infra/azure/scripts/static-check.sh

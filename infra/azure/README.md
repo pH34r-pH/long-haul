@@ -1,0 +1,47 @@
+# Azure CPU reference vessel
+
+This is a small, reproducible generic-x86 host for Long Haul's llama.cpp L0–L10
+reference trace. It is not a GPU benchmark rig, fleet-control-plane host, or
+replacement for Anchorage/Kestrel.
+
+## Costed baseline
+
+The only permitted SKU is `Standard_B1ms`: 1 vCPU and 2 GiB RAM. cloud-init enables
+2 GiB of ordinary swap and builds llama.cpp with one job, which is slow but sufficient
+for the 135M-class Q4 reference model and avoids paying for permanent build headroom.
+The VM uses a 32 GiB Standard HDD OS disk and one Standard static public IPv4 address.
+Azure requires an explicit outbound path for new VM networking; associating the
+least-cost Standard IP to the NIC is materially cheaper than NAT Gateway. The NSG has
+no inbound allow rules, so this is not an SSH management path.
+
+Microsoft Retail Prices API data checked on 2026-09-15 for `eastus`:
+
+| Component | Retail price | 730-hour estimate |
+| --- | ---: | ---: |
+| Linux B1ms | $0.0207/hour | $15.11/month |
+| 32 GiB Standard HDD (S4 LRS) | $1.536/month | $1.54/month |
+| Standard static IPv4 | $0.005/hour | $3.65/month |
+| **Total** |  | **$20.30/month** |
+
+This excludes internet data egress and is not a subscription budget cap. The protected
+workflow calls the same official API for the selected region before what-if or apply;
+it fails when any required price is absent, VM price exceeds $0.03/hour, or total
+exceeds $30/month. See [Azure Retail Prices API](https://learn.microsoft.com/en-us/rest/api/cost-management/retail-prices/azure-retail-prices).
+
+## Security and deployment boundary
+
+The resource group, GitHub OIDC federation, and RBAC are owner-managed external
+prerequisites. This repository never creates or changes them. The VM's system identity
+is intentionally unprivileged. The protected manual workflow uses only environment
+variables `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, and
+`AZURE_RESOURCE_GROUP`; it requires no client secret and deploys only at resource-group
+scope after verifying the configured target. It neither enumerates nor references any
+other resource group.
+
+Dispatch `Azure reference deploy` on trusted `main` with `mode=what-if`, inspect the
+cost and changes, then separately dispatch `mode=apply` after approval. This PR does
+not deploy anything.
+
+cloud-init contains only public URLs, pinned revisions, and a GGUF checksum. It writes
+`/opt/long-haul/run-reference`; invoke that later through an authenticated management
+path such as protected `az vm run-command invoke` and retain its output directory.
