@@ -35,12 +35,19 @@ prerequisites. This repository never creates or changes them. The VM's system id
 is intentionally unprivileged. The protected manual workflow uses only environment
 variables `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, and
 `AZURE_RESOURCE_GROUP`; it requires no client secret and deploys only at resource-group
-scope after verifying the configured target. It neither enumerates nor references any
-other resource group.
+scope after verifying the configured target. The Bicep entrypoint also has a
+deployment-time assertion that `resourceGroup().name` equals
+`expectedResourceGroupName`, so a direct or mis-targeted invocation fails rather than
+creating the stack elsewhere. It neither enumerates nor references any other resource
+group. The adjacent `bicepconfig.json` explicitly enables Bicep's Assertions feature;
+CI verifies the resulting ARM `asserts.targetResourceGroupIsExpected` expression, so the
+guard cannot degrade into an informational output.
 
-Dispatch `Azure reference deploy` on trusted `main` with `mode=what-if`, inspect the
-cost and changes, then separately dispatch `mode=apply` after approval. This PR does
-not deploy anything.
+GitHub Environment approval occurs before a job begins. The deliberate operator sequence
+is: dispatch `Azure reference deploy` on trusted `main` with `mode=what-if`, approve the
+`azure-reference` environment, inspect its cost and Azure change preview, then separately
+dispatch `mode=apply` and approve the environment again. The apply run performs a fresh
+what-if before it creates anything. This PR does not deploy anything.
 
 cloud-init contains only public URLs, pinned revisions, and a GGUF checksum. It writes
 `/opt/long-haul/run-reference`; invoke that later through an authenticated management

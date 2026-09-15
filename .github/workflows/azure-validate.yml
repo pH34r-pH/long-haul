@@ -25,6 +25,9 @@ jobs:
           inlineScript: |
             az bicep install
             export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
-            az bicep build --file infra/azure/main.bicep
+            az bicep build --file infra/azure/main.bicep --outfile /tmp/long-haul-reference.json
+            jq -e \
+              '.asserts.targetResourceGroupIsExpected == "[equals(resourceGroup().name, parameters('"'"'expectedResourceGroupName'"'"'))]"' \
+              /tmp/long-haul-reference.json
       - name: Check public IaC safety
         run: infra/azure/scripts/static-check.sh

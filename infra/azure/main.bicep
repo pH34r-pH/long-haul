@@ -6,6 +6,12 @@ param location string = 'eastus'
 @description('The dedicated resource group expected by the protected workflow.')
 param expectedResourceGroupName string
 
+// This deployment is intentionally constrained to the dedicated Long Haul
+// resource group. The workflow checks the target independently; this
+// deployment-time assertion prevents a direct or mis-targeted invocation from
+// silently creating the reference stack elsewhere.
+assert targetResourceGroupIsExpected = resourceGroup().name == expectedResourceGroupName
+
 @allowed([
   'Standard_B1ms'
 ])
