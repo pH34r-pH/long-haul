@@ -14,7 +14,6 @@ param nameSuffix string
 
 var functionName = 'longhaul-mcp-${nameSuffix}'
 var storageName = 'lhmcp${replace(nameSuffix, '-', '')}'
-var deploymentStorageContainer = 'app-package'
 var tags = {
   project: 'long-haul'
   purpose: 'mcp-control-plane'
@@ -25,7 +24,9 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: storageName
   location: location
   tags: tags
-  sku: { name: 'Standard_LRS' }
+  sku: {
+    name: 'Standard_LRS'
+  }
   kind: 'StorageV2'
   properties: {
     allowBlobPublicAccess: false
@@ -51,7 +52,9 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   location: location
   tags: tags
   kind: 'functionapp,linux'
-  identity: { type: 'SystemAssigned' }
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     serverFarmId: appServicePlan.id
     httpsOnly: true
@@ -59,11 +62,26 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
       appSettings: [
-        { name: 'AzureWebJobsStorage'; value: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storage.listKeys().keys[0].value}' }
-        { name: 'FUNCTIONS_EXTENSION_VERSION'; value: '~4' }
-        { name: 'FUNCTIONS_WORKER_RUNTIME'; value: 'python' }
-        { name: 'LONG_HAUL_AUTH_PROVIDER'; value: 'entra' }
-        { name: 'LONG_HAUL_MCP_SERVER_CLIENT_ID'; value: mcpServerClientId }
+        {
+          name: 'AzureWebJobsStorage'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storage.listKeys().keys[0].value}'
+        }
+        {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: '~4'
+        }
+        {
+          name: 'FUNCTIONS_WORKER_RUNTIME'
+          value: 'python'
+        }
+        {
+          name: 'LONG_HAUL_AUTH_PROVIDER'
+          value: 'entra'
+        }
+        {
+          name: 'LONG_HAUL_MCP_SERVER_CLIENT_ID'
+          value: mcpServerClientId
+        }
       ]
     }
   }
@@ -73,7 +91,9 @@ resource authConfig 'Microsoft.Web/sites/config@2024-04-01' = {
   parent: functionApp
   name: 'authsettingsV2'
   properties: {
-    platform: { enabled: true }
+    platform: {
+      enabled: true
+    }
     globalValidation: {
       requireAuthentication: true
       unauthenticatedClientAction: 'Return401'
@@ -83,7 +103,7 @@ resource authConfig 'Microsoft.Web/sites/config@2024-04-01' = {
         enabled: true
         registration: {
           clientId: mcpServerClientId
-          openIdIssuer: 'https://login.microsoftonline.com/${tenantId}/v2.0'
+          openIdIssuer: '${environment().authentication.loginEndpoint}${tenantId}/v2.0'
         }
         validation: {
           allowedAudiences: [
@@ -97,7 +117,9 @@ resource authConfig 'Microsoft.Web/sites/config@2024-04-01' = {
       }
     }
     login: {
-      tokenStore: { enabled: true }
+      tokenStore: {
+        enabled: true
+      }
     }
     httpSettings: {
       requireHttps: true
