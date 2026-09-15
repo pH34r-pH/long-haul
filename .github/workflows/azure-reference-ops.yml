@@ -63,44 +63,66 @@ jobs:
         if: inputs.operation == 'bootstrap-diagnostics'
         run: |
           set -euo pipefail
-          az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript --scripts '
-            set -u
-            echo "=== cloud-init ==="
-            cloud-init status --long || true
-            echo "=== swap ==="
-            swapon --show || true
-            free -h || true
-            echo "=== expected paths ==="
-            for p in /opt/long-haul /opt/llama.cpp /opt/models /opt/long-haul/run-reference; do
-              if [ -e "$p" ]; then ls -ld "$p"; else echo "MISSING $p"; fi
-            done
-            echo "=== llama binaries ==="
-            find /opt/llama.cpp -maxdepth 3 -type f \( -name llama-cli -o -name main \) -ls 2>/dev/null || true
-            echo "=== models ==="
-            find /opt/models -maxdepth 2 -type f -printf "%p %s bytes\n" 2>/dev/null || true
-            echo "=== cloud-init log tail ==="
-            tail -n 120 /var/log/cloud-init-output.log 2>/dev/null || true
-          ' --output json
+          guest_script=$(cat <<'GUEST'
+          set -u
+          echo "=== cloud-init ==="
+          cloud-init status --long || true
+          echo "=== swap ==="
+          swapon --show || true
+          free -h || true
+          echo "=== expected paths ==="
+          for p in /opt/long-haul /opt/llama.cpp /opt/models /opt/long-haul/run-reference; do
+            if [ -e "$p" ]; then ls -ld "$p"; else echo "MISSING $p"; fi
+          done
+          echo "=== llama binaries ==="
+          find /opt/llama.cpp -maxdepth 3 -type f \( -name llama-cli -o -name main \) -ls 2>/dev/null || true
+          echo "=== models ==="
+          find /opt/models -maxdepth 2 -type f -printf "%p %s bytes\n" 2>/dev/null || true
+          echo "=== cloud-init log tail ==="
+          tail -n 120 /var/log/cloud-init-output.log 2>/dev/null || true
+          GUEST
+          )
+          encoded=$(printf '%s' "$guest_script" | base64 -w0)
+          az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript \
+            --scripts "printf '%s' '$encoded' | base64 -d > /tmp/long-haul-op.sh; /bin/bash /tmp/long-haul-op.sh; rc=\$?; rm -f /tmp/long-haul-op.sh; exit \$rc" --output json
       - name: Run Long Haul reference experiment
         if: inputs.operation == 'run-reference'
         run: |
           set -euo pipefail
-          az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript --scripts '
-            set -euo pipefail
-            test -x /opt/long-haul/run-reference
-            /opt/long-haul/run-reference
-          ' --output json
+          guest_script=$(cat <<'GUEST'
+          set -euo pipefail
+          test -x /opt/long-haul/run-reference
+          /opt/long-haul/run-reference
+          GUEST
+          )
+          encoded=$(printf '%s' "$guest_script" | base64 -w0)
+          result=$(az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript \
+            --scripts "printf '%s' '$encoded' | base64 -d > /tmp/long-haul-op.sh; /bin/bash /tmp/long-haul-op.sh; rc=\$?; rm -f /tmp/long-haul-op.sh; echo __LONG_HAUL_EXIT_CODE__=\$rc; exit 0" --output json)
+          printf '%s\n' "$result"
+          message=$(printf '%s' "$result" | jq -r '.value[0].message // ""')
+          rc=$(printf '%s\n' "$message" | sed -n 's/.*__LONG_HAUL_EXIT_CODE__=\([0-9][0-9]*\).*/\1/p' | tail -1)
+          test -n "$rc"
+          test "$rc" -eq 0
       - name: Show retained reference report
         if: inputs.operation == 'show-reference-report'
         run: |
           set -euo pipefail
-          az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript --scripts '
-            set -u
-            echo "=== candidate reports ==="
-            find /opt/long-haul /var/lib/long-haul /tmp -maxdepth 4 -type f \( -name "*reference*.json" -o -name "*report*.json" \) -print 2>/dev/null | head -50
-            report=$(find /opt/long-haul /var/lib/long-haul /tmp -maxdepth 4 -type f \( -name "*reference*.json" -o -name "*report*.json" \) -print 2>/dev/null | head -1 || true)
-            if [ -n "$report" ]; then echo "=== $report ==="; cat "$report"; else echo "No retained JSON report found"; exit 2; fi
-          ' --output json
+          guest_script=$(cat <<'GUEST'
+          set -euo pipefail
+          echo "=== candidate reports ==="
+          find /opt/long-haul /var/lib/long-haul /tmp -maxdepth 4 -type f \( -name "*reference*.json" -o -name "*report*.json" \) -print 2>/dev/null | head -50
+          report=$(find /opt/long-haul /var/lib/long-haul /tmp -maxdepth 4 -type f \( -name "*reference*.json" -o -name "*report*.json" \) -print 2>/dev/null | head -1 || true)
+          if [ -n "$report" ]; then echo "=== $report ==="; cat "$report"; else echo "No retained JSON report found"; exit 2; fi
+          GUEST
+          )
+          encoded=$(printf '%s' "$guest_script" | base64 -w0)
+          result=$(az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript \
+            --scripts "printf '%s' '$encoded' | base64 -d > /tmp/long-haul-op.sh; /bin/bash /tmp/long-haul-op.sh; rc=\$?; rm -f /tmp/long-haul-op.sh; echo __LONG_HAUL_EXIT_CODE__=\$rc; exit 0" --output json)
+          printf '%s\n' "$result"
+          message=$(printf '%s' "$result" | jq -r '.value[0].message // ""')
+          rc=$(printf '%s\n' "$message" | sed -n 's/.*__LONG_HAUL_EXIT_CODE__=\([0-9][0-9]*\).*/\1/p' | tail -1)
+          test -n "$rc"
+          test "$rc" -eq 0
       - name: Start vessel
         if: inputs.operation == 'start'
         run: az vm start --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --no-wait
