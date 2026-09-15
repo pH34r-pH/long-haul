@@ -28,7 +28,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
       - name: Price approved reference configuration
-        run: infra/azure/scripts/check-reference-cost.sh '${{ inputs.location }}' Standard_B1ms
+        run: bash infra/azure/scripts/check-reference-cost.sh '${{ inputs.location }}' Standard_B1ms
       - uses: azure/login@v2
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}

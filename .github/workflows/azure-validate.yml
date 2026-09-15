@@ -30,4 +30,4 @@ jobs:
               '.asserts.targetResourceGroupIsExpected == "[equals(resourceGroup().name, parameters('"'"'expectedResourceGroupName'"'"'))]"' \
               /tmp/long-haul-reference.json
       - name: Check public IaC safety
-        run: infra/azure/scripts/static-check.sh
+        run: bash infra/azure/scripts/static-check.sh
