@@ -42,22 +42,33 @@ jobs:
           test -n "$TARGET_RESOURCE_GROUP"
           test "$(az account show --query id --output tsv)" = "$EXPECTED_SUBSCRIPTION"
           test "$(az group show --name "$TARGET_RESOURCE_GROUP" --query name --output tsv)" = "$TARGET_RESOURCE_GROUP"
+      - name: Generate ephemeral VM SSH public key
+        id: vm_ssh
+        shell: bash
+        run: |
+          set -euo pipefail
+          key_dir="$RUNNER_TEMP/long-haul-vm-key"
+          mkdir -p "$key_dir"
+          ssh-keygen -q -t ed25519 -N '' -C 'long-haul-ephemeral-deploy' -f "$key_dir/id_ed25519"
+          printf 'public_key=%s\n' "$(cat "$key_dir/id_ed25519.pub")" >> "$GITHUB_OUTPUT"
       - name: Show what-if
         env:
           TARGET_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          ADMIN_SSH_PUBLIC_KEY: ${{ steps.vm_ssh.outputs.public_key }}
           BOOTSTRAP: >-
             {"longHaulRevision":"${{ github.sha }}","llamaCppRevision":"b78a39a2f93b13a79a3e01aff3f14274efb43afc","modelUrl":"https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q4_K_M.gguf","modelSha256":"2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d"}
         run: |
           az deployment group what-if --resource-group "$TARGET_RESOURCE_GROUP" --name longhaul-reference-whatif \
             --template-file infra/azure/main.bicep \
-            --parameters expectedResourceGroupName="$TARGET_RESOURCE_GROUP" location='${{ inputs.location }}' vmSize=Standard_B1ms osDiskSizeGb=32 bootstrap="$BOOTSTRAP"
+            --parameters expectedResourceGroupName="$TARGET_RESOURCE_GROUP" location='${{ inputs.location }}' vmSize=Standard_B1ms osDiskSizeGb=32 adminSshPublicKey="$ADMIN_SSH_PUBLIC_KEY" bootstrap="$BOOTSTRAP"
       - name: Apply reviewed stack
         if: inputs.mode == 'apply'
         env:
           TARGET_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          ADMIN_SSH_PUBLIC_KEY: ${{ steps.vm_ssh.outputs.public_key }}
           BOOTSTRAP: >-
             {"longHaulRevision":"${{ github.sha }}","llamaCppRevision":"b78a39a2f93b13a79a3e01aff3f14274efb43afc","modelUrl":"https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q4_K_M.gguf","modelSha256":"2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d"}
         run: |
           az deployment group create --resource-group "$TARGET_RESOURCE_GROUP" --name longhaul-reference-apply \
             --template-file infra/azure/main.bicep \
-            --parameters expectedResourceGroupName="$TARGET_RESOURCE_GROUP" location='${{ inputs.location }}' vmSize=Standard_B1ms osDiskSizeGb=32 bootstrap="$BOOTSTRAP"
+            --parameters expectedResourceGroupName="$TARGET_RESOURCE_GROUP" location='${{ inputs.location }}' vmSize=Standard_B1ms osDiskSizeGb=32 adminSshPublicKey="$ADMIN_SSH_PUBLIC_KEY" bootstrap="$BOOTSTRAP"
