@@ -9,13 +9,11 @@ param location string = 'westus2'
 @description('Private immutable ready-to-run release package URI. The Function managed identity must be able to read it.')
 param packageUri string
 
-resource functionApp 'Microsoft.Web/sites@2024-04-01' existing = {
-  name: functionAppName
-}
-
+// Keep this as a top-level resource rather than a parented child. This is the
+// shape documented by Azure Functions for Flex Consumption One Deploy and it
+// also avoids the incomplete discriminated Bicep type for `onedeploy`.
 resource oneDeploy 'Microsoft.Web/sites/extensions@2022-09-01' = {
-  parent: functionApp
-  name: 'onedeploy'
+  name: '${functionAppName}/onedeploy'
   location: location
   properties: {
     packageUri: packageUri
