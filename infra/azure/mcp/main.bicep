@@ -12,9 +12,13 @@ param tenantId string
 @description('Globally unique suffix used for Function/storage names.')
 param nameSuffix string
 
+@description('Principal ID of the existing GitHub OIDC deployment identity; receives blob data access only on MCP storage.')
+param deploymentPrincipalId string
+
 var functionName = 'longhaul-mcp-${nameSuffix}'
 var storageName = 'lhmcp${replace(nameSuffix, '-', '')}'
 var deploymentContainerName = 'app-package'
+var releaseContainerName = 'release-artifacts'
 var storageBlobDataContributorRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
 var tags = {
   project: 'long-haul'
@@ -47,6 +51,14 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01'
 resource deploymentContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
   parent: blobService
   name: deploymentContainerName
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+resource releaseContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: releaseContainerName
   properties: {
     publicAccess: 'None'
   }
@@ -129,12 +141,22 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   ]
 }
 
-resource storageRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource functionStorageRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(storage.id, functionApp.id, storageBlobDataContributorRoleId)
   scope: storage
   properties: {
     roleDefinitionId: storageBlobDataContributorRoleId
     principalId: functionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource deploymentStorageRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storage.id, deploymentPrincipalId, storageBlobDataContributorRoleId)
+  scope: storage
+  properties: {
+    roleDefinitionId: storageBlobDataContributorRoleId
+    principalId: deploymentPrincipalId
     principalType: 'ServicePrincipal'
   }
 }
@@ -182,5 +204,7 @@ resource authConfig 'Microsoft.Web/sites/config@2024-04-01' = {
 output functionName string = functionApp.name
 output functionHostname string = functionApp.properties.defaultHostName
 output functionPrincipalId string = functionApp.identity.principalId
+output storageName string = storage.name
 output deploymentContainerUri string = '${storage.properties.primaryEndpoints.blob}${deploymentContainerName}'
+output releaseContainerUri string = '${storage.properties.primaryEndpoints.blob}${releaseContainerName}'
 output mcpEndpoint string = 'https://${functionApp.properties.defaultHostName}/runtime/webhooks/mcp'
