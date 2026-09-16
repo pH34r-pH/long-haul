@@ -82,6 +82,8 @@ jobs:
           function_name="longhaul-mcp-$NAME_SUFFIX"
           package="$RUNNER_TEMP/longhaul-mcp.zip"
           (cd infra/azure/mcp/function_app && zip -qr "$package" .)
-          az functionapp deployment source config-zip --resource-group "$TARGET_RESOURCE_GROUP" --name "$function_name" --src "$package"
+          # Flex Consumption uses One Deploy. Azure CLI selects the supported
+          # deployment path for Flex apps; Python source should be remotely built.
+          az functionapp deployment source config-zip --resource-group "$TARGET_RESOURCE_GROUP" --name "$function_name" --src "$package" --build-remote true
           echo "MCP endpoint: https://$function_name.azurewebsites.net/runtime/webhooks/mcp"
           echo "Protected resource metadata: https://$function_name.azurewebsites.net/.well-known/oauth-protected-resource"
