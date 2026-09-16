@@ -32,5 +32,7 @@ jobs:
               /tmp/long-haul-reference.json
             az bicep build --file infra/azure/mcp/main.bicep --outfile /tmp/long-haul-mcp.json
             jq -e '.resources | length >= 3' /tmp/long-haul-mcp.json
+            az bicep build --file infra/azure/mcp/deploy-package.bicep --outfile /tmp/long-haul-mcp-package.json
+            jq -e '.resources | any(.type == "Microsoft.Web/sites/extensions" and .name == "[format('"'"'{0}/onedeploy'"'"', parameters('"'"'functionAppName'"'"'))]")' /tmp/long-haul-mcp-package.json
       - name: Check public IaC safety
         run: bash infra/azure/scripts/static-check.sh
