@@ -4,11 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Review changes with what-if, or apply the MCP auth-spike stack.'
+        description: 'Review infrastructure, deploy current main, or roll back to a retained release SHA.'
         required: true
         type: choice
         default: what-if
-        options: [what-if, apply]
+        options: [what-if, apply, rollback]
+      release_sha:
+        description: 'For rollback only: full commit SHA of an existing retained MCP release artifact.'
+        required: false
+        type: string
       location:
         description: 'MCP control-plane region.'
         required: true
@@ -31,6 +35,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
+      - uses: actions/setup-python@v5
+        if: inputs.mode == 'apply'
+        with:
+          python-version: '3.11'
       - uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -47,43 +55,94 @@ jobs:
           test "$(az account show --query id --output tsv)" = "$EXPECTED_SUBSCRIPTION"
           test "$(az group show --name "$TARGET_RESOURCE_GROUP" --query name --output tsv)" = "$TARGET_RESOURCE_GROUP"
           case "$MCP_SCOPE" in "api://$MCP_SERVER_CLIENT_ID/"*) ;; *) echo 'MCP scope does not belong to configured server app' >&2; exit 2;; esac
-      - name: Derive deterministic name suffix
+          if [ '${{ inputs.mode }}' = rollback ]; then
+            case '${{ inputs.release_sha }}' in
+              [0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]*) ;;
+              *) echo 'rollback requires release_sha' >&2; exit 2;;
+            esac
+          fi
+      - name: Derive deterministic deployment identity and names
         id: names
         run: |
           set -euo pipefail
           suffix=$(printf '%s' '${{ secrets.AZURE_SUBSCRIPTION_ID }}' | sha256sum | cut -c1-10)
+          deployment_principal_id=$(az identity show --resource-group "$TARGET_RESOURCE_GROUP" --name id-long-haul-github-deploy --query principalId --output tsv)
+          test -n "$deployment_principal_id"
           echo "suffix=$suffix" >> "$GITHUB_OUTPUT"
+          echo "deployment_principal_id=$deployment_principal_id" >> "$GITHUB_OUTPUT"
       - name: MCP infrastructure what-if
         env:
           TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           NAME_SUFFIX: ${{ steps.names.outputs.suffix }}
+          DEPLOYMENT_PRINCIPAL_ID: ${{ steps.names.outputs.deployment_principal_id }}
         run: |
           set -euo pipefail
           az deployment group what-if --resource-group "$TARGET_RESOURCE_GROUP" --name longhaul-mcp-whatif \
             --template-file infra/azure/mcp/main.bicep \
-            --parameters location='${{ inputs.location }}' mcpServerClientId="$MCP_SERVER_CLIENT_ID" tenantId="$TENANT_ID" nameSuffix="$NAME_SUFFIX"
+            --parameters location='${{ inputs.location }}' mcpServerClientId="$MCP_SERVER_CLIENT_ID" tenantId="$TENANT_ID" nameSuffix="$NAME_SUFFIX" deploymentPrincipalId="$DEPLOYMENT_PRINCIPAL_ID"
       - name: Apply MCP infrastructure
         if: inputs.mode == 'apply'
         env:
           TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           NAME_SUFFIX: ${{ steps.names.outputs.suffix }}
+          DEPLOYMENT_PRINCIPAL_ID: ${{ steps.names.outputs.deployment_principal_id }}
         run: |
           set -euo pipefail
           az deployment group create --resource-group "$TARGET_RESOURCE_GROUP" --name longhaul-mcp-apply \
             --template-file infra/azure/mcp/main.bicep \
-            --parameters location='${{ inputs.location }}' mcpServerClientId="$MCP_SERVER_CLIENT_ID" tenantId="$TENANT_ID" nameSuffix="$NAME_SUFFIX" \
+            --parameters location='${{ inputs.location }}' mcpServerClientId="$MCP_SERVER_CLIENT_ID" tenantId="$TENANT_ID" nameSuffix="$NAME_SUFFIX" deploymentPrincipalId="$DEPLOYMENT_PRINCIPAL_ID" \
             --query properties.outputs --output json
-      - name: Package and deploy harmless MCP Function host
+      - name: Build immutable ready-to-run MCP release
+        if: inputs.mode == 'apply'
+        id: release
+        run: |
+          set -euo pipefail
+          build_dir="$RUNNER_TEMP/mcp-release"
+          package="$RUNNER_TEMP/released-package.zip"
+          mkdir -p "$build_dir"
+          cp -a infra/azure/mcp/function_app/. "$build_dir/"
+          python -m pip install --disable-pip-version-check --target="$build_dir/.python_packages/lib/site-packages" -r "$build_dir/requirements.txt"
+          (cd "$build_dir" && zip -qr "$package" .)
+          echo "package=$package" >> "$GITHUB_OUTPUT"
+          echo "release_sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+      - name: Publish immutable release artifact
         if: inputs.mode == 'apply'
         env:
           NAME_SUFFIX: ${{ steps.names.outputs.suffix }}
+          PACKAGE: ${{ steps.release.outputs.package }}
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+        run: |
+          set -euo pipefail
+          storage_name="lhmcp${NAME_SUFFIX//-/}"
+          blob_name="$RELEASE_SHA/released-package.zip"
+          for attempt in 1 2 3 4 5 6; do
+            if az storage blob upload --auth-mode login --account-name "$storage_name" --container-name release-artifacts --name "$blob_name" --file "$PACKAGE" --overwrite false; then
+              exit 0
+            fi
+            echo "Blob RBAC may still be propagating; retry $attempt/6" >&2
+            sleep 10
+          done
+          exit 1
+      - name: Promote selected release with One Deploy
+        if: inputs.mode == 'apply' || inputs.mode == 'rollback'
+        env:
+          NAME_SUFFIX: ${{ steps.names.outputs.suffix }}
+          APPLY_SHA: ${{ steps.release.outputs.release_sha }}
+          ROLLBACK_SHA: ${{ inputs.release_sha }}
         run: |
           set -euo pipefail
           function_name="longhaul-mcp-$NAME_SUFFIX"
-          package="$RUNNER_TEMP/longhaul-mcp.zip"
-          (cd infra/azure/mcp/function_app && zip -qr "$package" .)
-          # Flex Consumption uses One Deploy. Azure CLI selects the supported
-          # deployment path for Flex apps; Python source should be remotely built.
-          az functionapp deployment source config-zip --resource-group "$TARGET_RESOURCE_GROUP" --name "$function_name" --src "$package" --build-remote true
+          storage_name="lhmcp${NAME_SUFFIX//-/}"
+          if [ '${{ inputs.mode }}' = rollback ]; then release_sha="$ROLLBACK_SHA"; else release_sha="$APPLY_SHA"; fi
+          test -n "$release_sha"
+          package_uri="$(az storage account show --resource-group "$TARGET_RESOURCE_GROUP" --name "$storage_name" --query primaryEndpoints.blob --output tsv)release-artifacts/$release_sha/released-package.zip"
+          az storage blob exists --auth-mode login --account-name "$storage_name" --container-name release-artifacts --name "$release_sha/released-package.zip" --query exists --output tsv | grep -qx true
+          # Flex Consumption does not activate a package merely because a blob was
+          # uploaded or copied. One Deploy is the required promotion operation.
+          az deployment group create --resource-group "$TARGET_RESOURCE_GROUP" --name "longhaul-mcp-code-${release_sha:0:12}" \
+            --template-file infra/azure/mcp/deploy-package.bicep \
+            --parameters functionAppName="$function_name" location='${{ inputs.location }}' packageUri="$package_uri" \
+            --output none
+          echo "Promoted MCP release: $release_sha"
           echo "MCP endpoint: https://$function_name.azurewebsites.net/runtime/webhooks/mcp"
           echo "Protected resource metadata: https://$function_name.azurewebsites.net/.well-known/oauth-protected-resource"
