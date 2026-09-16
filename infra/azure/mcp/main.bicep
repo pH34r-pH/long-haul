@@ -14,6 +14,8 @@ param nameSuffix string
 
 var functionName = 'longhaul-mcp-${nameSuffix}'
 var storageName = 'lhmcp${replace(nameSuffix, '-', '')}'
+var deploymentContainerName = 'app-package'
+var storageBlobDataContributorRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
 var tags = {
   project: 'long-haul'
   purpose: 'mcp-control-plane'
@@ -30,7 +32,23 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   kind: 'StorageV2'
   properties: {
     allowBlobPublicAccess: false
+    allowSharedKeyAccess: false
+    defaultToOAuthAuthentication: true
     minimumTlsVersion: 'TLS1_2'
+    supportsHttpsTrafficOnly: true
+  }
+}
+
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
+  parent: storage
+  name: 'default'
+}
+
+resource deploymentContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobService
+  name: deploymentContainerName
+  properties: {
+    publicAccess: 'None'
   }
 }
 
@@ -38,6 +56,7 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = {
   name: '${functionName}-plan'
   location: location
   tags: tags
+  kind: 'functionapp'
   sku: {
     name: 'FC1'
     tier: 'FlexConsumption'
@@ -58,21 +77,22 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   properties: {
     serverFarmId: appServicePlan.id
     httpsOnly: true
+    publicNetworkAccess: 'Enabled'
     siteConfig: {
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
       appSettings: [
         {
-          name: 'AzureWebJobsStorage'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storage.listKeys().keys[0].value}'
+          name: 'AzureWebJobsStorage__accountName'
+          value: storage.name
+        }
+        {
+          name: 'AzureWebJobsStorage__credential'
+          value: 'managedidentity'
         }
         {
           name: 'FUNCTIONS_EXTENSION_VERSION'
           value: '~4'
-        }
-        {
-          name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'python'
         }
         {
           name: 'LONG_HAUL_AUTH_PROVIDER'
@@ -84,6 +104,38 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         }
       ]
     }
+    functionAppConfig: {
+      deployment: {
+        storage: {
+          type: 'blobContainer'
+          value: '${storage.properties.primaryEndpoints.blob}${deploymentContainerName}'
+          authentication: {
+            type: 'SystemAssignedIdentity'
+          }
+        }
+      }
+      scaleAndConcurrency: {
+        maximumInstanceCount: 10
+        instanceMemoryMB: 2048
+      }
+      runtime: {
+        name: 'python'
+        version: '3.11'
+      }
+    }
+  }
+  dependsOn: [
+    deploymentContainer
+  ]
+}
+
+resource storageRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storage.id, functionApp.id, storageBlobDataContributorRoleId)
+  scope: storage
+  properties: {
+    roleDefinitionId: storageBlobDataContributorRoleId
+    principalId: functionApp.identity.principalId
+    principalType: 'ServicePrincipal'
   }
 }
 
@@ -130,4 +182,5 @@ resource authConfig 'Microsoft.Web/sites/config@2024-04-01' = {
 output functionName string = functionApp.name
 output functionHostname string = functionApp.properties.defaultHostName
 output functionPrincipalId string = functionApp.identity.principalId
+output deploymentContainerUri string = '${storage.properties.primaryEndpoints.blob}${deploymentContainerName}'
 output mcpEndpoint string = 'https://${functionApp.properties.defaultHostName}/runtime/webhooks/mcp'
