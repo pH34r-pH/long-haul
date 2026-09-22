@@ -60,7 +60,7 @@ class AcceptancePredicate(BaseModel):
     artifact_path: str | None = None
 
     @model_validator(mode="after")
-    def executable_or_artifact(self) -> "AcceptancePredicate":
+    def executable_or_artifact(self) -> AcceptancePredicate:
         if self.kind is PredicateKind.ARTIFACT:
             if not self.artifact_path:
                 raise ValueError("artifact predicates require artifact_path")
@@ -91,7 +91,7 @@ class WorkContract(BaseModel):
     schema_version: Literal[1] = WORK_CONTRACT_SCHEMA_VERSION
 
     @model_validator(mode="after")
-    def validate_contract(self) -> "WorkContract":
+    def validate_contract(self) -> WorkContract:
         self.allowed_paths = [_validate_scope(path) for path in self.allowed_paths]
         self.forbidden_paths = [_validate_scope(path) for path in self.forbidden_paths]
         if len(set(self.allowed_paths)) != len(self.allowed_paths):
