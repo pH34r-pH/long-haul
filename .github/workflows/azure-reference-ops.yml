@@ -93,7 +93,7 @@ jobs:
             node_arch=x64
             node_archive="node-${node_version}-linux-${node_arch}.tar.xz"
             node_url="https://nodejs.org/dist/${node_version}/${node_archive}"
-            node_sha256="__NODE_SHA256__"
+            node_sha256="c0649af18e6a24f6fe5535a3e86b341dd49a8e71117c8b68bde973ef834f16f2"
             curl --fail --location --retry 3 --output "$root/$node_archive" "$node_url"
             printf "%s  %s\n" "$node_sha256" "$root/$node_archive" | sha256sum --check --strict
             tar -xJf "$root/$node_archive" -C "$root"
