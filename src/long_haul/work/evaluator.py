@@ -6,7 +6,13 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, Field
 
-from .contracts import EvidenceState, PredicateEvidence, WorkContract, WorkEvaluation, evaluate_work
+from .contracts import (
+    EvidenceState,
+    PredicateEvidence,
+    WorkContract,
+    WorkEvaluation,
+    evaluate_work,
+)
 
 EVIDENCE_PACKET_SCHEMA_VERSION = 1
 
