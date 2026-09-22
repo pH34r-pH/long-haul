@@ -1,5 +1,10 @@
 from long_haul.events import Event
-from long_haul.work import WorkSession, materialize_checkpoint, render_digest, resume_session
+from long_haul.work import (
+    WorkSession,
+    materialize_checkpoint,
+    render_digest,
+    resume_session,
+)
 
 
 def event(kind, **payload):
