@@ -52,3 +52,7 @@ what-if before it creates anything. This PR does not deploy anything.
 cloud-init contains only public URLs, pinned revisions, and a GGUF checksum. It writes
 `/opt/long-haul/run-reference`; invoke that later through an authenticated management
 path such as protected `az vm run-command invoke` and retain its output directory.
+
+## Pinned Pi qualification
+
+Long Haul's Pi integration is pinned to upstream `@earendil-works/pi-coding-agent` 0.87.0 at commit `e40126f578ccc0a4a21f8d30cd8e96c8ecfe1722`. The protected `pi-upstream-qualification` reference operation prepares that exact source revision under `/opt/long-haul/pi-qualification` and verifies its package version without modifying system Python, llama.cpp, or the model. Node/Pi execution is intentionally a separate qualification slice so the runtime installation can be isolated and rollbackable rather than added implicitly to cloud-init.
