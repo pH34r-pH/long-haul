@@ -80,6 +80,10 @@ Long Haul owns task objective, scope, authority, budgets, success/failure predic
 
 The MVP uses append-only JSONL events plus materialized views. SQLite remains an optional future index; event provenance remains exportable and human-readable.
 
+### Work checkpoints and session context
+
+The event log is authoritative history. A `WorkCheckpoint` is a deterministic compact materialization of contract-scoped facts, active constraints, subgoal state, unresolved failures, and the last externally verified artifact; it is disposable and rebuildable from events. A `TaskDigest` is a hard-bounded rendering of that checkpoint for a new harness/model session and explicitly reports omissions. A harness conversation is transient execution context, not durable memory. Resuming work creates a new session identity while retaining the work contract, crew identity, execution-plan linkage, and checkpoint provenance. Crew memory/continuity remains a separate institutional concern and must not be inferred from a model session transcript.
+
 ## Hardware boundary
 
 The core consumes normalized vessel, resource, link, and benchmark records. Discovery and runtime adapters are edge protocols; fixture data is conspicuously marked simulated and is never a measurement. Hardware access therefore validates probes and produces evidence without redesigning the core.
