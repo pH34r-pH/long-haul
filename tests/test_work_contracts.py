@@ -2,19 +2,26 @@ import pytest
 from pydantic import ValidationError
 
 from long_haul.work import (
-    AcceptancePredicate, EvidenceState, FailureKind, PredicateEvidence,
-    PredicateKind, WorkBudget, WorkContract, WorkDisposition, evaluate_work,
+    AcceptancePredicate,
+    EvidenceState,
+    FailureKind,
+    PredicateEvidence,
+    PredicateKind,
+    WorkBudget,
+    WorkContract,
+    WorkDisposition,
+    evaluate_work,
 )
 
 
 def contract(**overrides):
-    values = dict(
-        contract_id="wc-1", mission_id="mission-1", objective="Repair telemetry initialization",
-        execution_plan_id="local:kestrel", allowed_paths=["src/telemetry", "tests/telemetry"],
-        forbidden_paths=["src/telemetry/secrets"], capabilities=["read", "edit", "test"],
-        authority_scopes=["repository:bounded-write"], budget=WorkBudget(wall_seconds=600, max_attempts=2),
-        success_predicates=[AcceptancePredicate(predicate_id="tests", kind=PredicateKind.TEST, description="targeted tests pass", command=["pytest", "tests/telemetry"])],
-    )
+    values = {
+        "contract_id": "wc-1", "mission_id": "mission-1", "objective": "Repair telemetry initialization",
+        "execution_plan_id": "local:kestrel", "allowed_paths": ["src/telemetry", "tests/telemetry"],
+        "forbidden_paths": ["src/telemetry/secrets"], "capabilities": ["read", "edit", "test"],
+        "authority_scopes": ["repository:bounded-write"], "budget": WorkBudget(wall_seconds=600, max_attempts=2),
+        "success_predicates": [AcceptancePredicate(predicate_id="tests", kind=PredicateKind.TEST, description="targeted tests pass", command=["pytest", "tests/telemetry"])],
+    }
     values.update(overrides)
     return WorkContract(**values)
 
