@@ -10,6 +10,7 @@ Long Haul separates institutional identity from hardware and model embodiment.
 - **Resource**: CPU, GPU, NPU, memory, storage, sensor, or other individually addressable component. Capacity is typed; unlike capacities are never summed implicitly.
 - **Link**: measured relationship between resources or vessels (PCIe, memory, Tailscale, Ethernet, etc.).
 - **Mission**: unit of work with objectives, constraints, and outcome metrics.
+- **Work contract**: a bounded engineering task derived from a mission, with explicit repository scope, capabilities, budgets, external success predicates, failure predicates, and optional execution-plan linkage. It is not a model prompt or a crew identity.
 - **Decision**: structured proposal with independently captured positions and an explicit resolution mode.
 - **Execution plan**: mapping from a mission to crew, vessels, resources, runtimes, and execution mode.
 - **Model artifact**: compositional foundation/revision/quantization plus optional adapters and auxiliary artifacts; never crew identity.
@@ -28,6 +29,7 @@ Long Haul separates institutional identity from hardware and model embodiment.
 9. Tailscale is the authenticated transport plane; application protocols remain ordinary network services.
 10. Every material decision and embodiment transition is provenance-bearing and replayable.
 11. Model feasibility follows a validated inference profile over measured topology, not nominal size or aggregate VRAM.
+12. Engineering completion is determined by external predicate evidence; model or harness self-report cannot satisfy a work contract.
 
 ## Initial fleet topology
 
@@ -69,6 +71,10 @@ The MVP experiment compares this two-role consent/dissent architecture against s
 7. Execute an eligible plan.
 8. Record outcome, performance, calibration, dissent, and repair data.
 9. Update competence/trust statistics from observed results rather than rhetoric.
+
+## Work-contract boundary
+
+Long Haul owns task objective, scope, authority, budgets, success/failure predicates, provenance, and final disposition. A coding harness such as Pi is an execution adapter: it may render model-specific guidance and recover from provider-specific failures, but it does not redefine contract success. Work-contract events link creation, attempts, evidence, and disposition so later checkpointing and independent evaluation can reconstruct the history.
 
 ## Persistence
 
