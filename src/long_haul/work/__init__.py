@@ -32,7 +32,6 @@ from .evaluator import (
     evaluate_packet,
     reopen_regressions,
 )
-
 from .progress import (
     AttemptStep,
     ProgressIntervention,
@@ -47,8 +46,8 @@ from .progress import (
 
 __all__ = [
     "AcceptancePredicate",
-    "AttemptStep",
     "ArtifactState",
+    "AttemptStep",
     "CandidateArtifact",
     "CheckRecord",
     "CheckpointFact",
