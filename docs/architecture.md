@@ -76,6 +76,10 @@ The MVP experiment compares this two-role consent/dissent architecture against s
 
 Long Haul owns task objective, scope, authority, budgets, success/failure predicates, provenance, and final disposition. A coding harness such as Pi is an execution adapter: it may render model-specific guidance and recover from provider-specific failures, but it does not redefine contract success. Work-contract events link creation, attempts, evidence, and disposition so later checkpointing and independent evaluation can reconstruct the history.
 
+## Independent acceptance evaluation
+
+Implementation-time checks are worker feedback, not acceptance evidence. Independent evaluators receive a candidate through a read-only target interface, execute or inspect the WorkContract predicates, and emit an `EvidencePacket` bound to the exact candidate fingerprint plus evaluator/runtime identity. Evidence for an older fingerprint is stale and cannot certify a changed candidate. A later packet may record regressions against prior verified predicates without rewriting the historical packet. Mutation authority is absent from the evaluator interface rather than prohibited only by prompt text.
+
 ## Persistence
 
 The MVP uses append-only JSONL events plus materialized views. SQLite remains an optional future index; event provenance remains exportable and human-readable.

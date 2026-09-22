@@ -22,11 +22,27 @@ from .contracts import (
     WorkEvaluation,
     evaluate_work,
 )
+from .evaluator import (
+    CandidateArtifact,
+    CheckRecord,
+    EvaluationAuthority,
+    EvaluationRunner,
+    EvaluatorIdentity,
+    EvidencePacket,
+    evaluate_packet,
+    reopen_regressions,
+)
 
 __all__ = [
     "AcceptancePredicate",
     "ArtifactState",
+    "CandidateArtifact",
+    "CheckRecord",
     "CheckpointFact",
+    "EvaluationAuthority",
+    "EvaluationRunner",
+    "EvaluatorIdentity",
+    "EvidencePacket",
     "EvidenceState",
     "FailureKind",
     "FailurePredicate",
@@ -39,8 +55,10 @@ __all__ = [
     "WorkDisposition",
     "WorkEvaluation",
     "WorkSession",
+    "evaluate_packet",
     "evaluate_work",
     "materialize_checkpoint",
     "render_digest",
+    "reopen_regressions",
     "resume_session",
 ]
