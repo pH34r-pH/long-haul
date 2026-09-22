@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from ..models import CrewMember, Embodiment
 
-EventType = Literal["observation", "self_report", "inference", "unknown", "request", "decision", "embodiment_change", "competence_update", "rupture", "repair"]
+EventType = Literal["observation", "self_report", "inference", "unknown", "request", "decision", "embodiment_change", "competence_update", "rupture", "repair", "work_contract_created", "work_attempt_completed", "work_evidence", "work_disposition"]
 class Event(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
