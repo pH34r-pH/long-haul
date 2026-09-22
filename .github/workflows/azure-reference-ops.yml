@@ -88,7 +88,28 @@ jobs:
             git -C "$root/pi" checkout --detach e40126f578ccc0a4a21f8d30cd8e96c8ecfe1722
             test "$(python3 -c "import json; print(json.load(open(\"$root/pi/packages/coding-agent/package.json\"))[\"version\"])")" = "0.87.0"
             echo "Pinned Pi source prepared at $root/pi"
-            echo "Node/Pi execution follows in the next qualification slice; no system packages are modified here."
+
+            node_version=v22.19.0
+            node_arch=x64
+            node_archive="node-${node_version}-linux-${node_arch}.tar.xz"
+            node_url="https://nodejs.org/dist/${node_version}/${node_archive}"
+            node_sha256="__NODE_SHA256__"
+            curl --fail --location --retry 3 --output "$root/$node_archive" "$node_url"
+            printf "%s  %s\n" "$node_sha256" "$root/$node_archive" | sha256sum --check --strict
+            tar -xJf "$root/$node_archive" -C "$root"
+            node_root="$root/node-${node_version}-linux-${node_arch}"
+            export PATH="$node_root/bin:$PATH"
+            test "$(node --version)" = "$node_version"
+            cd "$root/pi"
+            npm ci --ignore-scripts
+            npm run build --workspace=@earendil-works/pi-coding-agent
+
+            npm run test --workspace=@earendil-works/pi-coding-agent -- --run \
+              test/rpc-jsonl.test.ts \
+              test/rpc-client-process-exit.test.ts \
+              test/suite/regressions/2835-tools-allowlist-filters-extension-tools.test.ts
+
+            echo "Pinned upstream Pi deterministic qualification passed."
           ' --output json
       - name: Start Long Haul reference experiment asynchronously
         if: inputs.operation == 'start-reference'
