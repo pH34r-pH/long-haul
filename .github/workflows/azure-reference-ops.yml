@@ -11,7 +11,6 @@ on:
         options:
           - status
           - bootstrap-diagnostics
-          - pi-adapter-qualification
           - start-reference
           - reference-status
           - reference-log
@@ -74,18 +73,6 @@ jobs:
             echo "=== llama-cli ==="; find /opt/llama.cpp -maxdepth 3 -type f -name llama-cli -ls 2>/dev/null || true
             echo "=== models ==="; find /opt/models -maxdepth 2 -type f -printf "%p %s bytes\n" 2>/dev/null || true
             echo "=== cloud-init tail ==="; tail -n 80 /var/log/cloud-init-output.log 2>/dev/null || true
-          ' --output json
-      - name: Qualify Pi adapter boundary on reference vessel
-        if: inputs.operation == 'pi-adapter-qualification'
-        run: |
-          set -euo pipefail
-          az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript --scripts '
-            set -euo pipefail
-            cd /opt/long-haul/repository
-            git fetch --depth 1 origin "${{ github.sha }}"
-            git checkout --detach "${{ github.sha }}"
-            /opt/long-haul/venv/bin/pip install -e .
-            /opt/long-haul/venv/bin/python -m pytest -q tests/test_pi_adapter.py tests/test_work_contracts.py tests/test_checkpoints.py tests/test_evaluator.py tests/test_progress.py
           ' --output json
       - name: Start Long Haul reference experiment asynchronously
         if: inputs.operation == 'start-reference'
