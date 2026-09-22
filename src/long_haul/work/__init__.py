@@ -25,10 +25,10 @@ from .contracts import (
 from .evaluator import (
     CandidateArtifact,
     CheckRecord,
+    EvidencePacket,
     EvaluationAuthority,
     EvaluationRunner,
     EvaluatorIdentity,
-    EvidencePacket,
     evaluate_packet,
     reopen_regressions,
 )
