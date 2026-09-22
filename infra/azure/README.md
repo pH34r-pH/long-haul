@@ -53,8 +53,3 @@ cloud-init contains only public URLs, pinned revisions, and a GGUF checksum. It 
 `/opt/long-haul/run-reference`; invoke that later through an authenticated management
 path such as protected `az vm run-command invoke` and retain its output directory.
 
-## Pi harness adapter qualification
-
-Before Pi is installed on Kestrel, the protected `Azure reference operations` workflow can run `pi-adapter-qualification` against the generic x86 reference vessel. The operation fetches the exact trusted `main` SHA, reinstalls Long Haul into the existing isolated venv, and runs the hermetic WorkContract/checkpoint/evaluator/progress/Pi-adapter suite. This phase deliberately uses `FakePiBackend`: it qualifies the Long Haul-to-Pi protocol boundary and interruption semantics without adding Node, Pi, credentials, or a persistent coding service to the vessel.
-
-A later real-Pi reference-vessel phase must be separately opt-in, version-pinned, and disposable. Rollback for this qualification is simply checking out and reinstalling the previous Long Haul revision; it does not modify system Python, llama.cpp, or the reference model.
