@@ -80,6 +80,10 @@ Long Haul owns task objective, scope, authority, budgets, success/failure predic
 
 Implementation-time checks are worker feedback, not acceptance evidence. Independent evaluators receive a candidate through a read-only target interface, execute or inspect the WorkContract predicates, and emit an `EvidencePacket` bound to the exact candidate fingerprint plus evaluator/runtime identity. Evidence for an older fingerprint is stale and cannot certify a changed candidate. A later packet may record regressions against prior verified predicates without rewriting the historical packet. Mutation authority is absent from the evaluator interface rather than prohibited only by prompt text.
 
+## Progress and recovery
+
+Long Haul classifies harness steps independently of model prose as information acquisition, state change, verification, recovery, or no-progress. Deterministic action signatures and failure-pair fingerprints permit bounded detection of repeated reads/calls/failures. Successful verification is allowed to repeat without being treated as idle work. Material progress resets the no-progress budget. Interventions are explicit provenance-bearing events containing counters and opaque signatures rather than prompt/tool payloads; exhausting the configured budget can hand the attempt back for checkpoint, retry, or later escalation.
+
 ## Persistence
 
 The MVP uses append-only JSONL events plus materialized views. SQLite remains an optional future index; event provenance remains exportable and human-readable.

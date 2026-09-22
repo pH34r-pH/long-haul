@@ -32,10 +32,22 @@ from .evaluator import (
     evaluate_packet,
     reopen_regressions,
 )
+from .progress import (
+    AttemptStep,
+    ProgressIntervention,
+    ProgressKind,
+    ProgressMonitor,
+    ProgressPolicy,
+    ProgressState,
+    StepOutcome,
+    failure_pair_signature,
+    stable_signature,
+)
 
 __all__ = [
     "AcceptancePredicate",
     "ArtifactState",
+    "AttemptStep",
     "CandidateArtifact",
     "CheckRecord",
     "CheckpointFact",
@@ -48,6 +60,12 @@ __all__ = [
     "FailurePredicate",
     "PredicateEvidence",
     "PredicateKind",
+    "ProgressIntervention",
+    "ProgressKind",
+    "ProgressMonitor",
+    "ProgressPolicy",
+    "ProgressState",
+    "StepOutcome",
     "TaskDigest",
     "WorkBudget",
     "WorkCheckpoint",
@@ -57,8 +75,10 @@ __all__ = [
     "WorkSession",
     "evaluate_packet",
     "evaluate_work",
+    "failure_pair_signature",
     "materialize_checkpoint",
     "render_digest",
     "reopen_regressions",
     "resume_session",
+    "stable_signature",
 ]
