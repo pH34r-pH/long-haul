@@ -43,7 +43,7 @@ def test_repeated_successful_non_verification_calls_trigger():
 
 def test_repeated_failure_pair_triggers_before_generic_loop():
     monitor = ProgressMonitor(ProgressPolicy(repeated_failure_limit=2, consecutive_limit=9, repeated_call_limit=9))
-    failed = dict(outcome=StepOutcome.FAILURE, progress=ProgressKind.NO_PROGRESS, result="validation-error")
+    failed = {"outcome": StepOutcome.FAILURE, "progress": ProgressKind.NO_PROGRESS, "result": "validation-error"}
     assert monitor.observe(step("1", action="edit", **failed)) is None
     intervention = monitor.observe(step("2", action="edit", **failed))
     assert intervention.reason == "repeated_failure_pair"
@@ -51,7 +51,7 @@ def test_repeated_failure_pair_triggers_before_generic_loop():
 
 def test_legitimate_repeated_verification_does_not_trigger_or_accumulate_no_progress():
     monitor = ProgressMonitor(ProgressPolicy(consecutive_limit=9, repeated_call_limit=2, max_no_progress_steps=2))
-    verify = dict(action="pytest", progress=ProgressKind.VERIFICATION, outcome=StepOutcome.SUCCESS)
+    verify = {"action": "pytest", "progress": ProgressKind.VERIFICATION, "outcome": StepOutcome.SUCCESS}
     assert monitor.observe(step("1", **verify)) is None
     assert monitor.observe(step("2", **verify)) is None
     assert monitor.state.no_progress_steps == 0
