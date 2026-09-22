@@ -2,9 +2,9 @@ import pytest
 
 from long_haul.work import (
     AcceptancePredicate,
-    EvidenceState,
     EvaluationRunner,
     EvaluatorIdentity,
+    EvidenceState,
     PredicateKind,
     WorkBudget,
     WorkContract,
