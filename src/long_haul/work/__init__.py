@@ -1,4 +1,14 @@
-"""Work-contract domain models and external acceptance evaluation."""
+"""Work-contract domain models, acceptance, and resumable checkpoints."""
+from .checkpoints import (
+    ArtifactState,
+    CheckpointFact,
+    TaskDigest,
+    WorkCheckpoint,
+    WorkSession,
+    materialize_checkpoint,
+    render_digest,
+    resume_session,
+)
 from .contracts import (
     AcceptancePredicate,
     EvidenceState,
@@ -14,7 +24,23 @@ from .contracts import (
 )
 
 __all__ = [
-    "AcceptancePredicate", "EvidenceState", "FailureKind", "FailurePredicate",
-    "PredicateEvidence", "PredicateKind", "WorkBudget", "WorkContract",
-    "WorkDisposition", "WorkEvaluation", "evaluate_work",
+    "AcceptancePredicate",
+    "ArtifactState",
+    "CheckpointFact",
+    "EvidenceState",
+    "FailureKind",
+    "FailurePredicate",
+    "PredicateEvidence",
+    "PredicateKind",
+    "TaskDigest",
+    "WorkBudget",
+    "WorkCheckpoint",
+    "WorkContract",
+    "WorkDisposition",
+    "WorkEvaluation",
+    "WorkSession",
+    "evaluate_work",
+    "materialize_checkpoint",
+    "render_digest",
+    "resume_session",
 ]
