@@ -11,6 +11,7 @@ on:
         options:
           - status
           - bootstrap-diagnostics
+          - pi-upstream-qualification
           - start-reference
           - reference-status
           - reference-log
@@ -73,6 +74,21 @@ jobs:
             echo "=== llama-cli ==="; find /opt/llama.cpp -maxdepth 3 -type f -name llama-cli -ls 2>/dev/null || true
             echo "=== models ==="; find /opt/models -maxdepth 2 -type f -printf "%p %s bytes\n" 2>/dev/null || true
             echo "=== cloud-init tail ==="; tail -n 80 /var/log/cloud-init-output.log 2>/dev/null || true
+          ' --output json
+      - name: Qualify pinned upstream Pi on reference vessel
+        if: inputs.operation == 'pi-upstream-qualification'
+        run: |
+          set -euo pipefail
+          az vm run-command invoke --resource-group "$TARGET_RESOURCE_GROUP" --name "$VM_NAME" --command-id RunShellScript --scripts '
+            set -euo pipefail
+            root=/opt/long-haul/pi-qualification
+            rm -rf "$root"
+            mkdir -p "$root"
+            git clone --filter=blob:none https://github.com/earendil-works/pi.git "$root/pi"
+            git -C "$root/pi" checkout --detach e40126f578ccc0a4a21f8d30cd8e96c8ecfe1722
+            test "$(python3 -c "import json; print(json.load(open(\"$root/pi/packages/coding-agent/package.json\"))[\"version\"])")" = "0.87.0"
+            echo "Pinned Pi source prepared at $root/pi"
+            echo "Node/Pi execution follows in the next qualification slice; no system packages are modified here."
           ' --output json
       - name: Start Long Haul reference experiment asynchronously
         if: inputs.operation == 'start-reference'
