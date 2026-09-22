@@ -9,16 +9,6 @@ from .checkpoints import (
     render_digest,
     resume_session,
 )
-from .evaluator import (
-    CandidateArtifact,
-    CheckRecord,
-    EvidencePacket,
-    EvaluationAuthority,
-    EvaluationRunner,
-    EvaluatorIdentity,
-    evaluate_packet,
-    reopen_regressions,
-)
 from .contracts import (
     AcceptancePredicate,
     EvidenceState,
@@ -32,6 +22,17 @@ from .contracts import (
     WorkEvaluation,
     evaluate_work,
 )
+from .evaluator import (
+    CandidateArtifact,
+    CheckRecord,
+    EvaluationAuthority,
+    EvaluationRunner,
+    EvaluatorIdentity,
+    EvidencePacket,
+    evaluate_packet,
+    reopen_regressions,
+)
+
 
 __all__ = [
     "AcceptancePredicate",
@@ -39,10 +40,10 @@ __all__ = [
     "CandidateArtifact",
     "CheckRecord",
     "CheckpointFact",
-    "EvidencePacket",
     "EvaluationAuthority",
     "EvaluationRunner",
     "EvaluatorIdentity",
+    "EvidencePacket",
     "EvidenceState",
     "FailureKind",
     "FailurePredicate",
