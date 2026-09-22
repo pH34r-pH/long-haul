@@ -33,7 +33,6 @@ from .evaluator import (
     reopen_regressions,
 )
 
-
 __all__ = [
     "AcceptancePredicate",
     "ArtifactState",
