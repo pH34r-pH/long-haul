@@ -25,8 +25,10 @@ def profile(id="resident", resources=None, strategy="resident"):
 
 def test_manifests_and_compositional_artifacts():
     root=Path(__file__).parents[1]
-    a=load_vessel(root/"fleet/anchorage.yaml"); k=load_vessel(root/"fleet/kestrel.yaml")
+    a=load_vessel(root/"tests/fixtures/vessels/station.yaml"); k=load_vessel(root/"tests/fixtures/vessels/ship.yaml")
+    assert (a.id, k.id) == ("station-example", "ship-example")
     assert any(r.kind.value=="storage" for r in a.resources) and any(r.kind.value=="storage" for r in k.resources)
+    assert all(not link.measured for vessel in (a, k) for link in vessel.links)
     assert profile().artifact.key == "test@Q4"
     assert len({ExecutionMode.LOCAL,ExecutionMode.POOL,ExecutionMode.PIPELINE,ExecutionMode.COMPOSE}) == 4
 

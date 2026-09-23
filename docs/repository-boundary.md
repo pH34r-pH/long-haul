@@ -11,4 +11,6 @@ The private fleet control plane consumes an explicit immutable commit from this 
 
 Existing deployment-specific material in this repository predates the split. It should be disentangled incrementally rather than deleted wholesale. Generic capability remains public; operator-specific deployment and lifecycle automation moves to the private fleet repository.
 
-Current review targets include the concrete `fleet/anchorage.yaml` and `fleet/kestrel.yaml` manifests, Azure provisioning/lifecycle material under `infra/azure/`, Azure deployment workflows, and hardware-validation procedures. Each must be classified into reusable product capability versus private deployment before migration.
+The concrete Anchorage and Kestrel declarations are preserved under `vessels/` in private Fleet. Public manifest examples under `tests/fixtures/vessels/` are synthetic and used only to validate portable schema/loader behavior. Source fixtures and hardware-validation guidance never represent live operator state.
+
+Azure provisioning/lifecycle material under `infra/azure/` and Azure deployment workflows still await the private deployment and rollback parity gates. Their removal requires revoking the public GitHub OIDC federated trust and Azure grants; deleting a workflow alone does not remove authority. See Fleet #2/#176 and Long Haul #40.

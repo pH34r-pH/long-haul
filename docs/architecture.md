@@ -6,7 +6,7 @@ Long Haul separates institutional identity from hardware and model embodiment.
 
 - **Crew member**: persistent operational identity, role, authority scope, competence history, relationships, and continuity record.
 - **Embodiment**: current model/runtime/vessel/resource combination implementing a crew member.
-- **Vessel**: physical device or host such as Anchorage or Kestrel.
+- **Vessel**: physical device or host, represented by a normalized manifest.
 - **Resource**: CPU, GPU, NPU, memory, storage, sensor, or other individually addressable component. Capacity is typed; unlike capacities are never summed implicitly.
 - **Link**: measured relationship between resources or vessels (PCIe, memory, Tailscale, Ethernet, etc.).
 - **Mission**: unit of work with objectives, constraints, and outcome metrics.
@@ -31,15 +31,9 @@ Long Haul separates institutional identity from hardware and model embodiment.
 11. Model feasibility follows a validated inference profile over measured topology, not nominal size or aggregate VRAM.
 12. Engineering completion is determined by external predicate evidence; model or harness self-report cannot satisfy a work contract.
 
-## Initial fleet topology
+## Example fleet topology
 
-### Anchorage
-
-Fixed station. `ANC-G0` and `ANC-G1` are both GTX 1070s but are explicitly modeled as asymmetric because the B650 Tomahawk motherboard gives the secondary slot a lower-bandwidth host path. Benchmarks, not nominal GPU equality, determine split ratios.
-
-### Kestrel
-
-Jetson Orin Nano ship. Primarily an independent small-model/edge worker, with optional participation in cross-node execution. It should degrade gracefully when disconnected from Anchorage.
+The public examples model a fixed station with potentially asymmetric accelerator paths and a portable ARM64 edge vessel. Benchmarks, rather than nominal device equality, determine split ratios. Cross-node execution must degrade gracefully when a direct link is lost. Concrete operator manifests and measurements are held in private Fleet.
 
 ## Initial crew
 

@@ -1,0 +1,27 @@
+id: ship-example
+name: Example Ship (SIMULATED)
+class_name: ship
+resources:
+  - id: SHP-C0
+    kind: cpu
+    model: Synthetic ARM CPU
+    architecture: arm64
+  - id: SHP-G0
+    kind: gpu
+    model: Synthetic unified-memory accelerator
+    capacities:
+      - kind: memory
+        amount: 4
+        unit: GiB
+  - id: SHP-S0
+    kind: storage
+    capacities:
+      - kind: storage
+        amount: 64
+        unit: GiB
+links:
+  - source: SHP-C0
+    target: SHP-G0
+    kind: memory
+    measured: false
+    notes: Illustrative shared-memory link, not a hardware observation.

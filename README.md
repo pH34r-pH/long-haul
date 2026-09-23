@@ -17,10 +17,9 @@ The initial crew is:
 - `NAV-01` — navigator / routing planner
 - `ENG-01` — hardware/runtime specialist
 
-The initial fleet is:
-
-- `Anchorage` — fixed desktop station with asymmetric dual GTX 1070 topology
-- `Kestrel` — NVIDIA Jetson Orin Nano ship, connected over Tailscale
+The test fixtures include a station with asymmetric accelerators and an edge
+ship that may lose its direct link. These examples are simulated, while the
+operator's physical vessel inventories belong in private Fleet.
 
 ## Execution modes
 
