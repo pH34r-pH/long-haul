@@ -24,6 +24,7 @@ REPOSITORY = "pH34r-pH/long-haul"
 WORKFLOW_PATH = ".github/workflows/ci.yml"
 TARGET = "longhaul-reference"
 BUILD_TOOLS = ("pip==24.3.1", "setuptools==75.8.2", "wheel==0.45.1")
+PACKAGE_SCHEMA_VERSION = 2
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 MAX_SOURCE_BYTES = 150 * 1024 * 1024
 MAX_WHEEL_BYTES = 100 * 1024 * 1024
@@ -169,8 +170,18 @@ def verify_project_wheel(path: Path, name: str, version: str) -> None:
         raise PackageError("Project wheel metadata differs from checked pyproject.toml")
 
 
+def validate_runtime(runtime: dict) -> None:
+    if (set(runtime) != {"pythonVersion", "pythonMajorMinor", "platform", "machine"}
+            or runtime.get("pythonMajorMinor") != "3.12"
+            or runtime.get("platform") != "linux" or runtime.get("machine") != "x86_64"
+            or not isinstance(runtime.get("pythonVersion"), str)
+            or re.fullmatch(r"3\.12\.[0-9]+", runtime["pythonVersion"]) is None):
+        raise PackageError("Package schema v2 requires Python 3.12 on Linux x86_64")
+
+
 def make_bundle(source: dict, runtime: dict, build_tools: dict, package: dict,
                 wheels: Path, output_dir: Path) -> dict:
+    validate_runtime(runtime)
     wheel_files = sorted(wheels.glob("*.whl"))
     if not wheel_files or len(wheel_files) > MAX_WHEELS:
         raise PackageError("Offline wheelhouse is empty or too large")
@@ -184,7 +195,7 @@ def make_bundle(source: dict, runtime: dict, build_tools: dict, package: dict,
     if package["wheelPath"] not in {item["path"] for item in wheel_records}:
         raise PackageError("Project wheel is absent from offline wheelhouse")
     common = {
-        "schemaVersion": 1,
+        "schemaVersion": PACKAGE_SCHEMA_VERSION,
         "kind": "long-haul.offline-package",
         "state": "built-on-public-runner-no-deployment",
         "target": TARGET,
@@ -228,8 +239,8 @@ def make_bundle(source: dict, runtime: dict, build_tools: dict, package: dict,
 
 def build(repo: Path, output_dir: Path, environment: dict[str, str]) -> dict:
     source = source_identity(repo, environment)
-    if sys.version_info[:2] != (3, 11) or sys.platform != "linux" or platform.machine() != "x86_64":
-        raise PackageError("Long Haul offline package requires Python 3.11 on Linux x86_64")
+    if sys.version_info[:2] != (3, 12) or sys.platform != "linux" or platform.machine() != "x86_64":
+        raise PackageError("Long Haul offline package schema v2 requires Python 3.12 on Linux x86_64")
     with tempfile.TemporaryDirectory(prefix="longhaul-public-package-") as temporary:
         work = Path(temporary)
         archive = work / "source.tar"
@@ -275,7 +286,7 @@ def build(repo: Path, output_dir: Path, environment: dict[str, str]) -> dict:
             raise PackageError("Build tools differ from the pinned producer versions")
         runtime = {
             "pythonVersion": platform.python_version(),
-            "pythonMajorMinor": "3.11",
+            "pythonMajorMinor": "3.12",
             "platform": "linux",
             "machine": "x86_64",
         }
