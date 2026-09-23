@@ -12,3 +12,24 @@ jobs:
       - run: pip install -e '.[dev]'
       - run: python -m ruff check src tests
       - run: python -m pytest -q
+
+  package:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - name: Build and verify offline Long Haul package
+        run: python3 scripts/build_offline_package.py --output-dir "$RUNNER_TEMP/longhaul-offline-package"
+      - name: Publish checked package bytes
+        uses: actions/upload-artifact@v4
+        with:
+          name: longhaul-offline-package-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/longhaul-offline-package/
+          if-no-files-found: error
+          retention-days: 30
