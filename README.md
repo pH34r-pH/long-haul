@@ -1,5 +1,7 @@
 # Long Haul
 
+[Exact-source Fleet handoff](docs/fleet-source-contract.md) records the public check and package provenance required before private deployment.
+
 Long Haul is a heterogeneous local inference crew: a topology-aware system for coordinating models, compute resources, and persistent crew identities across mismatched hardware over Tailscale.
 
 The project is intentionally built for the long haul: hardware, models, runtimes, and even assumptions about artificial identity may change over years or decades. The architecture therefore separates **crew identity**, **model embodiment**, **vessels**, **compute resources**, and **missions**.
