@@ -1,0 +1,29 @@
+id: station-example
+name: Example Station (SIMULATED)
+class_name: station
+resources:
+  - id: STN-C0
+    kind: cpu
+    model: Synthetic CPU
+  - id: STN-G0
+    kind: gpu
+    model: Synthetic accelerator
+    memory_mb: 4096
+  - id: STN-M0
+    kind: memory
+    capacities:
+      - kind: memory
+        amount: 16
+        unit: GiB
+  - id: STN-S0
+    kind: storage
+    capacities:
+      - kind: storage
+        amount: 256
+        unit: GiB
+links:
+  - source: STN-C0
+    target: STN-G0
+    kind: pcie
+    measured: false
+    notes: Illustrative connection, not a hardware observation.

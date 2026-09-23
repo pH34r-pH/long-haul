@@ -17,8 +17,8 @@ Use repeated execution-plan selection tasks over controlled variations of:
 - context length
 - latency-sensitive vs throughput-sensitive objectives
 - available VRAM/RAM
-- ANC-G0/ANC-G1 topology
-- Kestrel available/unavailable
+- asymmetric accelerator topology
+- edge vessel available/unavailable
 - Tailscale direct vs poor/relayed path
 - runtime availability
 - injected stale or misleading telemetry
