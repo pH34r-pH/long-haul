@@ -13,3 +13,10 @@ The Python 3.12 target matches Fleet's observed reference interpreter major/mino
 Fleet must recheck the successful main-push CI run and its `test` and `package` jobs, download the exact artifact with narrowly scoped `Actions:read`, recompute the bundle and member digests, inspect wheel metadata, and keep the approved bytes for any deployment or rollback. Later reruns can resolve different versions from the lower-bound dependencies; they cannot silently replace an already qualified package for the same release identity.
 
 Fleet owns Azure credentials, runners, deployment, probes and rollback. This public repository's legacy Azure workflows remain a transition path under #40 until Fleet has deployed a checked source and verified recovery. Public CI does not carry private dispatch or OIDC authority. See Fleet #176/#177 for the protected identity and exact-SHA intake.
+
+
+## Fleet operator handoff
+
+The public main-push `CI/test` and `package` jobs qualify candidate bytes; they do not deploy the public runtime or Fleet reference VM. Fleet polls for new main candidates every six hours. For an exact-SHA retry, use Fleet's **Long Haul checked release request** manual workflow with the full 40-character SHA; it repeats main ancestry and exact run/job checks before creating or reading the private archive. The archive is a retained input, not deployment approval.
+
+The Long Haul MCP endpoint and reference VM have separate protected Fleet operations. No runtime deployment follows a passing source check automatically. Review the selected release and operation before using the manual what-if/apply/rollback workflows; do not infer a current deployment or successful rollback from a source or archive receipt. See the [Fleet workflow and deployed-surface map](https://github.com/pH34r-pH/long-haul-fleet/blob/main/docs/workflow-and-surface-map.md), [Fleet #322](https://github.com/pH34r-pH/long-haul-fleet/issues/322), and [Fleet #324](https://github.com/pH34r-pH/long-haul-fleet/issues/324).
