@@ -15,7 +15,10 @@ from build_offline_package import (
     PackageError,
     extract_source,
     make_bundle,
+    validate_runtime,
 )
+
+RUNTIME = {"pythonVersion": "3.12.3", "pythonMajorMinor": "3.12", "platform": "linux", "machine": "x86_64"}
 
 
 def test_bundle_receipt_covers_exact_regular_members(tmp_path):
@@ -32,8 +35,8 @@ def test_bundle_receipt_covers_exact_regular_members(tmp_path):
         "artifactName": f"longhaul-offline-package-{sha}-123-1",
     }
     runtime = {
-        "pythonVersion": "3.11.16",
-        "pythonMajorMinor": "3.11",
+        "pythonVersion": "3.12.3",
+        "pythonMajorMinor": "3.12",
         "platform": "linux",
         "machine": "x86_64",
     }
@@ -41,7 +44,7 @@ def test_bundle_receipt_covers_exact_regular_members(tmp_path):
     wheels = tmp_path / "wheels"
     wheels.mkdir()
     project_wheel = wheels / "long_haul-0.1.0-py3-none-any.whl"
-    dependency_wheel = wheels / "PyYAML-6.0.3-cp311-cp311-manylinux.whl"
+    dependency_wheel = wheels / "PyYAML-6.0.3-cp312-cp312-manylinux.whl"
     project_wheel.write_bytes(b"project wheel bytes")
     dependency_wheel.write_bytes(b"dependency wheel bytes")
     package = {
@@ -68,6 +71,8 @@ def test_bundle_receipt_covers_exact_regular_members(tmp_path):
     assert manifest["files"] == [item for item in receipt["files"] if item["path"] != "manifest.json"]
     assert manifest["source"] == receipt["source"]
     assert manifest["package"] == receipt["package"]
+    assert manifest["schemaVersion"] == receipt["schemaVersion"] == 2
+    assert manifest["runtime"] == receipt["runtime"] == runtime
 
 
 def test_bundle_rejects_missing_project_wheel_and_symlinks(tmp_path):
@@ -75,11 +80,11 @@ def test_bundle_rejects_missing_project_wheel_and_symlinks(tmp_path):
     wheels.mkdir()
     (wheels / "dependency.whl").write_bytes(b"dependency")
     with pytest.raises(PackageError, match="Project wheel is absent"):
-        make_bundle({"sha": "a" * 40}, {}, {}, {"wheelPath": "wheelhouse/project.whl"},
+        make_bundle({"sha": "a" * 40}, RUNTIME, {}, {"wheelPath": "wheelhouse/project.whl"},
                     wheels, tmp_path / "out")
     (wheels / "project.whl").symlink_to(wheels / "dependency.whl")
     with pytest.raises(PackageError, match="linked wheel"):
-        make_bundle({"sha": "a" * 40}, {}, {}, {"wheelPath": "wheelhouse/project.whl"},
+        make_bundle({"sha": "a" * 40}, RUNTIME, {}, {"wheelPath": "wheelhouse/project.whl"},
                     wheels, tmp_path / "out")
 
 
@@ -96,3 +101,15 @@ def test_source_extractor_rejects_links_and_parent_paths(tmp_path):
             tar.addfile(member, io.BytesIO())
         with pytest.raises(PackageError, match="unsafe path"):
             extract_source(archive, sha, tmp_path / "source")
+
+
+@pytest.mark.parametrize("runtime", [
+    {**RUNTIME, "pythonVersion": "3.11.16", "pythonMajorMinor": "3.11"},
+    {**RUNTIME, "pythonVersion": "3.11.16"},
+    {**RUNTIME, "machine": "aarch64"},
+    {**RUNTIME, "platform": "win32"},
+    {},
+])
+def test_v2_refuses_other_runtime_or_inconsistent_version(runtime):
+    with pytest.raises(PackageError, match="schema v2 requires"):
+        validate_runtime(runtime)
