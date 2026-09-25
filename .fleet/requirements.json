@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "repository": "pH34r-pH/long-haul",
+  "manifests": [
+    {"path": "pyproject.toml", "kind": "python-project"},
+    {"path": ".github/workflows/ci.yml", "kind": "workflow"},
+    {"path": "docs/hardware-validation.md", "kind": "documentation"}
+  ],
+  "profiles": {
+    "python-core": {
+      "phases": ["test", "package", "runtime"],
+      "platforms": [{"os":"linux","arch":"amd64","abi":"glibc"},{"os":"linux","arch":"arm64","abi":"glibc"}],
+      "tools": {"python":{"sources":["pyproject.toml",".github/workflows/ci.yml"]},"pip":{"sources":[".github/workflows/ci.yml"]}},
+      "entrypoints": ["python -m ruff check src tests", "python -m pytest -q", "python3 scripts/build_offline_package.py --output-dir <output>"]
+    },
+    "linux-inventory": {
+      "phases": ["inventory"],
+      "platforms": [{"os":"linux","arch":"amd64","abi":"glibc"},{"os":"linux","arch":"arm64","abi":"glibc"}],
+      "tools": {"lspci":{"sources":["docs/hardware-validation.md"]},"lsblk":{"sources":["docs/hardware-validation.md"]},"findmnt":{"sources":["docs/hardware-validation.md"]},"tailscale":{"sources":["docs/hardware-validation.md"]}},
+      "entrypoints": [],
+      "notes": "Accelerator inventory and runtime builds require separate qualified platform profiles; this does not imply CUDA support."
+    }
+  }
+}

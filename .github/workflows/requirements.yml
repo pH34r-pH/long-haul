@@ -1,0 +1,24 @@
+name: Requirements contract
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  requirements:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: cue-lang/setup-cue@a93fa358375740cd8b0078f76355512b9208acb1 # v1.0.1
+        with:
+          version: v0.17.0
+      - name: Require CUE and exercise contract failures
+        run: |
+          cue version
+          python3 -m unittest discover -s tools -p test_requirements.py -v
+      - name: Validate and fingerprint own requirements
+        run: python3 tools/requirements.py --output "$RUNNER_TEMP/requirements.json"
