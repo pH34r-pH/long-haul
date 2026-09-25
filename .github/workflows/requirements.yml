@@ -13,12 +13,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - uses: cue-lang/setup-cue@a93fa358375740cd8b0078f76355512b9208acb1 # v1.0.1
+      - name: Validate own requirements through the shared action
+        uses: ./.github/actions/requirements
         with:
-          version: v0.17.0
+          output: ${{ runner.temp }}/requirements.json
       - name: Require CUE and exercise contract failures
         run: |
           cue version
           python3 -m unittest discover -s tools -p test_requirements.py -v
-      - name: Validate and fingerprint own requirements
-        run: python3 tools/requirements.py --output "$RUNNER_TEMP/requirements.json"
