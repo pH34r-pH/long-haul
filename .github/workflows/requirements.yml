@@ -20,4 +20,4 @@ jobs:
       - name: Require CUE and exercise contract failures
         run: |
           cue version
-          python3 -m unittest discover -s tools -p test_requirements.py -v
+          python3 -m unittest discover -s tools -p 'test_requirements*.py' -v
