@@ -1,0 +1,23 @@
+name: Requirements contract
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  requirements:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate own requirements through the shared action
+        uses: ./.github/actions/requirements
+        with:
+          output: ${{ runner.temp }}/requirements.json
+      - name: Require CUE and exercise contract failures
+        run: |
+          cue version
+          python3 -m unittest discover -s tools -p test_requirements.py -v
