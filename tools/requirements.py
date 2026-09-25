@@ -19,6 +19,8 @@ from pathlib import Path, PurePosixPath
 SCHEMA = Path(__file__).resolve().parents[1] / 'contracts/requirements.cue'
 MAX_DECLARATION = 256 * 1024
 MAX_MANIFEST = 16 * 1024 * 1024
+MAX_MANIFESTS = 128
+MAX_TOTAL_BYTES = 64 * 1024 * 1024
 
 
 def safe_path(root: Path, name: str) -> Path:
@@ -27,10 +29,21 @@ def safe_path(root: Path, name: str) -> Path:
     relative = PurePosixPath(name)
     if relative.is_absolute() or any(part in ('..', '.git') for part in relative.parts):
         raise ValueError('manifest path is outside the allowed source tree')
-    target = (root / relative).resolve(strict=True)
-    if not target.is_relative_to(root.resolve()) or not target.is_file():
+    base = root.resolve(strict=True)
+    target = (base / relative).resolve(strict=True)
+    if not target.is_relative_to(base) or not target.is_file():
         raise ValueError('manifest must be a regular file inside the source tree')
+    if '.git' in target.relative_to(base).parts:
+        raise ValueError('manifest must not resolve into Git metadata')
     return target
+
+
+def read_bounded(path: Path, maximum: int) -> bytes:
+    with path.open('rb') as stream:
+        content = stream.read(maximum + 1)
+    if len(content) > maximum:
+        raise ValueError('source input exceeds size limit')
+    return content
 
 
 def unique_object(pairs):
@@ -44,23 +57,25 @@ def unique_object(pairs):
 
 def load(root: Path) -> tuple[dict, bytes]:
     path = safe_path(root, '.fleet/requirements.json')
-    if path.stat().st_size > MAX_DECLARATION:
-        raise ValueError('requirements declaration exceeds size limit')
-    raw = path.read_bytes()
+    raw = read_bounded(path, MAX_DECLARATION)
     data = json.loads(raw, object_pairs_hook=unique_object)
     return data, raw
 
 
 def inventory(root: Path, data: dict, raw: bytes) -> dict:
+    if len(data['manifests']) > MAX_MANIFESTS or len(data['profiles']) > 128:
+        raise ValueError('too many manifests or profiles')
     manifests = {}
+    total_bytes = 0
     for item in data['manifests']:
         name = item['path']
         if name in manifests:
             raise ValueError('duplicate manifest path')
         path = safe_path(root, name)
-        if path.stat().st_size > MAX_MANIFEST:
-            raise ValueError('native manifest exceeds size limit')
-        content = path.read_bytes()
+        content = read_bounded(path, MAX_MANIFEST)
+        total_bytes += len(content)
+        if total_bytes > MAX_TOTAL_BYTES:
+            raise ValueError('native manifest set exceeds total size limit')
         record = {'kind': item['kind'], 'sha256': hashlib.sha256(content).hexdigest()}
         # Native formats stay authoritative; no version solving or copied pins.
         if item['kind'] == 'python-project':
@@ -73,12 +88,19 @@ def inventory(root: Path, data: dict, raw: bytes) -> dict:
         elif item['kind'] == 'rust-project':
             native = tomllib.loads(content.decode())
             record['native'] = {key: native.get('package', {})[key] for key in ('edition', 'rust-version') if key in native.get('package', {})}
+        elif item['kind'] == 'toolchain' and path.name in {'.nvmrc', '.node-version', '.python-version', 'lean-toolchain', 'rust-toolchain'}:
+            lines = [line.strip() for line in content.decode().splitlines() if line.strip() and not line.lstrip().startswith('#')]
+            if len(lines) != 1 or len(lines[0]) > 512:
+                raise ValueError('expected one bounded native toolchain selection')
+            record['native'] = {'selection': lines[0]}
         manifests[name] = record
     if not data['profiles']:
         raise ValueError('at least one named profile is required')
     for name, profile in data['profiles'].items():
         if not re.fullmatch(r'[a-z][a-z0-9-]*', name) or not profile['tools']:
             raise ValueError('profile names must be stable IDs and tools nonempty')
+        if len(profile['tools']) > 256:
+            raise ValueError('too many tool capabilities')
         for tool, need in profile['tools'].items():
             if not re.fullmatch(r'[a-z][a-z0-9+.-]*', tool):
                 raise ValueError('invalid tool capability name')
@@ -109,7 +131,7 @@ def main() -> int:
         if args.output:
             args.output.write_text(text, encoding='utf-8')
         print(text, end='')
-    except (ValueError, OSError, KeyError, TypeError, subprocess.TimeoutExpired) as error:
+    except (ValueError, OSError, KeyError, TypeError, RuntimeError, subprocess.TimeoutExpired) as error:
         print(f'Requirements check failed ({type(error).__name__}); verify CUE, declaration and source paths.', file=sys.stderr)
         return 1
     return 0

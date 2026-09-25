@@ -25,4 +25,5 @@ runs:
         set -euo pipefail
         args=(--root "$SOURCE_ROOT")
         if [[ -n "$REPORT_OUTPUT" ]]; then args+=(--output "$REPORT_OUTPUT"); fi
-        python3 "$TOOL_ACTION_PATH/../../../tools/requirements.py" "${args[@]}"
+        # Ignore candidate-controlled PYTHONPATH and user-site import hooks.
+        python3 -I "$TOOL_ACTION_PATH/../../../tools/requirements.py" "${args[@]}"
