@@ -1,0 +1,28 @@
+name: Validate source requirements
+description: Validate CUE requirements and fingerprint native source manifests without installing the requested workload.
+inputs:
+  root:
+    description: Local source checkout to inspect; never an executable entrypoint.
+    required: false
+    default: .
+  output:
+    description: Optional local JSON report destination.
+    required: false
+    default: ''
+runs:
+  using: composite
+  steps:
+    - uses: cue-lang/setup-cue@a93fa358375740cd8b0078f76355512b9208acb1 # v1.0.1
+      with:
+        version: v0.17.0
+    - name: Validate declared requirements
+      shell: bash
+      env:
+        TOOL_ACTION_PATH: ${{ github.action_path }}
+        SOURCE_ROOT: ${{ inputs.root }}
+        REPORT_OUTPUT: ${{ inputs.output }}
+      run: |
+        set -euo pipefail
+        args=(--root "$SOURCE_ROOT")
+        if [[ -n "$REPORT_OUTPUT" ]]; then args+=(--output "$REPORT_OUTPUT"); fi
+        python3 "$TOOL_ACTION_PATH/../../../tools/requirements.py" "${args[@]}"
