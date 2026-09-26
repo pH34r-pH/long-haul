@@ -4,6 +4,8 @@ let
   longHaul = config.languages.python.import ./. {};
 in
 {
+  name = "long-haul";
+
   packages = [
     pkgs.llama-cpp
   ];
@@ -23,6 +25,16 @@ in
   };
 
   outputs."long-haul" = longHaul;
+
+  containers."runtime" = {
+    name = "long-haul-runtime";
+    copyToRoot = [
+      longHaul
+      pkgs.llama-cpp
+    ];
+    entrypoint = [ "/bin/bash" "-lc" ];
+    startupCommand = "set -e; /env/bin/llama-cli --version; /env/bin/python -c 'import long_haul; assert long_haul.Vessel'";
+  };
 
   enterTest = ''
     python -m ruff check src tests
