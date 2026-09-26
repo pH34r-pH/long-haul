@@ -7,6 +7,7 @@ on:
       - 'devenv.nix'
       - 'devenv.yaml'
       - 'devenv.lock'
+      - 'uv.lock'
       - '.github/workflows/prototype-devenv.yml'
       - 'pyproject.toml'
       - 'src/**'
@@ -14,6 +15,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: prototype-devenv-runtime-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   cpu-environment:
@@ -26,16 +31,14 @@ jobs:
       - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
       - name: Install devenv
         run: nix profile add nixpkgs#devenv
-      - name: Exercise Python + nixpkgs llama.cpp environment
-        run: devenv test
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-        with:
-          version: "0.12.19"
-      - name: Resolve the first standard uv lock for review
+      - name: Resolve standard devenv inputs for review
         run: |
           set -euo pipefail
-          uv lock --python 3.12
-          echo '---BEGIN-UV-LOCK---'
-          cat uv.lock
-          echo '---END-UV-LOCK---'
-          sha256sum uv.lock
+          devenv update
+          echo '---BEGIN-DEVENV-LOCK---'
+          cat devenv.lock
+          echo '---END-DEVENV-LOCK---'
+      - name: Exercise locked Python + nixpkgs llama.cpp environment
+        run: devenv test
+      - name: Build the standard uv2nix Python output
+        run: devenv build outputs.long-haul

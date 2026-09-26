@@ -1,5 +1,8 @@
-{ pkgs, ... }:
+{ pkgs, config, ... }:
 
+let
+  longHaul = config.languages.python.import ./. {};
+in
 {
   packages = [
     pkgs.llama-cpp
@@ -9,12 +12,22 @@
     enable = true;
     package = pkgs.python312;
     venv.enable = true;
+    uv = {
+      enable = true;
+      sync = {
+        enable = true;
+        extras = [ "dev" ];
+        arguments = [ "--locked" ];
+      };
+    };
   };
 
+  outputs."long-haul" = longHaul;
+
   enterTest = ''
-    python -m pip install -e '.[dev]'
     python -m ruff check src tests
     python -m pytest -q
+    python -c 'import long_haul; assert long_haul.Vessel'
     llama-cli --version
   '';
 }
