@@ -4,7 +4,10 @@
   "manifests": [
     {"path": "pyproject.toml", "kind": "python-project"},
     {"path": ".github/workflows/ci.yml", "kind": "workflow"},
-    {"path": "docs/hardware-validation.md", "kind": "documentation"}
+    {"path": "docs/hardware-validation.md", "kind": "documentation"},
+    {"path": "infra/azure/cloud-init/reference-vessel.yaml", "kind": "build"},
+    {"path": "src/long_haul/adapters/llama_cpp.py", "kind": "build"},
+    {"path": "docs/native-runtime-prerequisites.md", "kind": "documentation"}
   ],
   "profiles": {
     "python-core": {
@@ -19,6 +22,30 @@
       "tools": {"lspci":{"sources":["docs/hardware-validation.md"]},"lsblk":{"sources":["docs/hardware-validation.md"]},"findmnt":{"sources":["docs/hardware-validation.md"]},"tailscale":{"sources":["docs/hardware-validation.md"]}},
       "entrypoints": [],
       "notes": "Accelerator inventory and runtime builds require separate qualified platform profiles; this does not imply CUDA support."
+    },
+    "llama-cpp-build": {
+      "phases": ["build"],
+      "platforms": [{"os":"linux","arch":"amd64","abi":"glibc"}],
+      "tools": {
+        "bash": {"sources":["infra/azure/cloud-init/reference-vessel.yaml"]},
+        "git": {"sources":["infra/azure/cloud-init/reference-vessel.yaml"]},
+        "cmake": {"sources":["infra/azure/cloud-init/reference-vessel.yaml"]},
+        "ninja": {"sources":["infra/azure/cloud-init/reference-vessel.yaml"]},
+        "cc": {"sources":["infra/azure/cloud-init/reference-vessel.yaml"]},
+        "c++": {"sources":["infra/azure/cloud-init/reference-vessel.yaml"]}
+      },
+      "entrypoints": [],
+      "notes": "Describes the existing single-job CMake/Ninja llama-cli reference build, not permission to execute legacy cloud-init. The external llama.cpp revision and its native CMake files must be bound by the deployment owner. No compiler installation, source revision or GPU backend is selected by this declaration."
+    },
+    "llama-cpp-cpu-runtime": {
+      "phases": ["runtime"],
+      "platforms": [{"os":"linux","arch":"amd64","abi":"glibc"}],
+      "tools": {
+        "python": {"sources":["pyproject.toml", "src/long_haul/adapters/llama_cpp.py"]},
+        "llama-cli": {"sources":["src/long_haul/adapters/llama_cpp.py", "docs/native-runtime-prerequisites.md"]}
+      },
+      "entrypoints": [],
+      "notes": "Existing CPU resident adapter only. A bounded successful identity probe is necessary, not proof of model loading, execution, benchmark performance or model authenticity. Requires an independently provisioned runtime and reviewed GGUF artifact; does not install CMake/compiler tools on a runtime-only host. Optional GPU and other OS/ABI paths need separate adapter-specific qualification."
     }
   }
 }
