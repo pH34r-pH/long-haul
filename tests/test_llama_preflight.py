@@ -11,7 +11,12 @@ import pytest
 
 from long_haul.adapters import llama_cpp as m
 from long_haul.models import InferenceProfile, ModelArtifact
-from long_haul.runtime import ExecutionRequest, FailureClass, ValidationDepth, ValidationState
+from long_haul.runtime import (
+    ExecutionRequest,
+    FailureClass,
+    ValidationDepth,
+    ValidationState,
+)
 
 pytestmark = pytest.mark.skipif(os.name != "posix", reason="declared Linux/POSIX runtime probe")
 
