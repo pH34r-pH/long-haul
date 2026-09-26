@@ -28,3 +28,14 @@ jobs:
         run: nix profile add nixpkgs#devenv
       - name: Exercise Python + nixpkgs llama.cpp environment
         run: devenv test
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.12.19"
+      - name: Resolve the first standard uv lock for review
+        run: |
+          set -euo pipefail
+          uv lock --python 3.12
+          echo '---BEGIN-UV-LOCK---'
+          cat uv.lock
+          echo '---END-UV-LOCK---'
+          sha256sum uv.lock
