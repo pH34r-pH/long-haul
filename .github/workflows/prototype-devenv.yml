@@ -41,6 +41,10 @@ jobs:
         run: |
           set -euo pipefail
           devenv container build runtime
-          test "$(docker image inspect long-haul-runtime:latest --format '{{.Config.User}}')" = "user"
+          # container run copies the Nix OCI derivation into Docker and executes
+          # the strict runtime-only assertions from devenv.nix.
           devenv container run runtime
-          docker image inspect long-haul-runtime:latest             --format 'image_id={{.Id}} user={{.Config.User}}'             | tee -a "$GITHUB_STEP_SUMMARY"
+          test "$(docker image inspect long-haul-runtime:latest --format '{{.Config.User}}')" = "user"
+          docker image inspect long-haul-runtime:latest \
+            --format 'image_id={{.Id}} size_bytes={{.Size}} user={{.Config.User}}' \
+            | tee -a "$GITHUB_STEP_SUMMARY"
