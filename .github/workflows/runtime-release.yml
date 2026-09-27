@@ -1,0 +1,152 @@
+name: Public CPU runtime
+
+on:
+  pull_request:
+    paths:
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'devenv.nix'
+      - 'devenv.yaml'
+      - 'devenv.lock'
+      - 'src/**'
+      - 'tests/**'
+      - '.github/workflows/runtime-release.yml'
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-cpu-runtime-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DEVENV_VERSION: v2.4.0
+  IMAGE_NAME: ghcr.io/ph34r-ph/long-haul
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - name: Install the reviewed devenv CLI
+        run: nix profile add "github:cachix/devenv/${DEVENV_VERSION}"
+      - name: Require committed Python lock
+        run: devenv shell -- uv lock --check
+      - name: Exercise the locked release environment
+        run: devenv test
+      - name: Build the standard uv2nix runtime output
+        run: devenv build outputs.long-haul
+      - name: Build and verify the runtime-only OCI image
+        run: |
+          set -euo pipefail
+          devenv container build runtime
+          test "$(docker image inspect long-haul-runtime:latest --format '{{.Config.User}}')" = "user"
+          devenv container run runtime
+          docker image inspect long-haul-runtime:latest \
+            --format 'image_id={{.Id}} size_bytes={{.Size}} user={{.Config.User}}' \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require a release tag on main history
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+      - name: Install the reviewed devenv CLI
+        run: nix profile add "github:cachix/devenv/${DEVENV_VERSION}"
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build, smoke, and push the immutable public image
+        id: image
+        run: |
+          set -euo pipefail
+          devenv shell -- uv lock --check
+          devenv test
+          devenv build outputs.long-haul
+          devenv container build runtime
+          devenv container run runtime
+
+          version_ref="$IMAGE_NAME:$GITHUB_REF_NAME"
+          docker tag long-haul-runtime:latest "$version_ref"
+          docker push "$version_ref"
+
+          digest="$(docker buildx imagetools inspect "$version_ref" --format '{{json .Manifest}}' | jq -er '.digest')"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+
+          latest_ref="$IMAGE_NAME:latest"
+          docker tag long-haul-runtime:latest "$latest_ref"
+          docker push "$latest_ref"
+
+          echo "name=$IMAGE_NAME" >> "$GITHUB_OUTPUT"
+          echo "version_ref=$version_ref" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Public Long Haul CPU runtime"
+            echo
+            echo "- image: `$IMAGE_NAME@$digest`"
+            echo "- tag: `$version_ref`"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Attest the public OCI digest
+        id: attest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.image.outputs.name }}
+          subject-digest: ${{ steps.image.outputs.digest }}
+          push-to-registry: true
+      - name: Verify public provenance
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh attestation verify \
+            "oci://${{ steps.image.outputs.name }}@${{ steps.image.outputs.digest }}" \
+            --repo "$GITHUB_REPOSITORY"
+      - name: Publish normal GitHub release metadata
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_NAME: ${{ steps.image.outputs.name }}
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+          ATTESTATION_URL: ${{ steps.attest.outputs.attestation-url }}
+        run: |
+          set -euo pipefail
+          notes="$RUNNER_TEMP/release-notes.md"
+          cat > "$notes" <<EOF
+          Public CPU runtime for Long Haul.
+
+          - OCI image: `$IMAGE_NAME@$IMAGE_DIGEST`
+          - Version tag: `$IMAGE_NAME:$GITHUB_REF_NAME`
+          - Build provenance: $ATTESTATION_URL
+
+          Fleet/private deployments should consume the immutable digest above; they should not rebuild Long Haul.
+          EOF
+          gh release create "$GITHUB_REF_NAME" \
+            --verify-tag \
+            --title "Long Haul $GITHUB_REF_NAME" \
+            --notes-file "$notes"
