@@ -1,0 +1,102 @@
+name: Structural quality audit
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Native + Lizard + jscpd
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install lightweight audit tools
+        run: python -m pip install --disable-pip-version-check "ruff==0.16.9" "lizard==1.24.0"
+
+      - name: Native Python structural lint (audit only)
+        shell: bash
+        run: |
+          set +e
+          mkdir -p quality-audit
+          ruff check . \
+            --select C901,PLR0912,PLR0913,PLR0914,PLR0915 \
+            --output-format concise > quality-audit/ruff-structural.txt 2>&1
+          status=$?
+          cat quality-audit/ruff-structural.txt
+          echo "ruff_status=$status" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      - name: Lizard structural metrics (audit only)
+        shell: bash
+        run: |
+          set +e
+          lizard . -C 15 -L 75 -a 7 -w \
+            -x "./.git/*" -x "./.venv/*" -x "./node_modules/*" \
+            -x "./artifacts/*" -x "./dist/*" -x "./build/*" \
+            > quality-audit/lizard.txt 2>&1
+          status=$?
+          cat quality-audit/lizard.txt
+          {
+            echo
+            echo "lizard_status=$status"
+            echo
+            echo "### Largest source files (physical lines; audit only)"
+            echo '~~~'
+            find . -type f \
+              \( -name '*.py' -o -name '*.js' -o -name '*.mjs' -o -name '*.cjs' -o -name '*.ts' -o -name '*.tsx' -o -name '*.rs' -o -name '*.sh' \) \
+              -not -path './.git/*' -not -path './.venv/*' -not -path './node_modules/*' \
+              -not -path './artifacts/*' -not -path './dist/*' -not -path './build/*' \
+              -print0 | xargs -0 -r wc -l | sort -nr | head -41
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      - name: Copy/paste duplication audit
+        id: jscpd
+        continue-on-error: true
+        uses: kucherenko/jscpd@v5
+        with:
+          path: "."
+          min-lines: 8
+          min-tokens: 60
+          format: "python,javascript,typescript,rust"
+          ignore: "**/.git/**,**/.venv/**,**/node_modules/**,**/artifacts/**,**/dist/**,**/build/**,**/*-lock.json"
+          reporters: "console,json"
+          output: "quality-audit/jscpd"
+
+      - name: Summarize audit policy
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo
+            echo "### Structural quality audit"
+            echo
+            echo "- Audit-only: this workflow does not block on existing findings."
+            echo "- Function length: 75 logical lines (Lizard)"
+            echo "- Cyclomatic complexity: 15 (Lizard + Ruff C901)"
+            echo "- Parameters: 7 (Lizard + Ruff PLR0913)"
+            echo "- Native Python signals: branches, arguments, locals, statements, complexity"
+            echo "- Duplication: jscpd, minimum 8 lines / 60 tokens"
+            echo "- Proposed later file ceiling: 500 physical lines; current largest files are reported above."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: structural-quality-audit-${{ github.sha }}
+          path: quality-audit/
+          if-no-files-found: warn
+          retention-days: 14
