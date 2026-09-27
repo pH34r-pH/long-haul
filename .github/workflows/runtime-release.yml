@@ -46,8 +46,10 @@ jobs:
         run: |
           set -euo pipefail
           devenv container build runtime
-          test "$(docker image inspect long-haul-runtime:latest --format '{{.Config.User}}')" = "user"
+          # devenv container run performs the standard copy into the Docker
+          # daemon before executing the image; inspect it only after that copy.
           devenv container run runtime
+          test "$(docker image inspect long-haul-runtime:latest --format '{{.Config.User}}')" = "user"
           docker image inspect long-haul-runtime:latest \
             --format 'image_id={{.Id}} size_bytes={{.Size}} user={{.Config.User}}' \
             | tee -a "$GITHUB_STEP_SUMMARY"
