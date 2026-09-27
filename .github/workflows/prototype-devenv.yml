@@ -31,6 +31,13 @@ jobs:
       - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
       - name: Install devenv
         run: nix profile add nixpkgs#devenv
+      - name: Resolve the documented Python-version input for review
+        run: |
+          set -euo pipefail
+          devenv update
+          echo '---BEGIN-DEVENV-LOCK---'
+          cat devenv.lock
+          echo '---END-DEVENV-LOCK---'
       - name: Require committed Python lock
         run: devenv shell -- uv lock --check
       - name: Exercise locked Python + nixpkgs llama.cpp environment
@@ -41,8 +48,6 @@ jobs:
         run: |
           set -euo pipefail
           devenv container build runtime
-          # container run copies the Nix OCI derivation into Docker and executes
-          # the strict runtime-only assertions from devenv.nix.
           devenv container run runtime
           test "$(docker image inspect long-haul-runtime:latest --format '{{.Config.User}}')" = "user"
           docker image inspect long-haul-runtime:latest \

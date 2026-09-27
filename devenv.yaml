@@ -3,6 +3,11 @@ require_version: ">=2.2"
 inputs:
   nixpkgs:
     url: github:cachix/devenv-nixpkgs/rolling
+  nixpkgs-python:
+    url: github:cachix/nixpkgs-python
+    inputs:
+      nixpkgs:
+        follows: nixpkgs
   uv2nix:
     url: github:pyproject-nix/uv2nix
     inputs:
