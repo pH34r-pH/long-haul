@@ -21,6 +21,10 @@ jobs:
         with:
           python-version: "3.12"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
       - name: Install lightweight audit tools
         run: python -m pip install --disable-pip-version-check "ruff==0.16.9" "lizard==1.24.0"
 
@@ -62,18 +66,22 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           exit 0
 
-      - name: Copy/paste duplication audit
-        id: jscpd
-        continue-on-error: true
-        uses: kucherenko/jscpd@v5
-        with:
-          path: "."
-          min-lines: 8
-          min-tokens: 60
-          format: "python,javascript,typescript,rust"
-          ignore: "**/.git/**,**/.venv/**,**/node_modules/**,**/artifacts/**,**/dist/**,**/build/**,**/*-lock.json"
-          reporters: "console,json"
-          output: "quality-audit/jscpd"
+      - name: Copy/paste duplication audit (audit only)
+        shell: bash
+        run: |
+          set +e
+          npx --yes jscpd@5.0.12 . \
+            --min-lines 8 \
+            --min-tokens 60 \
+            --format python,javascript,typescript,rust \
+            --ignore "**/.git/**,**/.venv/**,**/node_modules/**,**/artifacts/**,**/dist/**,**/build/**,**/*-lock.json" \
+            --reporters console,json \
+            --output quality-audit/jscpd \
+            > quality-audit/jscpd-console.txt 2>&1
+          status=$?
+          cat quality-audit/jscpd-console.txt
+          echo "jscpd_status=$status" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
 
       - name: Summarize audit policy
         if: always()
