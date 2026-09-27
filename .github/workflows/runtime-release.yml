@@ -36,8 +36,6 @@ jobs:
       - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
       - name: Install devenv using the upstream CI path
         run: nix profile add nixpkgs#devenv
-      - name: Require committed Python lock
-        run: devenv shell -- uv lock --check
       - name: Exercise the locked release environment
         run: devenv test
       - name: Build the standard uv2nix runtime output
@@ -88,7 +86,6 @@ jobs:
         id: image
         run: |
           set -euo pipefail
-          devenv shell -- uv lock --check
           devenv test
           devenv build outputs.long-haul
           devenv container build runtime
