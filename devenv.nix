@@ -14,7 +14,10 @@ in
 
   languages.python = {
     enable = true;
-    package = pkgs.python312;
+    # Use one explicit Python selection for both the interactive shell and
+    # uv2nix package output. Setting only 'package' leaves import() on the
+    # ambient nixpkgs Python.
+    version = "3.12";
     venv.enable = !config.container.isBuilding;
     uv = {
       enable = !config.container.isBuilding;
@@ -37,19 +40,21 @@ in
     entrypoint = [ "/bin/bash" "-lc" ];
     startupCommand = ''
       set -e
-      test ! -x /env/bin/uv
-      test ! -x /env/bin/ruff
-      test ! -x /env/bin/pytest
-      test ! -x /env/bin/cmake
-      test ! -x /env/bin/ninja
-      test ! -x /env/bin/cc
-      test ! -x /env/bin/c++
-      /env/bin/llama-cli --version
-      /env/bin/python -c 'import long_haul; assert long_haul.Vessel'
+      ! command -v uv
+      ! command -v ruff
+      ! command -v pytest
+      ! command -v cmake
+      ! command -v ninja
+      ! command -v cc
+      ! command -v c++
+      python --version | grep -E '^Python 3\.12\.'
+      llama-cli --version
+      python -c 'import long_haul; assert long_haul.Vessel'
     '';
   };
 
   enterTest = ''
+    python --version | grep -E '^Python 3\.12\.'
     python -m ruff check src tests
     python -m pytest -q
     python -c 'import long_haul; assert long_haul.Vessel'
