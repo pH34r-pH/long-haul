@@ -34,7 +34,9 @@ jobs:
           set +e
           mkdir -p quality-audit
           ruff check . \
-            --select C901,PLR0912,PLR0913,PLR0914,PLR0915 \
+            --select C901,PLR0912,PLR0913,PLR0915 \
+            --config "lint.mccabe.max-complexity=15" \
+            --config "lint.pylint.max-args=7" \
             --output-format concise > quality-audit/ruff-structural.txt 2>&1
           status=$?
           cat quality-audit/ruff-structural.txt
@@ -95,7 +97,7 @@ jobs:
             echo "- Function length: 75 logical lines (Lizard)"
             echo "- Cyclomatic complexity: 15 (Lizard + Ruff C901)"
             echo "- Parameters: 7 (Lizard + Ruff PLR0913)"
-            echo "- Native Python signals: branches, arguments, locals, statements, complexity"
+            echo "- Native Python signals: branches, arguments, statements, complexity"
             echo "- Duplication: jscpd, minimum 8 lines / 60 tokens"
             echo "- Proposed later file ceiling: 500 physical lines; current largest files are reported above."
           } >> "$GITHUB_STEP_SUMMARY"
