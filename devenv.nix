@@ -6,18 +6,15 @@ in
 {
   name = "long-haul";
 
-  # Development-shell conveniences stay outside the runtime container. The
-  # container copies only the explicit runtime roots below.
+  # One pinned nixpkgs Python is used by both the interactive/test environment
+  # and uv2nix package output. The release environment is therefore determined
+  # by devenv.lock rather than a second Python-version input.
   packages = lib.optionals (!config.container.isBuilding) [
     pkgs.llama-cpp
   ];
 
   languages.python = {
     enable = true;
-    # Use one explicit Python selection for both the interactive shell and
-    # uv2nix package output. Setting only 'package' leaves import() on the
-    # ambient nixpkgs Python.
-    version = "3.12";
     venv.enable = !config.container.isBuilding;
     uv = {
       enable = !config.container.isBuilding;
@@ -40,6 +37,7 @@ in
     entrypoint = [ "/bin/bash" "-lc" ];
     startupCommand = ''
       set -e
+      export PATH=/env/bin:/bin:/usr/bin
       ! command -v uv
       ! command -v ruff
       ! command -v pytest
@@ -47,14 +45,14 @@ in
       ! command -v ninja
       ! command -v cc
       ! command -v c++
-      python --version | grep -E '^Python 3\.12\.'
+      python --version
       llama-cli --version
       python -c 'import long_haul; assert long_haul.Vessel'
     '';
   };
 
   enterTest = ''
-    python --version | grep -E '^Python 3\.12\.'
+    python --version
     python -m ruff check src tests
     python -m pytest -q
     python -c 'import long_haul; assert long_haul.Vessel'

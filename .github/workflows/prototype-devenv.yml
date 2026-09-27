@@ -31,16 +31,9 @@ jobs:
       - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
       - name: Install devenv
         run: nix profile add nixpkgs#devenv
-      - name: Resolve the documented Python-version input for review
-        run: |
-          set -euo pipefail
-          devenv update
-          echo '---BEGIN-DEVENV-LOCK---'
-          cat devenv.lock
-          echo '---END-DEVENV-LOCK---'
       - name: Require committed Python lock
         run: devenv shell -- uv lock --check
-      - name: Exercise locked Python + nixpkgs llama.cpp environment
+      - name: Exercise locked release environment
         run: devenv test
       - name: Build the standard uv2nix Python output
         run: devenv build outputs.long-haul
