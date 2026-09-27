@@ -93,6 +93,7 @@ jobs:
           devenv build outputs.long-haul
           devenv container build runtime
           devenv container run runtime
+          test "$(docker image inspect long-haul-runtime:latest --format '{{.Config.User}}')" = "user"
 
           version_ref="$IMAGE_NAME:$GITHUB_REF_NAME"
           docker tag long-haul-runtime:latest "$version_ref"
