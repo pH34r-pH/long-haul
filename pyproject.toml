@@ -15,6 +15,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.6"]
+mutation = ["irradiate==0.4.3"]
 
 [tool.setuptools]
 license-files = ["LICENSE", "NOTICE"]
@@ -24,3 +25,9 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+
+
+[tool.irradiate]
+paths_to_mutate = "src/long_haul"
+tests_dir = "tests"
+pytest_add_cli_args = ["-q"]
