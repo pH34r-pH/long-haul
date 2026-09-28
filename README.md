@@ -1,46 +1,77 @@
 # Long Haul
 
-[Exact-source Fleet handoff](docs/fleet-source-contract.md) records the public check and package provenance required before private deployment.
+[![CI](https://github.com/pH34r-pH/long-haul/actions/workflows/ci.yml/badge.svg)](https://github.com/pH34r-pH/long-haul/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/pH34r-pH/long-haul)](LICENSE)
 
-Long Haul is a heterogeneous local inference crew: a topology-aware system for coordinating models, compute resources, and persistent crew identities across mismatched hardware over Tailscale.
+**Topology-aware orchestration for heterogeneous local inference crews.**
 
-The project is intentionally built for the long haul: hardware, models, runtimes, and even assumptions about artificial identity may change over years or decades. The architecture therefore separates **crew identity**, **model embodiment**, **vessels**, **compute resources**, and **missions**.
+Long Haul is a hardware-agnostic runtime and research framework for coordinating persistent crew identities, model/runtime embodiments, and mismatched compute resources across local and networked vessels.
 
-## MVP thesis
+It is built around a simple constraint: **real hardware is not a uniform pool, and reliable multi-agent engineering is not just prompt delegation**.
 
-The first technical hypothesis is narrow and falsifiable:
+## What Long Haul models
 
-> A structurally respectful, dissent-preserving, competence-scoped two-agent scheduler can outperform a conventional single-agent or master/subagent scheduler under identical compute constraints.
+- **Crew members** — persistent operational identities with roles, authority, competence history, and continuity.
+- **Embodiments** — the current model/runtime/vessel/resource combination implementing a crew member.
+- **Vessels and resources** — normalized physical hosts and individually addressable CPU/GPU/NPU/memory/storage capabilities.
+- **Measured links** — topology, bandwidth, latency, and transport evidence.
+- **Missions and work contracts** — objectives with explicit scope, capabilities, budgets, and external success/failure predicates.
+- **Execution plans** — mappings from work to crew, resources, runtimes, and execution modes.
+- **Evidence** — replayable events, independent acceptance packets, checkpoints, and outcome history.
 
-The initial crew is:
+Model size does not confer authority. Aggregate RAM/VRAM is not treated as uniform capacity. A worker saying “done” is not acceptance evidence.
 
-- `NAV-01` — navigator / routing planner
-- `ENG-01` — hardware/runtime specialist
+## Research question
 
-The test fixtures include a station with asymmetric accelerators and an edge
-ship that may lose its direct link. These examples are simulated, while the
-operator's physical vessel inventories belong in private Fleet.
+The first experiment asks whether a dissent-preserving, competence-scoped two-member scheduler can outperform simpler deterministic, single-planner, or master/subagent baselines under matched compute and task constraints.
 
-## Execution modes
+The experiment preserves independent initial judgments, measures coordination cost, and evaluates plan feasibility, task success, performance, calibration, disagreement, and regret. See [the experiment plan](docs/experiments.md).
 
-- **LOCAL** — one vessel executes locally
-- **POOL** — independent jobs across vessels
-- **PIPELINE** — one model split across resources/nodes when capacity requires it
-- **COMPOSE** — specialist crew members/models cooperate on a task
+## Architecture
 
-## Design invariants
+```text
+discovery + benchmarks -> normalized topology -> candidate plans
+                                                |
+                              independent crew positions
+                                                |
+                                         decision protocol
+                                                |
+                                           execution
+                                                |
+                                outcome + evidence + events
+```
 
-Long Haul does not treat aggregate VRAM/RAM as a uniform pool. It models topology, measured bandwidth, latency, runtime support, and current load. It does not assume larger models outrank smaller specialists. It preserves independent judgments, dissent, provenance, calibration, and repair history.
+Execution modes are `LOCAL`, `POOL`, `PIPELINE`, and `COMPOSE`. Runtime strategies such as resident, offloaded, split, or streaming execution are described by validated inference profiles rather than overloaded into those modes.
 
-See `docs/architecture.md`, `docs/articles.md`, and `docs/experiments.md`.
+Read [Architecture](docs/architecture.md) or the [Wiki](https://github.com/pH34r-pH/long-haul/wiki).
 
-## Status
+## Public runtime, private Fleet
 
-MVP scaffold. No production scheduler yet.
-# Long Haul
+This repository owns portable runtime code, schemas, tests, reference infrastructure, and qualification contracts.
 
-Long Haul is a hardware-agnostic core for a small, heterogeneous local inference
-crew. The shared schema, provenance/event log, consent protocol, fixture-backed
-topology adapters, benchmark store, and scheduler are implementable without
-physical fleet access. See [architecture](docs/architecture.md) and the
-[hardware-validation runbook](docs/hardware-validation.md).
+The separate private Fleet control plane owns concrete machines, privileged Azure/network state, self-hosted runners, protected promotion/rollback, and private hardware evidence. Fleet consumes exact public revisions; public pull-request code does not automatically cross the privilege boundary.
+
+See [repository boundary](docs/repository-boundary.md) and [exact-source Fleet handoff](docs/fleet-source-contract.md).
+
+## Repository map
+
+- `src/long_haul/` — runtime implementation.
+- `contracts/` — durable machine-readable contracts.
+- `crew/` — public crew/fixture definitions.
+- `tests/` — behavior and contract tests.
+- `docs/` — authoritative architecture, experiment, requirement, and validation documents.
+- `docs/wiki/` — canonical source for the GitHub Wiki.
+- `infra/azure/` — public reference infrastructure only.
+- `scripts/`, `tools/` — packaging and validation helpers.
+
+## Development
+
+Use the pinned repository environment (`pyproject.toml`, `uv.lock`, and the checked-in `devenv` definition) rather than copying tool versions from old notes. Run the repository CI-equivalent tests before submitting changes.
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+
+## Security, citation, and license
+
+Report sensitive problems according to [SECURITY.md](SECURITY.md). Research use can cite [CITATION.cff](CITATION.cff).
+
+Licensed under Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
