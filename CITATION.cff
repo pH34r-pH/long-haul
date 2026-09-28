@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use Long Haul in research, please cite this software repository."
+title: "Long Haul"
+type: software
+authors:
+  - family-names: "Harbin-Giuntoli"
+    given-names: "Tyler James"
+    alias: "Tyler J.H.G."
+repository-code: "https://github.com/pH34r-pH/long-haul"
+license: "Apache-2.0"
+date-released: 2026-09-27
