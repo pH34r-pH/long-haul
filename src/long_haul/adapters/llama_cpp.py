@@ -30,71 +30,85 @@ IDENTITY_OUTPUT_BYTES = 16 * 1024
 MAX_BINARY_BYTES = 512 * 1024 * 1024
 
 
-def _version_probe(binary: Path, timeout: float) -> tuple[str, str | None]:
-    """Read bounded combined output from a fixed --version argv on POSIX.
-
-    No shell, model input, environment dump or retained failed-process output.
-    Ordinary process groups are cleaned up even if a child holds the pipe open.
-    This is a resource-bounded probe, not a sandbox for an untrusted executable.
-    """
-    if os.name != "posix":
-        return "unsupported-probe-platform", None
-    deadline = time.monotonic() + timeout
+def _start_version_probe(binary: Path) -> subprocess.Popen[bytes] | None:
     try:
-        process = subprocess.Popen(
-            [str(binary), "--version"], stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, start_new_session=True,
+        return subprocess.Popen(
+            [str(binary), "--version"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
         )
     except FileNotFoundError:
-        return "missing", None
-    except PermissionError:
-        return "denied", None
-    except OSError:
-        return "unusable", None
-    try:
-        output = bytearray()
-        with selectors.DefaultSelector() as selector:
-            selector.register(process.stdout, selectors.EVENT_READ)
-            while True:
+        return None
+    except PermissionError as exc:
+        raise RuntimeError("denied") from exc
+    except OSError as exc:
+        raise RuntimeError("unusable") from exc
+
+
+def _read_version_output(process: subprocess.Popen[bytes], deadline: float) -> tuple[str, bytes]:
+    output = bytearray()
+    with selectors.DefaultSelector() as selector:
+        selector.register(process.stdout, selectors.EVENT_READ)
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return "timeout", bytes(output)
+            for key, _ in selector.select(remaining):
+                chunk = os.read(key.fd, min(4096, IDENTITY_OUTPUT_BYTES + 1 - len(output)))
+                if chunk:
+                    output.extend(chunk)
+                    if len(output) > IDENTITY_OUTPUT_BYTES:
+                        return "output-limit", bytes(output)
+                    continue
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
-                    return "timeout", None
-                for key, _ in selector.select(remaining):
-                    chunk = os.read(key.fd, min(4096, IDENTITY_OUTPUT_BYTES + 1 - len(output)))
-                    if chunk:
-                        output.extend(chunk)
-                        if len(output) > IDENTITY_OUTPUT_BYTES:
-                            return "output-limit", None
-                    else:
-                        remaining = deadline - time.monotonic()
-                        if remaining <= 0:
-                            return "timeout", None
-                        try:
-                            code = process.wait(timeout=remaining)
-                        except subprocess.TimeoutExpired:
-                            return "timeout", None
-                        if code != 0:
-                            return "unusable", None
-                        try:
-                            version = output.decode("utf-8").strip()
-                        except UnicodeDecodeError:
-                            return "unknown-version", None
-                        if not version or any(ord(c) < 32 and c not in "\n\r\t" for c in version):
-                            return "unknown-version", None
-                        return "ready", version
+                    return "timeout", bytes(output)
+                try:
+                    code = process.wait(timeout=remaining)
+                except subprocess.TimeoutExpired:
+                    return "timeout", bytes(output)
+                return ("complete" if code == 0 else "unusable"), bytes(output)
+
+
+def _parse_version(output: bytes) -> tuple[str, str | None]:
+    try:
+        version = output.decode("utf-8").strip()
+    except UnicodeDecodeError:
+        return "unknown-version", None
+    if not version or any(ord(c) < 32 and c not in "\n\r\t" for c in version):
+        return "unknown-version", None
+    return "ready", version
+
+
+def _cleanup_probe(process: subprocess.Popen[bytes]) -> None:
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    if process.stdout is not None:
+        process.stdout.close()
+    process.wait()
+
+
+def _version_probe(binary: Path, timeout: float) -> tuple[str, str | None]:
+    """Read bounded combined output from a fixed --version argv on POSIX."""
+    if os.name != "posix":
+        return "unsupported-probe-platform", None
+    try:
+        process = _start_version_probe(binary)
+    except RuntimeError as exc:
+        return str(exc), None
+    if process is None:
+        return "missing", None
+    try:
+        status, output = _read_version_output(process, time.monotonic() + timeout)
+        return _parse_version(output) if status == "complete" else (status, None)
     except (OSError, ValueError):
         return "unusable", None
     finally:
-        # Kill the session's process group, not just the leader: a wrapper may
-        # have exited while a child still holds stdout. No outside process group
-        # is targeted. Escaped processes are outside this probe's guarantees.
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        if process.stdout is not None:
-            process.stdout.close()
-        process.wait()
+        _cleanup_probe(process)
 
 
 class LlamaCppAdapter:
