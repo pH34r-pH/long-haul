@@ -109,8 +109,8 @@ jobs:
           {
             echo "## Public Long Haul CPU runtime"
             echo
-            echo "- image: `$IMAGE_NAME@$digest`"
-            echo "- tag: `$version_ref`"
+            echo "- image: $IMAGE_NAME@$digest"
+            echo "- tag: $version_ref"
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Attest the public OCI digest
         id: attest
@@ -136,15 +136,15 @@ jobs:
         run: |
           set -euo pipefail
           notes="$RUNNER_TEMP/release-notes.md"
-          cat > "$notes" <<EOF
-          Public CPU runtime for Long Haul.
-
-          - OCI image: `$IMAGE_NAME@$IMAGE_DIGEST`
-          - Version tag: `$IMAGE_NAME:$GITHUB_REF_NAME`
-          - Build provenance: $ATTESTATION_URL
-
-          Fleet/private deployments should consume the immutable digest above; they should not rebuild Long Haul.
-          EOF
+          printf '%s\n' \
+            'Public CPU runtime for Long Haul.' \
+            '' \
+            "- OCI image: $IMAGE_NAME@$IMAGE_DIGEST" \
+            "- Version tag: $IMAGE_NAME:$GITHUB_REF_NAME" \
+            "- Build provenance: $ATTESTATION_URL" \
+            '' \
+            'Fleet/private deployments should consume the immutable digest above; they should not rebuild Long Haul.' \
+            > "$notes"
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" \
               --title "Long Haul $GITHUB_REF_NAME" \
