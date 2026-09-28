@@ -63,55 +63,89 @@ def resume_session(previous: WorkSession, checkpoint: WorkCheckpoint) -> WorkSes
     )
 
 
+def _append_unique(values: list[str], text: str) -> None:
+    if text and text not in values:
+        values.append(text)
+
+
+def _apply_fact(checkpoint: WorkCheckpoint, event: Event, fact_keys: set[str]) -> None:
+    text = str(event.payload.get("text", "")).strip()
+    if text and text not in fact_keys:
+        checkpoint.facts.append(CheckpointFact(text=text, source_event_id=event.id))
+        fact_keys.add(text)
+
+
+def _apply_constraint(checkpoint: WorkCheckpoint, event: Event) -> None:
+    _append_unique(checkpoint.active_constraints, str(event.payload.get("text", "")).strip())
+
+
+def _apply_subgoal(checkpoint: WorkCheckpoint, event: Event) -> None:
+    payload = event.payload
+    text = str(payload.get("text", "")).strip()
+    if not text:
+        return
+    state = payload.get("state")
+    if state == "completed":
+        _append_unique(checkpoint.completed_subgoals, text)
+        checkpoint.remaining_subgoals = [item for item in checkpoint.remaining_subgoals if item != text]
+    elif state == "remaining" and text not in checkpoint.completed_subgoals:
+        _append_unique(checkpoint.remaining_subgoals, text)
+
+
+def _apply_failure(checkpoint: WorkCheckpoint, event: Event) -> None:
+    payload = event.payload
+    failure_id = str(payload.get("failure_id", event.id))
+    detail = str(payload.get("detail", failure_id)).strip()
+    checkpoint.unresolved_failures = [
+        item for item in checkpoint.unresolved_failures
+        if not item.startswith(f"{failure_id}:")
+    ]
+    checkpoint.unresolved_failures.append(f"{failure_id}: {detail}")
+
+
+def _apply_failure_resolution(checkpoint: WorkCheckpoint, event: Event) -> None:
+    failure_id = str(event.payload.get("failure_id", ""))
+    checkpoint.unresolved_failures = [
+        item for item in checkpoint.unresolved_failures
+        if not item.startswith(f"{failure_id}:")
+    ]
+
+
+def _apply_artifact(checkpoint: WorkCheckpoint, event: Event) -> None:
+    payload = event.payload
+    fingerprint = str(payload.get("fingerprint", "")).strip()
+    if fingerprint:
+        checkpoint.artifact = ArtifactState(
+            fingerprint=fingerprint,
+            description=str(payload.get("description", "")),
+            source_event_id=event.id,
+        )
+
+
+def _apply_event(checkpoint: WorkCheckpoint, event: Event, fact_keys: set[str]) -> None:
+    if event.event_type == "work_fact":
+        _apply_fact(checkpoint, event, fact_keys)
+    elif event.event_type == "work_constraint":
+        _apply_constraint(checkpoint, event)
+    elif event.event_type == "work_subgoal":
+        _apply_subgoal(checkpoint, event)
+    elif event.event_type == "work_failure":
+        _apply_failure(checkpoint, event)
+    elif event.event_type == "work_failure_resolved":
+        _apply_failure_resolution(checkpoint, event)
+    elif event.event_type == "work_artifact_verified":
+        _apply_artifact(checkpoint, event)
+
+
 def materialize_checkpoint(contract_id: str, events: list[Event]) -> WorkCheckpoint:
     """Materialize compact state from authoritative events in append order."""
     checkpoint = WorkCheckpoint(contract_id=contract_id)
     fact_keys: set[str] = set()
-
-    def belongs(event: Event) -> bool:
-        return event.payload.get("contract_id") == contract_id
-
     for event in events:
-        if not belongs(event):
+        if event.payload.get("contract_id") != contract_id:
             continue
-        payload = event.payload
         checkpoint.through_event_id = event.id
-        if event.event_type == "work_fact":
-            text = str(payload.get("text", "")).strip()
-            if text and text not in fact_keys:
-                checkpoint.facts.append(CheckpointFact(text=text, source_event_id=event.id))
-                fact_keys.add(text)
-        elif event.event_type == "work_constraint":
-            text = str(payload.get("text", "")).strip()
-            if text and text not in checkpoint.active_constraints:
-                checkpoint.active_constraints.append(text)
-        elif event.event_type == "work_subgoal":
-            text = str(payload.get("text", "")).strip()
-            state = payload.get("state")
-            if not text:
-                continue
-            if state == "completed":
-                if text not in checkpoint.completed_subgoals:
-                    checkpoint.completed_subgoals.append(text)
-                checkpoint.remaining_subgoals = [item for item in checkpoint.remaining_subgoals if item != text]
-            elif state == "remaining" and text not in checkpoint.completed_subgoals and text not in checkpoint.remaining_subgoals:
-                checkpoint.remaining_subgoals.append(text)
-        elif event.event_type == "work_failure":
-            failure_id = str(payload.get("failure_id", event.id))
-            detail = str(payload.get("detail", failure_id)).strip()
-            checkpoint.unresolved_failures = [item for item in checkpoint.unresolved_failures if not item.startswith(f"{failure_id}:")]
-            checkpoint.unresolved_failures.append(f"{failure_id}: {detail}")
-        elif event.event_type == "work_failure_resolved":
-            failure_id = str(payload.get("failure_id", ""))
-            checkpoint.unresolved_failures = [item for item in checkpoint.unresolved_failures if not item.startswith(f"{failure_id}:")]
-        elif event.event_type == "work_artifact_verified":
-            fingerprint = str(payload.get("fingerprint", "")).strip()
-            if fingerprint:
-                checkpoint.artifact = ArtifactState(
-                    fingerprint=fingerprint,
-                    description=str(payload.get("description", "")),
-                    source_event_id=event.id,
-                )
+        _apply_event(checkpoint, event, fact_keys)
     return checkpoint
 
 
