@@ -16,6 +16,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -85,6 +86,63 @@ jobs:
           echo "jscpd_status=$status" >> "$GITHUB_STEP_SUMMARY"
           exit 0
 
+      - name: Enforce no structural regression
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          base_dir="$RUNNER_TEMP/quality-base"
+          git worktree add --detach "$base_dir" "$BASE_SHA"
+          mkdir -p quality-audit/base
+
+          (
+            cd "$base_dir"
+            set +e
+            ruff check . \
+              --select C901,PLR0912,PLR0913,PLR0915 \
+              --config "lint.mccabe.max-complexity=15" \
+              --config "lint.pylint.max-args=7" \
+              --output-format concise > "$GITHUB_WORKSPACE/quality-audit/base/ruff.txt" 2>&1
+            lizard . -C 15 -L 75 -a 7 -w \
+              -x "./.git/*" -x "./.venv/*" -x "./node_modules/*" \
+              -x "./artifacts/*" -x "./dist/*" -x "./build/*" \
+              > "$GITHUB_WORKSPACE/quality-audit/base/lizard.txt" 2>&1
+            npx --yes jscpd@5.0.12 . \
+              --min-lines 8 --min-tokens 60 \
+              --format python,javascript,typescript,rust \
+              --ignore "**/.git/**,**/.venv/**,**/node_modules/**,**/artifacts/**,**/dist/**,**/build/**,**/*-lock.json" \
+              --reporters console \
+              > "$GITHUB_WORKSPACE/quality-audit/base/jscpd.txt" 2>&1
+            true
+          )
+
+          count_ruff() { grep -Eo 'Found [0-9]+ errors?\.' "$1" | tail -1 | grep -Eo '[0-9]+' || echo 0; }
+          count_lizard() { grep -c 'warning: .* NLOC,' "$1" || true; }
+          count_clones() { grep -Eo 'Found [0-9]+ clones?\.' "$1" | tail -1 | grep -Eo '[0-9]+' || echo 0; }
+
+          head_ruff="$(count_ruff quality-audit/ruff-structural.txt)"
+          base_ruff="$(count_ruff quality-audit/base/ruff.txt)"
+          head_lizard="$(count_lizard quality-audit/lizard.txt)"
+          base_lizard="$(count_lizard quality-audit/base/lizard.txt)"
+          head_clones="$(count_clones quality-audit/jscpd-console.txt)"
+          base_clones="$(count_clones quality-audit/base/jscpd.txt)"
+
+          {
+            echo
+            echo "### Quality ratchet"
+            echo "| Signal | Base | Head |"
+            echo "| --- | ---: | ---: |"
+            echo "| Native Ruff structural findings | $base_ruff | $head_ruff |"
+            echo "| Lizard structural findings | $base_lizard | $head_lizard |"
+            echo "| jscpd clone blocks | $base_clones | $head_clones |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          test "$head_ruff" -le "$base_ruff" || { echo "::error::Ruff structural findings increased: $base_ruff -> $head_ruff"; exit 1; }
+          test "$head_lizard" -le "$base_lizard" || { echo "::error::Lizard structural findings increased: $base_lizard -> $head_lizard"; exit 1; }
+          test "$head_clones" -le "$base_clones" || { echo "::error::Duplication clone blocks increased: $base_clones -> $head_clones"; exit 1; }
+
       - name: Summarize audit policy
         if: always()
         shell: bash
@@ -93,7 +151,7 @@ jobs:
             echo
             echo "### Structural quality audit"
             echo
-            echo "- Audit-only: this workflow does not block on existing findings."
+            echo "- Existing findings are grandfathered; pull requests may not increase structural findings or clone blocks."
             echo "- Function length: 75 logical lines (Lizard)"
             echo "- Cyclomatic complexity: 15 (Lizard + Ruff C901)"
             echo "- Parameters: 7 (Lizard + Ruff PLR0913)"
