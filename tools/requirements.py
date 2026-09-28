@@ -62,12 +62,67 @@ def load(root: Path) -> tuple[dict, bytes]:
     return data, raw
 
 
-def inventory(root: Path, data: dict, raw: bytes) -> dict:
-    if len(data['manifests']) > MAX_MANIFESTS or len(data['profiles']) > 128:
+def _python_native(content: bytes) -> dict:
+    project = tomllib.loads(content.decode()).get('project', {})
+    return {
+        key: project[key]
+        for key in ('requires-python', 'dependencies', 'optional-dependencies')
+        if key in project
+    }
+
+
+def _node_native(content: bytes) -> dict:
+    native = json.loads(content, object_pairs_hook=unique_object)
+    return {
+        key: native[key]
+        for key in ('engines', 'packageManager', 'dependencies', 'devDependencies')
+        if key in native
+    }
+
+
+def _rust_native(content: bytes) -> dict:
+    package = tomllib.loads(content.decode()).get('package', {})
+    return {
+        key: package[key]
+        for key in ('edition', 'rust-version')
+        if key in package
+    }
+
+
+def _toolchain_native(content: bytes) -> dict:
+    lines = [
+        line.strip()
+        for line in content.decode().splitlines()
+        if line.strip() and not line.lstrip().startswith('#')
+    ]
+    if len(lines) != 1 or len(lines[0]) > 512:
+        raise ValueError('expected one bounded native toolchain selection')
+    return {'selection': lines[0]}
+
+
+def native_manifest_record(path: Path, item: dict, content: bytes) -> dict:
+    record = {'kind': item['kind'], 'sha256': hashlib.sha256(content).hexdigest()}
+    readers = {
+        'python-project': _python_native,
+        'node-project': _node_native,
+        'rust-project': _rust_native,
+    }
+    reader = readers.get(item['kind'])
+    if reader is not None:
+        record['native'] = reader(content)
+    elif item['kind'] == 'toolchain' and path.name in {
+        '.nvmrc', '.node-version', '.python-version', 'lean-toolchain', 'rust-toolchain'
+    }:
+        record['native'] = _toolchain_native(content)
+    return record
+
+
+def collect_manifests(root: Path, declarations: list[dict]) -> dict:
+    if len(declarations) > MAX_MANIFESTS:
         raise ValueError('too many manifests or profiles')
     manifests = {}
     total_bytes = 0
-    for item in data['manifests']:
+    for item in declarations:
         name = item['path']
         if name in manifests:
             raise ValueError('duplicate manifest path')
@@ -76,27 +131,16 @@ def inventory(root: Path, data: dict, raw: bytes) -> dict:
         total_bytes += len(content)
         if total_bytes > MAX_TOTAL_BYTES:
             raise ValueError('native manifest set exceeds total size limit')
-        record = {'kind': item['kind'], 'sha256': hashlib.sha256(content).hexdigest()}
-        # Native formats stay authoritative; no version solving or copied pins.
-        if item['kind'] == 'python-project':
-            native = tomllib.loads(content.decode())
-            project = native.get('project', {})
-            record['native'] = {key: project[key] for key in ('requires-python', 'dependencies', 'optional-dependencies') if key in project}
-        elif item['kind'] == 'node-project':
-            native = json.loads(content, object_pairs_hook=unique_object)
-            record['native'] = {key: native[key] for key in ('engines', 'packageManager', 'dependencies', 'devDependencies') if key in native}
-        elif item['kind'] == 'rust-project':
-            native = tomllib.loads(content.decode())
-            record['native'] = {key: native.get('package', {})[key] for key in ('edition', 'rust-version') if key in native.get('package', {})}
-        elif item['kind'] == 'toolchain' and path.name in {'.nvmrc', '.node-version', '.python-version', 'lean-toolchain', 'rust-toolchain'}:
-            lines = [line.strip() for line in content.decode().splitlines() if line.strip() and not line.lstrip().startswith('#')]
-            if len(lines) != 1 or len(lines[0]) > 512:
-                raise ValueError('expected one bounded native toolchain selection')
-            record['native'] = {'selection': lines[0]}
-        manifests[name] = record
-    if not data['profiles']:
+        manifests[name] = native_manifest_record(path, item, content)
+    return manifests
+
+
+def validate_profiles(profiles: dict, manifests: dict) -> None:
+    if not profiles:
         raise ValueError('at least one named profile is required')
-    for name, profile in data['profiles'].items():
+    if len(profiles) > 128:
+        raise ValueError('too many manifests or profiles')
+    for name, profile in profiles.items():
         if not re.fullmatch(r'[a-z][a-z0-9-]*', name) or not profile['tools']:
             raise ValueError('profile names must be stable IDs and tools nonempty')
         if len(profile['tools']) > 256:
@@ -106,7 +150,19 @@ def inventory(root: Path, data: dict, raw: bytes) -> dict:
                 raise ValueError('invalid tool capability name')
             if any(source not in manifests for source in need['sources']):
                 raise ValueError('tool source must reference a declared native manifest')
-    return {'schemaVersion': 1, 'repository': data['repository'], 'requirementsSha256': hashlib.sha256(raw).hexdigest(), 'manifests': manifests, 'profiles': data['profiles'], 'installed': False}
+
+
+def inventory(root: Path, data: dict, raw: bytes) -> dict:
+    manifests = collect_manifests(root, data['manifests'])
+    validate_profiles(data['profiles'], manifests)
+    return {
+        'schemaVersion': 1,
+        'repository': data['repository'],
+        'requirementsSha256': hashlib.sha256(raw).hexdigest(),
+        'manifests': manifests,
+        'profiles': data['profiles'],
+        'installed': False,
+    }
 
 
 def validate(root: Path) -> dict:
