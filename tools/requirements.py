@@ -62,40 +62,58 @@ def load(root: Path) -> tuple[dict, bytes]:
     return data, raw
 
 
+def _python_native(content: bytes) -> dict:
+    project = tomllib.loads(content.decode()).get('project', {})
+    return {
+        key: project[key]
+        for key in ('requires-python', 'dependencies', 'optional-dependencies')
+        if key in project
+    }
+
+
+def _node_native(content: bytes) -> dict:
+    native = json.loads(content, object_pairs_hook=unique_object)
+    return {
+        key: native[key]
+        for key in ('engines', 'packageManager', 'dependencies', 'devDependencies')
+        if key in native
+    }
+
+
+def _rust_native(content: bytes) -> dict:
+    package = tomllib.loads(content.decode()).get('package', {})
+    return {
+        key: package[key]
+        for key in ('edition', 'rust-version')
+        if key in package
+    }
+
+
+def _toolchain_native(content: bytes) -> dict:
+    lines = [
+        line.strip()
+        for line in content.decode().splitlines()
+        if line.strip() and not line.lstrip().startswith('#')
+    ]
+    if len(lines) != 1 or len(lines[0]) > 512:
+        raise ValueError('expected one bounded native toolchain selection')
+    return {'selection': lines[0]}
+
+
 def native_manifest_record(path: Path, item: dict, content: bytes) -> dict:
     record = {'kind': item['kind'], 'sha256': hashlib.sha256(content).hexdigest()}
-    if item['kind'] == 'python-project':
-        project = tomllib.loads(content.decode()).get('project', {})
-        record['native'] = {
-            key: project[key]
-            for key in ('requires-python', 'dependencies', 'optional-dependencies')
-            if key in project
-        }
-    elif item['kind'] == 'node-project':
-        native = json.loads(content, object_pairs_hook=unique_object)
-        record['native'] = {
-            key: native[key]
-            for key in ('engines', 'packageManager', 'dependencies', 'devDependencies')
-            if key in native
-        }
-    elif item['kind'] == 'rust-project':
-        package = tomllib.loads(content.decode()).get('package', {})
-        record['native'] = {
-            key: package[key]
-            for key in ('edition', 'rust-version')
-            if key in package
-        }
+    readers = {
+        'python-project': _python_native,
+        'node-project': _node_native,
+        'rust-project': _rust_native,
+    }
+    reader = readers.get(item['kind'])
+    if reader is not None:
+        record['native'] = reader(content)
     elif item['kind'] == 'toolchain' and path.name in {
         '.nvmrc', '.node-version', '.python-version', 'lean-toolchain', 'rust-toolchain'
     }:
-        lines = [
-            line.strip()
-            for line in content.decode().splitlines()
-            if line.strip() and not line.lstrip().startswith('#')
-        ]
-        if len(lines) != 1 or len(lines[0]) > 512:
-            raise ValueError('expected one bounded native toolchain selection')
-        record['native'] = {'selection': lines[0]}
+        record['native'] = _toolchain_native(content)
     return record
 
 
