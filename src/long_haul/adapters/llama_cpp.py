@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import math
 import os
+import re
 import selectors
 import signal
 import stat
@@ -28,6 +29,14 @@ from ..runtime import (
 IDENTITY_TIMEOUT_SECONDS = 5.0
 IDENTITY_OUTPUT_BYTES = 16 * 1024
 MAX_BINARY_BYTES = 512 * 1024 * 1024
+_ACCELERATED_STRATEGIES = {
+    "gpu-offload",
+    "gpu_offload",
+    "cpu-gpu-split",
+    "cpu_gpu_split",
+    "multi-gpu",
+    "multi_gpu",
+}
 
 
 def _start_version_probe(binary: Path) -> subprocess.Popen[bytes] | None:
@@ -92,10 +101,42 @@ def _cleanup_probe(process: subprocess.Popen[bytes]) -> None:
     process.wait()
 
 
+def _windows_version_probe(binary: Path, timeout: float) -> tuple[str, str | None]:
+    creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    try:
+        process = subprocess.Popen(
+            [str(binary), "--version"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            creationflags=creationflags,
+        )
+    except FileNotFoundError:
+        return "missing", None
+    except PermissionError:
+        return "denied", None
+    except OSError:
+        return "unusable", None
+    try:
+        try:
+            output, _ = process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.communicate()
+            return "timeout", None
+        if len(output) > IDENTITY_OUTPUT_BYTES:
+            return "output-limit", None
+        if process.returncode != 0:
+            return "unusable", None
+        return _parse_version(output)
+    except OSError:
+        return "unusable", None
+
+
 def _version_probe(binary: Path, timeout: float) -> tuple[str, str | None]:
-    """Read bounded combined output from a fixed --version argv on POSIX."""
+    """Read bounded combined output from a fixed --version argv."""
     if os.name != "posix":
-        return "unsupported-probe-platform", None
+        return _windows_version_probe(binary, timeout)
     try:
         process = _start_version_probe(binary)
     except RuntimeError as exc:
@@ -111,13 +152,59 @@ def _version_probe(binary: Path, timeout: float) -> tuple[str, str | None]:
         _cleanup_probe(process)
 
 
+def _parse_timings(stderr: str, total_seconds: float) -> Timing:
+    timing = Timing(total_seconds=total_seconds)
+    for line in stderr.splitlines():
+        lowered = line.lower()
+        if "load time" in lowered:
+            match = re.search(r"load time\s*=\s*([0-9.]+)\s*ms", line, re.IGNORECASE)
+            if match:
+                timing.load_seconds = float(match.group(1)) / 1000.0
+        elif "prompt eval time" in lowered:
+            tokens = re.search(r"/\s*(\d+)\s+tokens?", line, re.IGNORECASE)
+            rate = re.search(r"([0-9.]+)\s+tokens per second", line, re.IGNORECASE)
+            if tokens:
+                timing.prompt_tokens = int(tokens.group(1))
+            if rate:
+                timing.prefill_tps = float(rate.group(1))
+        elif "eval time" in lowered:
+            tokens = re.search(r"/\s*(\d+)\s+(?:runs?|tokens?)", line, re.IGNORECASE)
+            rate = re.search(r"([0-9.]+)\s+tokens per second", line, re.IGNORECASE)
+            if tokens:
+                timing.generated_tokens = int(tokens.group(1))
+            if rate:
+                timing.decode_tps = float(rate.group(1))
+    return timing
+
+
+def _accelerated(profile: InferenceProfile) -> bool:
+    return profile.strategy in _ACCELERATED_STRATEGIES
+
+
+def _gpu_layers(profile: InferenceProfile) -> int:
+    value = profile.options.get("gpu_layers", 0)
+    if isinstance(value, bool):
+        return 0
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 class LlamaCppAdapter:
     runtime_id = "llama.cpp"
 
-    def __init__(self, binary: str | Path, *, identity_timeout_seconds: float = IDENTITY_TIMEOUT_SECONDS):
-        if (isinstance(identity_timeout_seconds, bool)
-                or not math.isfinite(identity_timeout_seconds)
-                or not 0 < identity_timeout_seconds <= IDENTITY_TIMEOUT_SECONDS):
+    def __init__(
+        self,
+        binary: str | Path,
+        *,
+        identity_timeout_seconds: float = IDENTITY_TIMEOUT_SECONDS,
+    ):
+        if (
+            isinstance(identity_timeout_seconds, bool)
+            or not math.isfinite(identity_timeout_seconds)
+            or not 0 < identity_timeout_seconds <= IDENTITY_TIMEOUT_SECONDS
+        ):
             raise ValueError("identity timeout must be finite, positive and at most five seconds")
         # Path('./llama-cli') drops './'; use an absolute path so the version
         # probe and execution address the selected file rather than search PATH.
@@ -127,7 +214,8 @@ class LlamaCppAdapter:
     def identity(self) -> RuntimeIdentity:
         def unavailable(status: str) -> RuntimeIdentity:
             return RuntimeIdentity(
-                runtime_id=self.runtime_id, binary_path=str(self.binary),
+                runtime_id=self.runtime_id,
+                binary_path=str(self.binary),
                 capabilities={"identity_probe": status, "resident": False},
             )
 
@@ -151,8 +239,10 @@ class LlamaCppAdapter:
             if status != "ready":
                 return unavailable(status)
             after = self.binary.stat()
-            if ((before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
-                    != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)):
+            if (
+                (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
+                != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
+            ):
                 return unavailable("binary-changed")
         except FileNotFoundError:
             return unavailable("missing")
@@ -161,8 +251,11 @@ class LlamaCppAdapter:
         except OSError:
             return unavailable("unusable")
         return RuntimeIdentity(
-            runtime_id=self.runtime_id, version=version, build_id=digest.hexdigest()[:16],
-            binary_path=str(self.binary), backends=["cpu"],
+            runtime_id=self.runtime_id,
+            version=version,
+            build_id=digest.hexdigest()[:16],
+            binary_path=str(self.binary),
+            backends=["cpu"],
             capabilities={"resident": True, "identity_probe": "ready"},
         )
 
@@ -170,62 +263,150 @@ class LlamaCppAdapter:
         runtime = self.identity()
         if profile.runtime_id != self.runtime_id:
             state, rationale = ValidationState.UNSUPPORTED, "profile names a different runtime"
-        elif profile.strategy != "resident":
-            state, rationale = ValidationState.UNSUPPORTED, "reference adapter only validates CPU resident strategy"
         elif runtime.capabilities.get("identity_probe") != "ready":
             state = ValidationState.UNKNOWN
-            rationale = "llama.cpp identity probe: " + str(runtime.capabilities.get("identity_probe", "unknown"))
+            rationale = "llama.cpp identity probe: " + str(
+                runtime.capabilities.get("identity_probe", "unknown")
+            )
         elif not profile.options.get("model_path"):
             state, rationale = ValidationState.UNKNOWN, "profile has no adapter model_path option"
         elif not Path(str(profile.options["model_path"])).is_file():
             state, rationale = ValidationState.UNSUPPORTED, "GGUF model artifact is missing"
-        else:
+        elif profile.strategy == "resident":
             state = ValidationState.SUPPORTED
-            rationale = "CPU resident prerequisites available; model loading and execution remain unverified"
+            rationale = (
+                "CPU resident prerequisites available; model loading and execution remain unverified"
+            )
+        elif _accelerated(profile):
+            if _gpu_layers(profile) <= 0:
+                state = ValidationState.UNSUPPORTED
+                rationale = "accelerated profile requires a positive gpu_layers option"
+            else:
+                state = ValidationState.UNKNOWN
+                rationale = (
+                    "accelerated profile requires measured execution qualification; "
+                    "preflight does not infer CUDA support from GPU presence"
+                )
+        else:
+            state, rationale = (
+                ValidationState.UNSUPPORTED,
+                "reference adapter does not implement the requested inference strategy",
+            )
         return ProfileValidation(
-            runtime=runtime, profile_id=profile.id, artifact_key=profile.artifact.key,
-            resources=profile.participating_resources, strategy=profile.strategy,
-            options=profile.options, state=state, depth=ValidationDepth.PREFLIGHT,
-            rationale=rationale, provenance="probe",
+            runtime=runtime,
+            profile_id=profile.id,
+            artifact_key=profile.artifact.key,
+            resources=profile.participating_resources,
+            strategy=profile.strategy,
+            options=profile.options,
+            state=state,
+            depth=ValidationDepth.PREFLIGHT,
+            rationale=rationale,
+            provenance="probe",
         )
+
+    def _command(self, request: ExecutionRequest) -> list[str]:
+        options = request.profile.options
+        command = [
+            str(self.binary),
+            "-m",
+            str(options["model_path"]),
+            "-p",
+            request.prompt,
+            "-n",
+            str(request.max_tokens),
+            "--temp",
+            str(request.temperature),
+        ]
+        if options.get("no_warmup", True):
+            command.append("--no-warmup")
+        gpu_layers = _gpu_layers(request.profile)
+        if gpu_layers > 0:
+            command.extend(["-ngl", str(gpu_layers)])
+        split_mode = options.get("split_mode")
+        if split_mode:
+            command.extend(["--split-mode", str(split_mode)])
+        tensor_split = options.get("tensor_split")
+        if tensor_split:
+            if isinstance(tensor_split, (list, tuple)):
+                tensor_split = ",".join(str(value) for value in tensor_split)
+            command.extend(["--tensor-split", str(tensor_split)])
+        main_gpu = options.get("main_gpu")
+        if main_gpu is not None and not isinstance(main_gpu, bool):
+            command.extend(["--main-gpu", str(main_gpu)])
+        return command
 
     def execute(self, request: ExecutionRequest) -> ExecutionResult:
         validation = self.validate(request.profile)
         runtime = validation.runtime
-        if validation.state is not ValidationState.SUPPORTED:
+        if validation.state is ValidationState.UNSUPPORTED or (
+            validation.state is ValidationState.UNKNOWN and not request.allow_unknown_runtime
+        ):
             return ExecutionResult(
-                request_id=request.request_id, runtime=runtime, success=False,
-                error_class=FailureClass.RUNTIME, error_detail=validation.rationale,
+                request_id=request.request_id,
+                runtime=runtime,
+                success=False,
+                error_class=FailureClass.RUNTIME,
+                error_detail=validation.rationale,
             )
         started = time.monotonic()
-        command = [str(self.binary), "-m", str(request.profile.options["model_path"]),
-                   "-p", request.prompt, "-n", str(request.max_tokens), "--temp",
-                   str(request.temperature), "--no-warmup", "--log-disable"]
+        env = os.environ.copy()
+        visible_devices = request.profile.options.get("cuda_visible_devices")
+        if visible_devices is not None:
+            env["CUDA_VISIBLE_DEVICES"] = str(visible_devices)
         try:
-            run = subprocess.run(command, capture_output=True, text=True,
-                                 timeout=request.timeout_seconds, check=False)
+            run = subprocess.run(
+                self._command(request),
+                capture_output=True,
+                text=True,
+                timeout=request.timeout_seconds,
+                check=False,
+                env=env,
+            )
         except subprocess.TimeoutExpired:
             return ExecutionResult(
-                request_id=request.request_id, runtime=runtime, success=False,
-                error_class=FailureClass.TIMEOUT, error_detail="llama.cpp timed out",
+                request_id=request.request_id,
+                runtime=runtime,
+                success=False,
+                error_class=FailureClass.TIMEOUT,
+                error_detail="llama.cpp timed out",
                 timings=Timing(total_seconds=time.monotonic() - started),
             )
         except OSError as exc:
             return ExecutionResult(
-                request_id=request.request_id, runtime=runtime, success=False,
+                request_id=request.request_id,
+                runtime=runtime,
+                success=False,
                 error_class=FailureClass.RESOURCE,
                 error_detail=f"llama.cpp process could not start: {exc}",
                 timings=Timing(total_seconds=time.monotonic() - started),
             )
+        elapsed = time.monotonic() - started
+        timings = _parse_timings(run.stderr, elapsed)
         if run.returncode:
             return ExecutionResult(
-                request_id=request.request_id, runtime=runtime, success=False,
-                error_class=FailureClass.EXECUTION, error_detail=run.stderr[-1000:],
+                request_id=request.request_id,
+                runtime=runtime,
+                success=False,
+                error_class=FailureClass.EXECUTION,
+                error_detail=run.stderr[-1000:],
                 raw_exit_code=run.returncode,
-                timings=Timing(total_seconds=time.monotonic() - started),
+                timings=timings,
+            )
+        if _accelerated(request.profile):
+            capabilities = dict(runtime.capabilities)
+            capabilities["accelerated_execution"] = "measured"
+            runtime = runtime.model_copy(
+                update={
+                    "backends": sorted(set(runtime.backends) | {"cuda"}),
+                    "capabilities": capabilities,
+                }
             )
         output = run.stdout.removeprefix(request.prompt).strip()
         return ExecutionResult(
-            request_id=request.request_id, runtime=runtime, success=True, output=output,
-            timings=Timing(total_seconds=time.monotonic() - started),
+            request_id=request.request_id,
+            runtime=runtime,
+            success=True,
+            output=output,
+            timings=timings,
         )
