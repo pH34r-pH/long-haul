@@ -47,7 +47,7 @@ discovery + benchmarks -> normalized topology -> candidate plans
 
 Execution modes are `LOCAL`, `POOL`, `PIPELINE`, and `COMPOSE`. Runtime strategies such as resident, offloaded, split, or streaming execution are described by validated inference profiles rather than overloaded into those modes.
 
-Read [Architecture](docs/architecture.md) or the [Wiki](https://github.com/pH34r-pH/long-haul/wiki).
+Read [Architecture](docs/architecture.md), the detailed [North-Star Architecture](docs/north-star.md), or the [Wiki](https://github.com/pH34r-pH/long-haul/wiki).
 
 ## Public runtime, private Fleet
 
