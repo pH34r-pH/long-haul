@@ -133,3 +133,30 @@ def test_manifest_matrix_records_cpu_and_exploratory_gpu(fixture_runtime, tmp_pa
     gpu = next(item for item in report["profiles"] if item["profile"]["id"] == "anc-g0")
     assert gpu["preflight"]["state"] == "UNKNOWN"
     assert gpu["measured_validation"]["state"] == "SUPPORTED"
+
+
+def test_multi_gpu_tensor_split_uses_llama_cpp_slash_separator(fixture_runtime, tmp_path):
+    model = tmp_path / "model.gguf"
+    model.write_bytes(b"fixture")
+    profile = InferenceProfile(
+        id="dual",
+        runtime_id="llama.cpp",
+        strategy="multi_gpu",
+        artifact=ModelArtifact(foundation="fixture"),
+        participating_resources=["ANC-G0", "ANC-G1"],
+        options={
+            "model_path": str(model),
+            "gpu_layers": 999,
+            "split_mode": "layer",
+            "tensor_split": [0.75, 0.25],
+        },
+    )
+    request = ExecutionRequest(
+        request_id="dual",
+        profile=profile,
+        prompt="test",
+        allow_unknown_runtime=True,
+    )
+    command = LlamaCppAdapter(fixture_runtime)._command(request)
+    index = command.index("--tensor-split")
+    assert command[index + 1] == "0.75/0.25"
