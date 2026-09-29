@@ -41,6 +41,12 @@ def main() -> None:
     replay.add_argument("--benchmarks", required=True)
     replay.add_argument("--workload")
 
+    native = sub.add_parser("import-llama-bench")
+    native.add_argument("--manifest", required=True)
+    native.add_argument("--profile-id", required=True)
+    native.add_argument("--raw", required=True)
+    native.add_argument("--output", required=True)
+
     args = parser.parse_args()
 
     if args.command == "show":
@@ -101,6 +107,21 @@ def main() -> None:
                     args.matrix_report,
                     args.benchmarks,
                     workload=args.workload,
+                ),
+                indent=2,
+            )
+        )
+        return
+    if args.command == "import-llama-bench":
+        from .llama_bench_import import import_profile
+
+        print(
+            __import__("json").dumps(
+                import_profile(
+                    args.manifest,
+                    args.profile_id,
+                    args.raw,
+                    args.output,
                 ),
                 indent=2,
             )
