@@ -3,6 +3,10 @@
 [![CI](https://github.com/pH34r-pH/long-haul/actions/workflows/ci.yml/badge.svg)](https://github.com/pH34r-pH/long-haul/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/pH34r-pH/long-haul)](LICENSE)
 
+<p align="center">
+  <img src="docs/assets/hero.webp" alt="Long Haul — heterogeneous compute vessels operating across a shared orchestration network" width="100%">
+</p>
+
 **Topology-aware orchestration for heterogeneous local inference crews.**
 
 Long Haul is a hardware-agnostic runtime and research framework for coordinating persistent crew identities, model/runtime embodiments, and mismatched compute resources across local and networked vessels.
