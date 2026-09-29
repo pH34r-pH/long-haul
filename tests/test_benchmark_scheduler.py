@@ -31,79 +31,75 @@ def _validation(profile: InferenceProfile) -> dict:
     ).model_dump(mode="json")
 
 
-def test_scheduler_replay_ignores_failed_measurements_and_selects_fastest(tmp_path):
-    vessel = tmp_path / "vessel.yaml"
-    vessel.write_text(
-        """
-id: anchorage
-name: Anchorage
-class_name: station
-resources:
+def _write_vessel(tmp_path, *, cpu: bool = True):
+    resources = """
   - id: ANC-C0
     kind: cpu
+""" if cpu else ""
+    resources += """
   - id: ANC-G0
     kind: gpu
     memory_mb: 8192
-""".lstrip()
+"""
+    path = tmp_path / "vessel.yaml"
+    path.write_text(
+        "id: anchorage\nname: Anchorage\nclass_name: station\nresources:\n" + resources
     )
+    return path
 
-    cpu = _profile("cpu", "ANC-C0")
-    gpu = _profile("gpu", "ANC-G0")
-    matrix = tmp_path / "matrix-report.json"
-    matrix.write_text(
+
+def _write_matrix(tmp_path, profiles):
+    path = tmp_path / "matrix-report.json"
+    path.write_text(
         json.dumps(
             {
                 "schema": "long-haul-benchmark-matrix/v1",
                 "profiles": [
                     {
-                        "profile": cpu.model_dump(mode="json"),
-                        "measured_validation": _validation(cpu),
-                    },
-                    {
-                        "profile": gpu.model_dump(mode="json"),
-                        "measured_validation": _validation(gpu),
-                    },
+                        "profile": profile.model_dump(mode="json"),
+                        "measured_validation": _validation(profile),
+                    }
+                    for profile in profiles
                 ],
             }
         )
     )
+    return path
 
-    benchmarks = tmp_path / "benchmarks.jsonl"
-    observations = [
-        BenchmarkObservation(
-            profile=gpu,
-            plan_mode=ExecutionMode.LOCAL,
-            resources=["ANC-G0"],
-            workload={"name": "exact-string"},
-            provenance="measured",
-            decode_tps=999,
-            error="FAIL_RUNTIME: fixture failure",
-        ),
-        BenchmarkObservation(
-            profile=cpu,
-            plan_mode=ExecutionMode.LOCAL,
-            resources=["ANC-C0"],
-            workload={"name": "exact-string"},
-            provenance="measured",
-            decode_tps=20,
-        ),
-        BenchmarkObservation(
-            profile=gpu,
-            plan_mode=ExecutionMode.LOCAL,
-            resources=["ANC-G0"],
-            workload={"name": "exact-string"},
-            provenance="measured",
-            decode_tps=40,
-        ),
-    ]
-    benchmarks.write_text("\n".join(item.model_dump_json() for item in observations) + "\n")
 
-    result = run(
-        str(vessel),
-        str(matrix),
-        str(benchmarks),
-        workload="exact-string",
+def _observation(profile, rate, *, error=None):
+    return BenchmarkObservation(
+        profile=profile,
+        plan_mode=ExecutionMode.LOCAL,
+        resources=profile.participating_resources,
+        workload={"name": "exact-string"},
+        provenance="measured",
+        decode_tps=rate,
+        error=error,
     )
+
+
+def _write_benchmarks(tmp_path, observations):
+    path = tmp_path / "benchmarks.jsonl"
+    path.write_text("\n".join(item.model_dump_json() for item in observations) + "\n")
+    return path
+
+
+def test_scheduler_replay_ignores_failed_measurements_and_selects_fastest(tmp_path):
+    vessel = _write_vessel(tmp_path)
+    cpu = _profile("cpu", "ANC-C0")
+    gpu = _profile("gpu", "ANC-G0")
+    matrix = _write_matrix(tmp_path, [cpu, gpu])
+    benchmarks = _write_benchmarks(
+        tmp_path,
+        [
+            _observation(gpu, 999, error="FAIL_RUNTIME: fixture failure"),
+            _observation(cpu, 20),
+            _observation(gpu, 40),
+        ],
+    )
+
+    result = run(str(vessel), str(matrix), str(benchmarks), workload="exact-string")
 
     assert result["selected"]["plan"]["inference_profile_id"] == "gpu"
     gpu_candidate = next(
@@ -115,46 +111,16 @@ resources:
 
 
 def test_scheduler_replay_keeps_failed_only_profile_without_evidence(tmp_path):
-    vessel = tmp_path / "vessel.yaml"
-    vessel.write_text(
-        """
-id: anchorage
-name: Anchorage
-class_name: station
-resources:
-  - id: ANC-G0
-    kind: gpu
-    memory_mb: 8192
-""".lstrip()
-    )
+    vessel = _write_vessel(tmp_path, cpu=False)
     gpu = _profile("gpu", "ANC-G0")
-    matrix = tmp_path / "matrix-report.json"
-    matrix.write_text(
-        json.dumps(
-            {
-                "schema": "long-haul-benchmark-matrix/v1",
-                "profiles": [
-                    {
-                        "profile": gpu.model_dump(mode="json"),
-                        "measured_validation": _validation(gpu),
-                    }
-                ],
-            }
-        )
+    matrix = _write_matrix(tmp_path, [gpu])
+    benchmarks = _write_benchmarks(
+        tmp_path,
+        [_observation(gpu, 999, error="FAIL_RUNTIME: fixture failure")],
     )
-    failed = BenchmarkObservation(
-        profile=gpu,
-        plan_mode=ExecutionMode.LOCAL,
-        resources=["ANC-G0"],
-        workload={"name": "exact-string"},
-        provenance="measured",
-        decode_tps=999,
-        error="FAIL_RUNTIME: fixture failure",
-    )
-    benchmarks = tmp_path / "benchmarks.jsonl"
-    benchmarks.write_text(failed.model_dump_json() + "\n")
 
     result = run(str(vessel), str(matrix), str(benchmarks))
+
     candidate = result["candidates"][0]
     assert candidate["evidence_id"] is None
     assert "no comparable benchmark evidence; uncertainty retained" in candidate["reasons"]
