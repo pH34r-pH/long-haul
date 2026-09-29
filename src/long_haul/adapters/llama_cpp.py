@@ -177,8 +177,27 @@ def _parse_timings(stderr: str, total_seconds: float) -> Timing:
     return timing
 
 
-def _accelerated(profile: InferenceProfile) -> bool:
+def _target_accelerated(profile: InferenceProfile) -> bool:
     return profile.strategy in _ACCELERATED_STRATEGIES
+
+
+def _draft_accelerated(profile: InferenceProfile) -> bool:
+    device = profile.options.get("draft_device")
+    if device is not None:
+        return str(device).strip().lower() not in {"", "none", "cpu"}
+    value = profile.options.get("draft_gpu_layers")
+    if value is None or isinstance(value, bool):
+        return False
+    if isinstance(value, str) and value.lower() in {"auto", "all"}:
+        return True
+    try:
+        return int(value) > 0
+    except (TypeError, ValueError):
+        return False
+
+
+def _accelerated(profile: InferenceProfile) -> bool:
+    return _target_accelerated(profile) or _draft_accelerated(profile)
 
 
 def _gpu_layers(profile: InferenceProfile) -> int:
@@ -327,12 +346,7 @@ class LlamaCppAdapter:
             state, rationale = ValidationState.UNKNOWN, "profile has no adapter model_path option"
         elif not Path(str(profile.options["model_path"])).is_file():
             state, rationale = ValidationState.UNSUPPORTED, "GGUF model artifact is missing"
-        elif profile.strategy == "resident":
-            state = ValidationState.SUPPORTED
-            rationale = (
-                "CPU resident prerequisites available; model loading and execution remain unverified"
-            )
-        elif _accelerated(profile):
+        elif _target_accelerated(profile):
             if _gpu_layers(profile) <= 0:
                 state = ValidationState.UNSUPPORTED
                 rationale = "accelerated profile requires a positive gpu_layers option"
@@ -342,6 +356,17 @@ class LlamaCppAdapter:
                     "accelerated profile requires measured execution qualification; "
                     "preflight does not infer CUDA support from GPU presence"
                 )
+        elif _draft_accelerated(profile):
+            state = ValidationState.UNKNOWN
+            rationale = (
+                "accelerated draft profile requires measured execution qualification; "
+                "preflight does not infer CUDA support from draft placement"
+            )
+        elif profile.strategy == "resident":
+            state = ValidationState.SUPPORTED
+            rationale = (
+                "CPU resident prerequisites available; model loading and execution remain unverified"
+            )
         else:
             state, rationale = (
                 ValidationState.UNSUPPORTED,
