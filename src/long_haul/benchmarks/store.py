@@ -12,6 +12,7 @@ from ..models import ExecutionMode, InferenceProfile
 Provenance = Literal["measured", "imported", "simulated", "estimated"]
 class Workload(BaseModel):
     name: str; prompt_tokens: int = 0; output_tokens: int = 0; cold: bool = False
+    context_depth_tokens: int = 0; repetitions: int = 1
 class BenchmarkObservation(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4())); timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     profile: InferenceProfile; plan_mode: ExecutionMode; resources: list[str]; workload: Workload
@@ -19,6 +20,7 @@ class BenchmarkObservation(BaseModel):
     prefill_tps: float | None = None; decode_tps: float | None = None
     residency_mib: dict[str, float] = Field(default_factory=dict); utilization: dict[str, float] = Field(default_factory=dict)
     network: dict[str, float | str] = Field(default_factory=dict); power_watts: float | None = None
+    statistics: dict[str, object] = Field(default_factory=dict)
     error: str | None = None; schema_version: int = 1
 
 class BenchmarkStore:
