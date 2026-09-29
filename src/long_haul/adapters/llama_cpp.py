@@ -321,7 +321,7 @@ class LlamaCppAdapter:
         if options.get("no_warmup", True):
             command.append("--no-warmup")
         gpu_layers = _gpu_layers(request.profile)
-        if gpu_layers > 0:
+        if gpu_layers >= 0:
             command.extend(["-ngl", str(gpu_layers)])
         split_mode = options.get("split_mode")
         if split_mode:
