@@ -194,3 +194,70 @@ def test_llama_command_exposes_all_cpu_moe_flag(fixture_runtime, tmp_path):
         ExecutionRequest(request_id="cpu-moe", profile=profile, prompt="test")
     )
     assert "--cpu-moe" in command
+
+
+def test_llama_command_exposes_speculative_placement_controls(fixture_runtime, tmp_path):
+    model = tmp_path / "model.gguf"
+    draft = tmp_path / "draft.gguf"
+    model.write_bytes(b"fixture")
+    draft.write_bytes(b"draft")
+    profile = InferenceProfile(
+        id="anc-speculative",
+        runtime_id="llama.cpp",
+        strategy="gpu_offload",
+        artifact=ModelArtifact(foundation="fixture", quantization="Q4"),
+        participating_resources=["ANC-C0", "ANC-G0", "ANC-G1"],
+        options={
+            "model_path": str(model),
+            "gpu_layers": 20,
+            "spec_type": "draft-simple",
+            "draft_model_path": str(draft),
+            "draft_device": "CUDA1",
+            "draft_gpu_layers": "all",
+            "draft_threads": 6,
+            "draft_threads_batch": 12,
+            "draft_cpu_range": "6-11",
+            "draft_n_max": 5,
+            "draft_n_min": 1,
+            "draft_n_cpu_moe": 4,
+        },
+    )
+    command = LlamaCppAdapter(fixture_runtime)._command(
+        ExecutionRequest(request_id="spec", profile=profile, prompt="test")
+    )
+    expected_pairs = {
+        "--spec-type": "draft-simple",
+        "--spec-draft-model": str(draft),
+        "--spec-draft-device": "CUDA1",
+        "--spec-draft-ngl": "all",
+        "--spec-draft-threads": "6",
+        "--spec-draft-threads-batch": "12",
+        "--spec-draft-cpu-range": "6-11",
+        "--spec-draft-n-max": "5",
+        "--spec-draft-n-min": "1",
+        "--spec-draft-n-cpu-moe": "4",
+    }
+    for flag, value in expected_pairs.items():
+        position = command.index(flag)
+        assert command[position + 1] == value
+
+
+def test_llama_command_exposes_ngram_speculation_without_draft_model(fixture_runtime, tmp_path):
+    model = tmp_path / "model.gguf"
+    model.write_bytes(b"fixture")
+    profile = InferenceProfile(
+        id="anc-ngram-spec",
+        runtime_id="llama.cpp",
+        strategy="resident",
+        artifact=ModelArtifact(foundation="fixture", quantization="Q4"),
+        participating_resources=["ANC-C0"],
+        options={
+            "model_path": str(model),
+            "spec_type": "ngram-simple",
+        },
+    )
+    command = LlamaCppAdapter(fixture_runtime)._command(
+        ExecutionRequest(request_id="ngram", profile=profile, prompt="test")
+    )
+    assert command[command.index("--spec-type") + 1] == "ngram-simple"
+    assert "--spec-draft-model" not in command
