@@ -1,6 +1,6 @@
 # Architecture
 
-Long Haul has three broad layers: **observation**, **decision**, and **execution/evidence**.
+Long Haul has three broad layers: **observation**, **decision**, and **execution/evidence**. The evolving standards-first shared-epistemic and heterogeneous-execution design is maintained in the repository's [North-Star Architecture](https://github.com/pH34r-pH/long-haul/blob/main/docs/north-star.md).
 
 ```text
 discovery + benchmarks
