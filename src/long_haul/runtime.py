@@ -15,13 +15,22 @@ class ValidationState(str, Enum):
     UNSUPPORTED = "UNSUPPORTED"
     UNKNOWN = "UNKNOWN"
 
+
 class ValidationDepth(str, Enum):
-    STRUCTURAL = "STRUCTURAL"; PREFLIGHT = "PREFLIGHT"; EXECUTION = "EXECUTION"; BENCHMARK = "BENCHMARK"
+    STRUCTURAL = "STRUCTURAL"
+    PREFLIGHT = "PREFLIGHT"
+    EXECUTION = "EXECUTION"
+    BENCHMARK = "BENCHMARK"
 
 
 class FailureClass(str, Enum):
-    SYSTEM = "FAIL_SYSTEM"; RUNTIME = "FAIL_RUNTIME"; ARTIFACT = "FAIL_ARTIFACT"
-    RESOURCE = "FAIL_RESOURCE"; EXECUTION = "FAIL_EXECUTION"; TIMEOUT = "FAIL_TIMEOUT"; INTERRUPTION = "FAIL_RUNNER_INTERRUPTION"
+    SYSTEM = "FAIL_SYSTEM"
+    RUNTIME = "FAIL_RUNTIME"
+    ARTIFACT = "FAIL_ARTIFACT"
+    RESOURCE = "FAIL_RESOURCE"
+    EXECUTION = "FAIL_EXECUTION"
+    TIMEOUT = "FAIL_TIMEOUT"
+    INTERRUPTION = "FAIL_RUNNER_INTERRUPTION"
 
 
 class RuntimeIdentity(BaseModel):
@@ -34,7 +43,14 @@ class RuntimeIdentity(BaseModel):
 
     @property
     def fingerprint(self) -> str:
-        return "|".join([self.runtime_id, self.version or "unknown", self.build_id or "unknown", ",".join(sorted(self.backends))])
+        return "|".join(
+            [
+                self.runtime_id,
+                self.version or "unknown",
+                self.build_id or "unknown",
+                ",".join(sorted(self.backends)),
+            ]
+        )
 
 
 class ProfileValidation(BaseModel):
@@ -52,7 +68,16 @@ class ProfileValidation(BaseModel):
 
     @property
     def fingerprint(self) -> str:
-        return "|".join([self.runtime.fingerprint, self.profile_id, self.artifact_key, ",".join(sorted(self.resources)), self.strategy, repr(sorted(self.options.items()))])
+        return "|".join(
+            [
+                self.runtime.fingerprint,
+                self.profile_id,
+                self.artifact_key,
+                ",".join(sorted(self.resources)),
+                self.strategy,
+                repr(sorted(self.options.items())),
+            ]
+        )
 
 
 class ExecutionRequest(BaseModel):
@@ -62,23 +87,33 @@ class ExecutionRequest(BaseModel):
     max_tokens: int = Field(default=32, ge=1, le=4096)
     temperature: float = Field(default=0, ge=0)
     timeout_seconds: float = Field(default=120, gt=0)
+    allow_unknown_runtime: bool = False
 
 
 class Timing(BaseModel):
-    load_seconds: float | None = None; ttft_seconds: float | None = None
-    prompt_tokens: int | None = None; generated_tokens: int | None = None
-    prefill_tps: float | None = None; decode_tps: float | None = None; total_seconds: float | None = None
+    load_seconds: float | None = None
+    ttft_seconds: float | None = None
+    prompt_tokens: int | None = None
+    generated_tokens: int | None = None
+    prefill_tps: float | None = None
+    decode_tps: float | None = None
+    total_seconds: float | None = None
 
 
 class ExecutionResult(BaseModel):
-    request_id: str; runtime: RuntimeIdentity
-    success: bool; output: str | None = None; timings: Timing = Field(default_factory=Timing)
-    error_class: FailureClass | None = None; error_detail: str | None = None
+    request_id: str
+    runtime: RuntimeIdentity
+    success: bool
+    output: str | None = None
+    timings: Timing = Field(default_factory=Timing)
+    error_class: FailureClass | None = None
+    error_detail: str | None = None
     raw_exit_code: int | None = None
 
 
 class RuntimeAdapter(Protocol):
     runtime_id: str
+
     def identity(self) -> RuntimeIdentity: ...
     def validate(self, profile: InferenceProfile) -> ProfileValidation: ...
     def execute(self, request: ExecutionRequest) -> ExecutionResult: ...
