@@ -34,6 +34,11 @@ The llama.cpp adapter exposes placement controls through `InferenceProfile.optio
 - `gpu_layers`, `split_mode`, `tensor_split`, `main_gpu`
 - `cpu_moe` → `--cpu-moe`
 - `n_cpu_moe` → `--n-cpu-moe`
+- `spec_type` → `--spec-type` (including n-gram modes that need no draft model)
+- `draft_model_path`, `draft_device`, `draft_gpu_layers`
+- `draft_threads`, `draft_threads_batch`, `draft_cpu_range`
+- `draft_n_max`, `draft_n_min`
+- `draft_cpu_moe`, `draft_n_cpu_moe`
 
 These are edge options. The scheduler should consume qualified inference profiles, not embed llama.cpp flags.
 
