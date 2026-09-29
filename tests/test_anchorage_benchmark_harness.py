@@ -7,7 +7,7 @@ import pytest
 import yaml
 
 from long_haul.adapters.llama_cpp import LlamaCppAdapter
-from long_haul.benchmark_matrix import run
+from long_haul.benchmark_matrix import load_manifest, run
 from long_haul.models import InferenceProfile, ModelArtifact
 from long_haul.runtime import ExecutionRequest, FailureClass, ValidationState
 
@@ -261,3 +261,22 @@ def test_llama_command_exposes_ngram_speculation_without_draft_model(fixture_run
     )
     assert command[command.index("--spec-type") + 1] == "ngram-simple"
     assert "--spec-draft-model" not in command
+
+
+def test_checked_in_anchorage_cpu_sweep_manifest_is_valid():
+    manifest_path = (
+        Path(__file__).parents[1]
+        / "docs"
+        / "benchmarks"
+        / "anchorage-cpu-thread-sweep.yaml"
+    )
+    manifest = load_manifest(manifest_path)
+    assert [profile.options["threads"] for profile in manifest.profiles] == [
+        1,
+        2,
+        4,
+        6,
+        12,
+        24,
+    ]
+    assert all(profile.resources == ["ANC-C0"] for profile in manifest.profiles)
