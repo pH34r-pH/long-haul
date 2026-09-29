@@ -280,3 +280,35 @@ def test_checked_in_anchorage_cpu_sweep_manifest_is_valid():
         24,
     ]
     assert all(profile.resources == ["ANC-C0"] for profile in manifest.profiles)
+
+
+def test_gpu_draft_on_resident_target_requires_explicit_exploration(
+    fixture_runtime, tmp_path
+):
+    model = tmp_path / "model.gguf"
+    draft = tmp_path / "draft.gguf"
+    model.write_bytes(b"fixture")
+    draft.write_bytes(b"draft")
+    profile = InferenceProfile(
+        id="anc-cpu-target-gpu-draft",
+        runtime_id="llama.cpp",
+        strategy="resident",
+        artifact=ModelArtifact(foundation="fixture", quantization="Q4"),
+        participating_resources=["ANC-C0", "ANC-G1"],
+        options={
+            "model_path": str(model),
+            "spec_type": "draft-simple",
+            "draft_model_path": str(draft),
+            "draft_device": "CUDA1",
+            "draft_gpu_layers": "all",
+        },
+    )
+    adapter = LlamaCppAdapter(fixture_runtime)
+
+    validation = adapter.validate(profile)
+    assert validation.state is ValidationState.UNKNOWN
+    denied = adapter.execute(
+        ExecutionRequest(request_id="draft-denied", profile=profile, prompt="test")
+    )
+    assert denied.success is False
+    assert denied.error_class is FailureClass.RUNTIME
