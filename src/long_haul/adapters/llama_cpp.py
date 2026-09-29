@@ -224,6 +224,28 @@ def _append_cpu_options(command: list[str], options: dict[str, object]) -> None:
         command.extend(["--n-cpu-moe", str(n_cpu_moe)])
 
 
+def _append_speculative_options(command: list[str], options: dict[str, object]) -> None:
+    """Append upstream speculative-decoding controls without owning the policy."""
+    for key, flag in (
+        ("spec_type", "--spec-type"),
+        ("draft_model_path", "--spec-draft-model"),
+        ("draft_device", "--spec-draft-device"),
+        ("draft_gpu_layers", "--spec-draft-ngl"),
+        ("draft_threads", "--spec-draft-threads"),
+        ("draft_threads_batch", "--spec-draft-threads-batch"),
+        ("draft_cpu_range", "--spec-draft-cpu-range"),
+        ("draft_n_max", "--spec-draft-n-max"),
+        ("draft_n_min", "--spec-draft-n-min"),
+        ("draft_n_cpu_moe", "--spec-draft-n-cpu-moe"),
+    ):
+        value = options.get(key)
+        if value is not None and not isinstance(value, bool):
+            command.extend([flag, str(value)])
+
+    if options.get("draft_cpu_moe"):
+        command.append("--spec-draft-cpu-moe")
+
+
 class LlamaCppAdapter:
     runtime_id = "llama.cpp"
 
@@ -371,6 +393,7 @@ class LlamaCppAdapter:
         # CPU placement is part of an inference profile because thread count and
         # affinity can materially change performance on multi-CCD hosts.
         _append_cpu_options(command, options)
+        _append_speculative_options(command, options)
         return command
 
     def execute(self, request: ExecutionRequest) -> ExecutionResult:
