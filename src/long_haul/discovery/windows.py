@@ -62,77 +62,69 @@ class GenericWindowsDiscovery:
         except json.JSONDecodeError:
             return None
 
-    def discover(self) -> Vessel:
-        prefix = self.resource_prefix
-        resources: list[Resource] = []
-        links: list[Link] = []
-
+    def _cpu(self) -> Resource:
         processors = _records(
             self._powershell_json(
                 "Get-CimInstance Win32_Processor | "
                 "Select-Object Name,NumberOfCores,NumberOfLogicalProcessors"
             )
         )
-        cpu_id = f"{prefix}-C0"
-        cpu_model = processors[0].get("Name") if processors else None
-        cpu_metadata: dict[str, Any] = {"provenance": "observed"}
-        if processors:
-            cpu_metadata.update(
+        observed = processors[0] if processors else {}
+        metadata: dict[str, Any] = {"provenance": "observed"}
+        if observed:
+            metadata.update(
                 {
-                    "cores": processors[0].get("NumberOfCores"),
-                    "logical_processors": processors[0].get("NumberOfLogicalProcessors"),
+                    "cores": observed.get("NumberOfCores"),
+                    "logical_processors": observed.get("NumberOfLogicalProcessors"),
                 }
             )
-        resources.append(
-            Resource(
-                id=cpu_id,
-                kind=ResourceKind.CPU,
-                model=str(cpu_model).strip() if cpu_model else None,
-                architecture="x86_64",
-                metadata=cpu_metadata,
-            )
+        model = str(observed.get("Name") or "").strip() or None
+        return Resource(
+            id=f"{self.resource_prefix}-C0",
+            kind=ResourceKind.CPU,
+            model=model,
+            architecture="x86_64",
+            metadata=metadata,
         )
 
+    def _memory(self) -> Resource | None:
         dimms = _records(
             self._powershell_json(
                 "Get-CimInstance Win32_PhysicalMemory | "
                 "Select-Object DeviceLocator,BankLabel,Capacity,ConfiguredClockSpeed"
             )
         )
-        if dimms:
-            total_bytes = sum(int(item.get("Capacity") or 0) for item in dimms)
-            memory_id = f"{prefix}-M0"
-            resources.append(
-                Resource(
-                    id=memory_id,
-                    kind=ResourceKind.MEMORY,
-                    model="system RAM",
-                    capacities=[Capacity(kind="memory", amount=total_bytes, unit="bytes")],
-                    metadata={
-                        "provenance": "observed",
-                        "modules": [
-                            {
-                                "device_locator": item.get("DeviceLocator"),
-                                "bank_label": item.get("BankLabel"),
-                                "capacity_bytes": int(item.get("Capacity") or 0),
-                                "configured_clock_mhz": item.get("ConfiguredClockSpeed"),
-                            }
-                            for item in dimms
-                        ],
-                    },
-                )
-            )
-        else:
-            memory_id = None
+        if not dimms:
+            return None
+        total_bytes = sum(int(item.get("Capacity") or 0) for item in dimms)
+        modules = [
+            {
+                "device_locator": item.get("DeviceLocator"),
+                "bank_label": item.get("BankLabel"),
+                "capacity_bytes": int(item.get("Capacity") or 0),
+                "configured_clock_mhz": item.get("ConfiguredClockSpeed"),
+            }
+            for item in dimms
+        ]
+        return Resource(
+            id=f"{self.resource_prefix}-M0",
+            kind=ResourceKind.MEMORY,
+            model="system RAM",
+            capacities=[Capacity(kind="memory", amount=total_bytes, unit="bytes")],
+            metadata={"provenance": "observed", "modules": modules},
+        )
 
+    def _storage(self, memory_id: str | None) -> tuple[list[Resource], list[Link]]:
         disks = _records(
             self._powershell_json(
                 "Get-CimInstance Win32_DiskDrive | "
                 "Select-Object Model,FirmwareRevision,Size,InterfaceType"
             )
         )
+        resources: list[Resource] = []
+        links: list[Link] = []
         for index, disk in enumerate(disks):
-            storage_id = f"{prefix}-S{index}"
+            storage_id = f"{self.resource_prefix}-S{index}"
             size = int(disk.get("Size") or 0)
             capacities = [Capacity(kind="storage", amount=size, unit="bytes")] if size else []
             resources.append(
@@ -158,55 +150,67 @@ class GenericWindowsDiscovery:
                         notes="Observed local storage; practical throughput remains unmeasured.",
                     )
                 )
+        return resources, links
 
+    def _gpus(self, cpu_id: str) -> tuple[list[Resource], list[Link]]:
         smi = self._run(
             "nvidia-smi",
             "--query-gpu=index,name,memory.total,pci.bus_id,driver_version",
             "--format=csv,noheader,nounits",
         )
-        if smi:
-            for line in smi.splitlines():
-                fields = [field.strip() for field in line.split(",")]
-                if len(fields) < 5:
-                    continue
-                try:
-                    index = int(fields[0])
-                    memory_mib = float(fields[2])
-                except ValueError:
-                    continue
-                gpu_id = f"{prefix}-G{index}"
-                resources.append(
-                    Resource(
-                        id=gpu_id,
-                        kind=ResourceKind.GPU,
-                        model=fields[1],
-                        capacities=[Capacity(kind="memory", amount=memory_mib, unit="MiB")],
-                        metadata={
-                            "provenance": "observed",
-                            "nvidia_index": index,
-                            "pci_bus_id": fields[3],
-                            "driver_version": fields[4],
-                        },
-                    )
+        resources: list[Resource] = []
+        links: list[Link] = []
+        if not smi:
+            return resources, links
+        for line in smi.splitlines():
+            fields = [field.strip() for field in line.split(",")]
+            if len(fields) < 5:
+                continue
+            try:
+                index = int(fields[0])
+                memory_mib = float(fields[2])
+            except ValueError:
+                continue
+            gpu_id = f"{self.resource_prefix}-G{index}"
+            resources.append(
+                Resource(
+                    id=gpu_id,
+                    kind=ResourceKind.GPU,
+                    model=fields[1],
+                    capacities=[Capacity(kind="memory", amount=memory_mib, unit="MiB")],
+                    metadata={
+                        "provenance": "observed",
+                        "nvidia_index": index,
+                        "pci_bus_id": fields[3],
+                        "driver_version": fields[4],
+                    },
                 )
-                links.append(
-                    Link(
-                        source=cpu_id,
-                        target=gpu_id,
-                        kind="pcie",
-                        path=fields[3],
-                        measured=True,
-                        notes=(
-                            "PCI bus identity observed from nvidia-smi; "
-                            "link width and throughput remain unmeasured."
-                        ),
-                    )
+            )
+            links.append(
+                Link(
+                    source=cpu_id,
+                    target=gpu_id,
+                    kind="pcie",
+                    path=fields[3],
+                    measured=True,
+                    notes=(
+                        "PCI bus identity observed from nvidia-smi; "
+                        "link width and throughput remain unmeasured."
+                    ),
                 )
+            )
+        return resources, links
 
+    def discover(self) -> Vessel:
+        cpu = self._cpu()
+        memory = self._memory()
+        storage, storage_links = self._storage(memory.id if memory else None)
+        gpus, gpu_links = self._gpus(cpu.id)
+        resources = [cpu, *([memory] if memory else []), *storage, *gpus]
         return Vessel(
             id=self.vessel_id,
             name=self.name,
             class_name=self.class_name,
             resources=resources,
-            links=links,
+            links=[*storage_links, *gpu_links],
         )
