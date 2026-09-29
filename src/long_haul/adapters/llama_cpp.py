@@ -329,7 +329,7 @@ class LlamaCppAdapter:
         tensor_split = options.get("tensor_split")
         if tensor_split:
             if isinstance(tensor_split, (list, tuple)):
-                tensor_split = ",".join(str(value) for value in tensor_split)
+                tensor_split = "/".join(str(value) for value in tensor_split)
             command.extend(["--tensor-split", str(tensor_split)])
         main_gpu = options.get("main_gpu")
         if main_gpu is not None and not isinstance(main_gpu, bool):
