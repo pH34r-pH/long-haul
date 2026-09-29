@@ -27,6 +27,7 @@ def main() -> None:
 
     benchmark = sub.add_parser("benchmark-matrix")
     benchmark.add_argument("--binary", required=True)
+    benchmark.add_argument("--bench-binary")
     benchmark.add_argument("--model", required=True)
     benchmark.add_argument("--manifest", required=True)
     benchmark.add_argument("--output", default="benchmark-matrix")
@@ -67,7 +68,14 @@ def main() -> None:
 
         print(
             __import__("json").dumps(
-                run(args.binary, args.model, args.manifest, args.output, args.timeout),
+                run(
+                    args.binary,
+                    args.model,
+                    args.manifest,
+                    args.output,
+                    args.timeout,
+                    args.bench_binary,
+                ),
                 indent=2,
             )
         )
