@@ -133,3 +133,64 @@ def test_manifest_matrix_records_cpu_and_exploratory_gpu(fixture_runtime, tmp_pa
     gpu = next(item for item in report["profiles"] if item["profile"]["id"] == "anc-g0")
     assert gpu["preflight"]["state"] == "UNKNOWN"
     assert gpu["measured_validation"]["state"] == "SUPPORTED"
+
+
+def test_llama_command_exposes_cpu_affinity_and_moe_controls(fixture_runtime, tmp_path):
+    model = tmp_path / "model.gguf"
+    model.write_bytes(b"fixture")
+    profile = InferenceProfile(
+        id="anc-hybrid-affinity",
+        runtime_id="llama.cpp",
+        strategy="gpu_offload",
+        artifact=ModelArtifact(foundation="fixture", quantization="Q4"),
+        participating_resources=["ANC-C0", "ANC-G0"],
+        options={
+            "model_path": str(model),
+            "gpu_layers": 20,
+            "threads": 6,
+            "threads_batch": 12,
+            "cpu_range": "0-5",
+            "cpu_range_batch": "0-11",
+            "cpu_strict": True,
+            "cpu_strict_batch": True,
+            "n_cpu_moe": 8,
+        },
+    )
+    adapter = LlamaCppAdapter(fixture_runtime)
+    command = adapter._command(
+        ExecutionRequest(request_id="affinity", profile=profile, prompt="test")
+    )
+
+    expected_pairs = {
+        "--threads": "6",
+        "--threads-batch": "12",
+        "--cpu-range": "0-5",
+        "--cpu-range-batch": "0-11",
+        "--cpu-strict": "1",
+        "--cpu-strict-batch": "1",
+        "--n-cpu-moe": "8",
+    }
+    for flag, value in expected_pairs.items():
+        position = command.index(flag)
+        assert command[position + 1] == value
+
+
+def test_llama_command_exposes_all_cpu_moe_flag(fixture_runtime, tmp_path):
+    model = tmp_path / "model.gguf"
+    model.write_bytes(b"fixture")
+    profile = InferenceProfile(
+        id="anc-cpu-moe",
+        runtime_id="llama.cpp",
+        strategy="gpu_offload",
+        artifact=ModelArtifact(foundation="fixture", quantization="Q4"),
+        participating_resources=["ANC-C0", "ANC-G0"],
+        options={
+            "model_path": str(model),
+            "gpu_layers": 20,
+            "cpu_moe": True,
+        },
+    )
+    command = LlamaCppAdapter(fixture_runtime)._command(
+        ExecutionRequest(request_id="cpu-moe", profile=profile, prompt="test")
+    )
+    assert "--cpu-moe" in command
