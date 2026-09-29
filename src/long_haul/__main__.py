@@ -24,6 +24,9 @@ def main() -> None:
     reference.add_argument("--model", required=True)
     reference.add_argument("--output", default="reference-run")
     reference.add_argument("--timeout", type=float, default=900)
+    reference.add_argument("--vessel-id")
+    reference.add_argument("--vessel-name")
+    reference.add_argument("--resource-prefix")
 
     benchmark = sub.add_parser("benchmark-matrix")
     benchmark.add_argument("--binary", required=True)
@@ -66,7 +69,17 @@ def main() -> None:
     if args.command == "validate-reference":
         from .reference import run
 
-        print(run(args.binary, args.model, args.output, args.timeout).model_dump_json(indent=2))
+        print(
+            run(
+                args.binary,
+                args.model,
+                args.output,
+                args.timeout,
+                vessel_id=args.vessel_id,
+                vessel_name=args.vessel_name,
+                resource_prefix=args.resource_prefix,
+            ).model_dump_json(indent=2)
+        )
         return
     if args.command == "benchmark-matrix":
         from .benchmark_matrix import run
