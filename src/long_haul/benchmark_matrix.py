@@ -8,6 +8,7 @@ from uuid import uuid4
 import yaml
 from pydantic import BaseModel, Field
 
+from .adapters.llama_bench import LlamaBenchAdapter, LlamaBenchSweep
 from .adapters.llama_cpp import LlamaCppAdapter
 from .benchmarks import BenchmarkObservation, BenchmarkStore, Workload
 from .models import ExecutionMode, InferenceProfile, ModelArtifact
@@ -39,6 +40,7 @@ class MatrixManifest(BaseModel):
     artifact: ModelArtifact
     profiles: list[MatrixProfile] = Field(min_length=1)
     workloads: list[MatrixWorkload] = Field(min_length=1)
+    performance: LlamaBenchSweep | None = None
 
 
 def load_manifest(path: str | Path) -> MatrixManifest:
@@ -102,6 +104,25 @@ def _measured_validation(profile: InferenceProfile, result) -> ProfileValidation
     )
 
 
+def _run_native_benchmark(
+    adapter: LlamaBenchAdapter,
+    store: BenchmarkStore,
+    profile: InferenceProfile,
+    model: str,
+    sweep: LlamaBenchSweep,
+    timeout_seconds: float,
+    bench_adapter: LlamaBenchAdapter | None = None,
+) -> dict[str, object]:
+    result = adapter.run(profile, model, sweep, timeout_seconds)
+    observation_ids = [store.append(item).id for item in result.observations]
+    return {
+        "success": result.success,
+        "observation_ids": observation_ids,
+        "error": result.error,
+        "exit_code": result.exit_code,
+    }
+
+
 def _run_profile(
     adapter: LlamaCppAdapter,
     store: BenchmarkStore,
@@ -152,6 +173,15 @@ def _run_profile(
 
     if measured is not None:
         record["measured_validation"] = measured.model_dump(mode="json")
+        if bench_adapter is not None and manifest.performance is not None:
+            record["native_benchmark"] = _run_native_benchmark(
+                bench_adapter,
+                store,
+                profile,
+                model,
+                manifest.performance,
+                timeout_seconds,
+            )
     return record
 
 
@@ -161,14 +191,24 @@ def run(
     manifest_path: str,
     output_dir: str,
     timeout_seconds: float = 900,
+    bench_binary: str | None = None,
 ) -> dict[str, object]:
     manifest = load_manifest(manifest_path)
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     store = BenchmarkStore(out / "benchmarks.jsonl")
     adapter = LlamaCppAdapter(binary)
+    bench_adapter = LlamaBenchAdapter(bench_binary) if bench_binary else None
     profiles = [
-        _run_profile(adapter, store, manifest, spec, model, timeout_seconds)
+        _run_profile(
+            adapter,
+            store,
+            manifest,
+            spec,
+            model,
+            timeout_seconds,
+            bench_adapter,
+        )
         for spec in manifest.profiles
     ]
     report: dict[str, object] = {
