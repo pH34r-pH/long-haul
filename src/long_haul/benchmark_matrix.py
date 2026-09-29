@@ -111,7 +111,6 @@ def _run_native_benchmark(
     model: str,
     sweep: LlamaBenchSweep,
     timeout_seconds: float,
-    bench_adapter: LlamaBenchAdapter | None = None,
 ) -> dict[str, object]:
     result = adapter.run(profile, model, sweep, timeout_seconds)
     observation_ids = [store.append(item).id for item in result.observations]
@@ -130,6 +129,7 @@ def _run_profile(
     specification: MatrixProfile,
     model: str,
     timeout_seconds: float,
+    bench_adapter: LlamaBenchAdapter | None = None,
 ) -> dict[str, object]:
     profile = _profile(specification, manifest.artifact, model)
     validation = adapter.validate(profile)
