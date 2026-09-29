@@ -334,6 +334,39 @@ class LlamaCppAdapter:
         main_gpu = options.get("main_gpu")
         if main_gpu is not None and not isinstance(main_gpu, bool):
             command.extend(["--main-gpu", str(main_gpu)])
+
+        # CPU placement is part of an inference profile because thread count and
+        # affinity can materially change performance on multi-CCD hosts.
+        for key, flag in (
+            ("threads", "--threads"),
+            ("threads_batch", "--threads-batch"),
+        ):
+            value = options.get(key)
+            if value is not None and not isinstance(value, bool):
+                command.extend([flag, str(value)])
+
+        for key, flag in (
+            ("cpu_range", "--cpu-range"),
+            ("cpu_range_batch", "--cpu-range-batch"),
+        ):
+            value = options.get(key)
+            if value:
+                command.extend([flag, str(value)])
+
+        for key, flag in (
+            ("cpu_strict", "--cpu-strict"),
+            ("cpu_strict_batch", "--cpu-strict-batch"),
+        ):
+            value = options.get(key)
+            if value is not None:
+                command.extend([flag, "1" if bool(value) else "0"])
+
+        if options.get("cpu_moe"):
+            command.append("--cpu-moe")
+        n_cpu_moe = options.get("n_cpu_moe")
+        if n_cpu_moe is not None and not isinstance(n_cpu_moe, bool):
+            command.extend(["--n-cpu-moe", str(n_cpu_moe)])
+
         return command
 
     def execute(self, request: ExecutionRequest) -> ExecutionResult:
