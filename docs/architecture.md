@@ -1,6 +1,6 @@
 # Long Haul MVP Architecture
 
-Long Haul separates institutional identity from hardware and model embodiment.
+Long Haul separates institutional identity from hardware and model embodiment. This document defines the current MVP architecture; the standards-first shared-epistemic and heterogeneous-execution direction is diagrammed in [North-Star Architecture](north-star.md).
 
 ## Core entities
 
