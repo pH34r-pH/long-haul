@@ -9,7 +9,12 @@ from pydantic import BaseModel
 from .benchmark_matrix import MatrixManifest, _profile, load_manifest
 from .benchmarks import BenchmarkObservation, BenchmarkStore, Workload
 from .models import ExecutionMode
-from .runtime import ProfileValidation, RuntimeIdentity, ValidationDepth, ValidationState
+from .runtime import (
+    ProfileValidation,
+    RuntimeIdentity,
+    ValidationDepth,
+    ValidationState,
+)
 
 
 class LlamaBenchRow(BaseModel):
@@ -55,40 +60,29 @@ def _runtime(row: LlamaBenchRow) -> RuntimeIdentity:
     )
 
 
-def import_profile(
-    manifest_path: str | Path,
-    profile_id: str,
-    raw_path: str | Path,
-    output_dir: str | Path,
-) -> dict[str, object]:
-    manifest: MatrixManifest = load_manifest(manifest_path)
-    specification = next(
-        (item for item in manifest.profiles if item.id == profile_id),
-        None,
-    )
-    if specification is None:
-        raise ValueError(f"profile is not declared in matrix: {profile_id}")
-
-    raw = json.loads(Path(raw_path).read_text())
+def _rows(path: str | Path) -> list[LlamaBenchRow]:
+    raw = json.loads(Path(path).read_text())
     if not isinstance(raw, list) or not raw:
         raise ValueError("llama-bench output must be a non-empty JSON array")
     rows = [LlamaBenchRow.model_validate(item) for item in raw]
     model_path = rows[0].model_filename
     if any(row.model_filename != model_path for row in rows):
         raise ValueError("one import may contain only one model artifact path")
+    return rows
 
-    profile = _profile(specification, manifest.artifact, model_path)
-    out = Path(output_dir)
-    out.mkdir(parents=True, exist_ok=True)
-    store = BenchmarkStore(out / "benchmarks.jsonl")
+
+def _append_observations(
+    store: BenchmarkStore,
+    profile,
+    rows: list[LlamaBenchRow],
+) -> list[str]:
     observation_ids = []
     for row in rows:
-        workload = _workload(row)
         observation = BenchmarkObservation(
             profile=profile,
             plan_mode=ExecutionMode.LOCAL,
             resources=profile.participating_resources,
-            workload=workload,
+            workload=_workload(row),
             provenance="measured",
             prefill_tps=row.avg_ts if row.n_prompt and not row.n_gen else None,
             decode_tps=row.avg_ts if row.n_gen else None,
@@ -98,12 +92,13 @@ def import_profile(
                 else 0.0
             },
         )
-        store.append(observation)
-        observation_ids.append(observation.id)
+        observation_ids.append(store.append(observation).id)
+    return observation_ids
 
-    runtime = _runtime(rows[0])
-    validation = ProfileValidation(
-        runtime=runtime,
+
+def _validation(profile, row: LlamaBenchRow) -> ProfileValidation:
+    return ProfileValidation(
+        runtime=_runtime(row),
         profile_id=profile.id,
         artifact_key=profile.artifact.key,
         resources=profile.participating_resources,
@@ -114,30 +109,61 @@ def import_profile(
         rationale="native llama-bench completed for the declared execution profile",
         provenance="measured",
     )
-    report_path = out / "matrix-report.json"
-    if report_path.exists():
-        report = json.loads(report_path.read_text())
+
+
+def _report(
+    path: Path,
+    manifest: MatrixManifest,
+    model_path: str,
+    benchmark_path: Path,
+) -> dict[str, object]:
+    if path.exists():
+        report = json.loads(path.read_text())
         if report.get("schema") != "long-haul-benchmark-matrix/v1":
             raise ValueError("existing matrix report has an unsupported schema")
-    else:
-        report = {
-            "schema": "long-haul-benchmark-matrix/v1",
-            "binary": "native-llama-bench",
-            "model": model_path,
-            "manifest": manifest.model_dump(mode="json"),
-            "profiles": [],
-            "benchmark_store": str(out / "benchmarks.jsonl"),
-        }
-
-    record = {
-        "profile": profile.model_dump(mode="json"),
-        "preflight": validation.model_dump(mode="json"),
-        "runs": [
-            {"observation_id": observation_id}
-            for observation_id in observation_ids
-        ],
-        "measured_validation": validation.model_dump(mode="json"),
+        return report
+    return {
+        "schema": "long-haul-benchmark-matrix/v1",
+        "binary": "native-llama-bench",
+        "model": model_path,
+        "manifest": manifest.model_dump(mode="json"),
+        "profiles": [],
+        "benchmark_store": str(benchmark_path),
     }
+
+
+def _record(profile, validation: ProfileValidation, observation_ids: list[str]) -> dict[str, object]:
+    measured = validation.model_dump(mode="json")
+    return {
+        "profile": profile.model_dump(mode="json"),
+        "preflight": measured,
+        "runs": [{"observation_id": item} for item in observation_ids],
+        "measured_validation": measured,
+    }
+
+
+def import_profile(
+    manifest_path: str | Path,
+    profile_id: str,
+    raw_path: str | Path,
+    output_dir: str | Path,
+) -> dict[str, object]:
+    manifest = load_manifest(manifest_path)
+    specification = next((item for item in manifest.profiles if item.id == profile_id), None)
+    if specification is None:
+        raise ValueError(f"profile is not declared in matrix: {profile_id}")
+
+    rows = _rows(raw_path)
+    profile = _profile(specification, manifest.artifact, rows[0].model_filename)
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    benchmark_path = out / "benchmarks.jsonl"
+    observation_ids = _append_observations(BenchmarkStore(benchmark_path), profile, rows)
+    validation = _validation(profile, rows[0])
+    record = _record(profile, validation, observation_ids)
+
+    report_path = out / "matrix-report.json"
+    report = _report(report_path, manifest, rows[0].model_filename, benchmark_path)
     report["profiles"] = [
         item
         for item in report.get("profiles", [])
