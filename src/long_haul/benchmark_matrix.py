@@ -192,6 +192,7 @@ def run(
     output_dir: str,
     timeout_seconds: float = 900,
     bench_binary: str | None = None,
+    profile_ids: set[str] | None = None,
 ) -> dict[str, object]:
     manifest = load_manifest(manifest_path)
     out = Path(output_dir)
@@ -199,6 +200,13 @@ def run(
     store = BenchmarkStore(out / "benchmarks.jsonl")
     adapter = LlamaCppAdapter(binary)
     bench_adapter = LlamaBenchAdapter(bench_binary) if bench_binary else None
+    selected = [
+        spec for spec in manifest.profiles
+        if profile_ids is None or spec.id in profile_ids
+    ]
+    missing = (profile_ids or set()) - {spec.id for spec in selected}
+    if missing:
+        raise ValueError(f"unknown benchmark profiles: {', '.join(sorted(missing))}")
     profiles = [
         _run_profile(
             adapter,
@@ -209,7 +217,7 @@ def run(
             timeout_seconds,
             bench_adapter,
         )
-        for spec in manifest.profiles
+        for spec in selected
     ]
     report: dict[str, object] = {
         "schema": "long-haul-benchmark-matrix/v1",
