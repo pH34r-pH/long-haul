@@ -34,6 +34,20 @@ class Scheduler:
             for mode in ExecutionMode:
                 output.append(ExecutionPlan(plan_id=f"{mode.value.lower()}:{profile.id}",mode=mode,vessels=vessels,resources=resources,inference_profile_id=profile.id))
         return output
+    def _evidence(self, plan: ExecutionPlan, profile: InferenceProfile) -> BenchmarkObservation | None:
+        comparable = [
+            benchmark
+            for benchmark in self.benchmarks
+            if benchmark.profile.id == profile.id
+            and benchmark.plan_mode is plan.mode
+            and set(plan.resources) <= set(benchmark.resources)
+            and benchmark.error is None
+        ]
+        return next(
+            (benchmark for benchmark in comparable if benchmark.provenance == "measured"),
+            comparable[0] if comparable else None,
+        )
+
     def evaluate(self, mission: MissionRequirements, plan: ExecutionPlan, profile: InferenceProfile) -> CandidateResult:
         reasons: list[str] = []
         validation = self.validations.get(profile.id)
@@ -56,30 +70,7 @@ class Scheduler:
         if plan.mode is ExecutionMode.PIPELINE and cross_node and mission.requires_synchronous_cross_node:
             matching = [link for link in self.links if {link.source,link.target} == set(plan.vessels)]
             if not any(link.kind == "tailscale" and link.direct and link.path == "direct" for link in matching): reasons.append("synchronous PIPELINE requires acceptable direct Tailscale path")
-        evidence = next(
-            (
-                b
-                for b in self.benchmarks
-                if b.profile.id == profile.id
-                and b.plan_mode is plan.mode
-                and set(plan.resources) <= set(b.resources)
-                and b.provenance == "measured"
-                and b.error is None
-            ),
-            None,
-        )
-        if evidence is None:
-            evidence = next(
-                (
-                    b
-                    for b in self.benchmarks
-                    if b.profile.id == profile.id
-                    and b.plan_mode is plan.mode
-                    and set(plan.resources) <= set(b.resources)
-                    and b.error is None
-                ),
-                None,
-            )
+        evidence = self._evidence(plan, profile)
         if evidence is None: reasons.append("no comparable benchmark evidence; uncertainty retained")
         return CandidateResult(plan, not reasons or reasons == ["no comparable benchmark evidence; uncertainty retained"], reasons, evidence)
     def rank(self, candidates: Iterable[CandidateResult]) -> list[CandidateResult]:
