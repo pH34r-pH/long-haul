@@ -33,6 +33,7 @@ def _parser() -> argparse.ArgumentParser:
     benchmark.add_argument("--manifest", required=True)
     benchmark.add_argument("--output", default="benchmark-matrix")
     benchmark.add_argument("--timeout", type=float, default=900)
+    benchmark.add_argument("--profile", action="append", dest="profiles")
     return parser
 
 
@@ -67,6 +68,7 @@ def _benchmark(args: argparse.Namespace) -> None:
         args.output,
         args.timeout,
         args.bench_binary,
+        set(args.profiles) if args.profiles else None,
     )
     print(json.dumps(report, indent=2))
 
