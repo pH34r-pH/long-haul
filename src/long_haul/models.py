@@ -36,7 +36,13 @@ class Resource(BaseModel):
         return self
     def capacity_mib(self, kind: Literal["memory", "storage"] = "memory") -> float | None:
         for capacity in self.capacities:
-            if capacity.kind != kind:\n                continue\n            if capacity.unit == "GiB":\n                return capacity.amount * 1024\n            if capacity.unit == "bytes":\n                return capacity.amount / (1024 * 1024)\n            return capacity.amount
+            if capacity.kind != kind:
+                continue
+            if capacity.unit == "GiB":
+                return capacity.amount * 1024
+            if capacity.unit == "bytes":
+                return capacity.amount / (1024 * 1024)
+            return capacity.amount
         return None
 
 class Link(BaseModel):
