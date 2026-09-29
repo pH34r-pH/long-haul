@@ -32,6 +32,12 @@ def main() -> None:
     benchmark.add_argument("--output", default="benchmark-matrix")
     benchmark.add_argument("--timeout", type=float, default=900)
 
+    replay = sub.add_parser("benchmark-scheduler")
+    replay.add_argument("--vessel", required=True)
+    replay.add_argument("--matrix-report", required=True)
+    replay.add_argument("--benchmarks", required=True)
+    replay.add_argument("--workload")
+
     args = parser.parse_args()
 
     if args.command == "show":
@@ -68,6 +74,21 @@ def main() -> None:
         print(
             __import__("json").dumps(
                 run(args.binary, args.model, args.manifest, args.output, args.timeout),
+                indent=2,
+            )
+        )
+        return
+    if args.command == "benchmark-scheduler":
+        from .benchmark_scheduler import run
+
+        print(
+            __import__("json").dumps(
+                run(
+                    args.vessel,
+                    args.matrix_report,
+                    args.benchmarks,
+                    workload=args.workload,
+                ),
                 indent=2,
             )
         )
