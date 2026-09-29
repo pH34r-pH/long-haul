@@ -1,67 +1,226 @@
 """Opt-in real reference run; no ordinary test imports this module."""
 from __future__ import annotations
 
+import os
 import platform
 from pathlib import Path
 from uuid import uuid4
 
 from .adapters.llama_cpp import LlamaCppAdapter
 from .benchmarks import BenchmarkObservation, BenchmarkStore, Workload
-from .discovery.linux import GenericLinuxDiscovery
 from .events import Event, EventStore, materialize
-from .models import ExecutionMode, InferenceProfile, ModelArtifact
+from .models import ExecutionMode, InferenceProfile, ModelArtifact, ResourceKind
 from .runtime import ExecutionRequest, ValidationDepth, ValidationState
 from .scheduler import MissionRequirements, Scheduler
 from .validation import LayerState, ReferenceReport
 
 
-def run(binary: str, model: str, output_dir: str, timeout_seconds: float = 900) -> ReferenceReport:
-    out=Path(output_dir); report=ReferenceReport(environment={"platform":platform.platform()})
+def _discover(vessel_id: str, vessel_name: str, resource_prefix: str | None):
+    if os.name == "nt":
+        from .discovery.windows import GenericWindowsDiscovery
+
+        return GenericWindowsDiscovery(
+            vessel_id,
+            vessel_name,
+            "station",
+            resource_prefix=resource_prefix,
+        ).discover()
+    from .discovery.linux import GenericLinuxDiscovery
+
+    return GenericLinuxDiscovery(vessel_id, vessel_name, "station").discover()
+
+
+def run(
+    binary: str,
+    model: str,
+    output_dir: str,
+    timeout_seconds: float = 900,
+    *,
+    vessel_id: str | None = None,
+    vessel_name: str | None = None,
+    resource_prefix: str | None = None,
+) -> ReferenceReport:
+    out = Path(output_dir)
+    report = ReferenceReport(environment={"platform": platform.platform()})
     report_path = out / "reference-report.json"
-    def checkpoint() -> None: report.save(report_path)
-    report.record(0,LayerState.PASS,"imports and schemas loaded")
-    events=EventStore(out/"events.jsonl"); report.record(1,LayerState.PASS,"append-only event store available")
-    vessel=GenericLinuxDiscovery("work-vm","Work VM","station").discover(); report.artifact["vessel"]=vessel.model_dump(); report.record(2,LayerState.PASS,"generic Linux discovery completed")
-    artifact=ModelArtifact(foundation="SmolLM2-135M-Instruct-GGUF",quantization="Q4_K_M")
-    profile=InferenceProfile(id="work-vm-cpu-resident",runtime_id="llama.cpp",strategy="resident",artifact=artifact,participating_resources=[vessel.resources[0].id],options={"model_path":model})
-    adapter=LlamaCppAdapter(binary); validation=adapter.validate(profile); report.artifact["validation"]=validation.model_dump(mode="json")
-    if validation.state is not ValidationState.SUPPORTED:
-        report.record(3,LayerState.UNSUPPORTED if validation.state is ValidationState.UNSUPPORTED else LayerState.UNKNOWN,validation.rationale); checkpoint(); return report
-    report.record(3,LayerState.PASS,validation.rationale); report.record(4,LayerState.PASS,"GGUF artifact present")
-    request=ExecutionRequest(request_id=str(uuid4()),profile=profile,prompt="Return exactly: LONG_HAUL_OK",max_tokens=12,timeout_seconds=timeout_seconds)
-    events.append(Event(event_type="request",source="reference",payload={"request_id":request.request_id,"state":"started"}))
-    report.record(5,LayerState.UNKNOWN,"inference is in progress; a runner interruption leaves this checkpoint intact")
-    checkpoint()
-    direct=adapter.execute(request)
-    if not direct.success:
-        failure = LayerState.FAIL_RESOURCE if direct.error_class and direct.error_class.value == "FAIL_RESOURCE" else LayerState.FAIL_RUNTIME
-        report.set_layer(5,failure,direct.error_detail or "inference failed"); checkpoint(); return report
-    validation.depth=ValidationDepth.EXECUTION; validation.provenance="measured"; report.artifact["validation"]=validation.model_dump(mode="json")
-    report.set_layer(5,LayerState.PASS,"normalized inference and model load succeeded")
-    benchmark=BenchmarkObservation(profile=profile,plan_mode=ExecutionMode.LOCAL,resources=profile.participating_resources,workload=Workload(name="exact-string",cold=True),provenance="measured",load_seconds=direct.timings.load_seconds,ttft_seconds=direct.timings.ttft_seconds,prefill_tps=direct.timings.prefill_tps,decode_tps=direct.timings.decode_tps)
-    store=BenchmarkStore(out/"benchmarks.jsonl")
-    try:
-        store.append(benchmark); queried=store.query(profile.id)
-    except (OSError, ValueError) as exc:
-        report.record(6,LayerState.FAIL_SYSTEM,f"benchmark persistence/query failed: {exc}"); checkpoint(); return report
-    if not queried:
-        report.record(6,LayerState.FAIL_SYSTEM,"benchmark persistence/query returned no observation"); checkpoint(); return report
-    validation.depth=ValidationDepth.BENCHMARK; report.artifact["validation"]=validation.model_dump(mode="json")
-    report.record(6,LayerState.PASS,"measured benchmark persisted and queried")
-    scheduler=Scheduler([vessel],benchmarks=store.query(profile.id),validations=[validation]); selected=scheduler.select(MissionRequirements(id="reference",allow_modes={ExecutionMode.LOCAL}),[profile]); report.artifact["selected_plan"]=selected.plan.model_dump(); report.record(7,LayerState.PASS,"scheduler selected validated LOCAL resident plan")
-    scheduled_request = ExecutionRequest(request_id=str(uuid4()),profile=profile,prompt="Say hello.",max_tokens=8,timeout_seconds=timeout_seconds)
-    events.append(Event(event_type="decision",source="scheduler",payload={"plan_id":selected.plan.plan_id}))
-    events.append(Event(event_type="request",source="reference",payload={"request_id":scheduled_request.request_id,"state":"started"}))
-    report.record(8,LayerState.UNKNOWN,"scheduled execution is in progress; a runner interruption leaves this checkpoint intact")
-    checkpoint()
-    scheduled=adapter.execute(scheduled_request)
-    if not scheduled.success:
-        failure = LayerState.FAIL_RESOURCE if scheduled.error_class and scheduled.error_class.value == "FAIL_RESOURCE" else LayerState.FAIL_RUNTIME
-        report.set_layer(8,failure,scheduled.error_detail or "scheduled execution failed")
-        report.artifact["execution_result"]=scheduled.model_dump(mode="json")
+
+    def checkpoint() -> None:
+        report.save(report_path)
+
+    report.record(0, LayerState.PASS, "imports and schemas loaded")
+    events = EventStore(out / "events.jsonl")
+    report.record(1, LayerState.PASS, "append-only event store available")
+
+    resolved_id = vessel_id or ("windows-host" if os.name == "nt" else "work-vm")
+    resolved_name = vessel_name or ("Windows Host" if os.name == "nt" else "Work VM")
+    vessel = _discover(resolved_id, resolved_name, resource_prefix)
+    report.artifact["vessel"] = vessel.model_dump()
+    report.record(2, LayerState.PASS, "platform discovery completed")
+
+    cpu = next((resource for resource in vessel.resources if resource.kind is ResourceKind.CPU), None)
+    if cpu is None:
+        report.record(3, LayerState.FAIL_RESOURCE, "discovery returned no CPU resource")
         checkpoint()
         return report
-    report.set_layer(8,LayerState.PASS,"scheduler-selected plan executed")
-    events.append(Event(event_type="observation",source="runtime",payload={"success":True,"output":scheduled.output})); report.record(9,LayerState.PASS,"execution events persisted")
-    materialize(events.events()); report.record(10,LayerState.PASS,"fresh event-log replay completed")
-    report.artifact["execution_result"]=scheduled.model_dump(mode="json"); checkpoint(); return report
+
+    artifact = ModelArtifact(
+        foundation="SmolLM2-135M-Instruct-GGUF",
+        quantization="Q4_K_M",
+    )
+    profile = InferenceProfile(
+        id=f"{resolved_id}-cpu-resident",
+        runtime_id="llama.cpp",
+        strategy="resident",
+        artifact=artifact,
+        participating_resources=[cpu.id],
+        options={"model_path": model},
+    )
+    adapter = LlamaCppAdapter(binary)
+    validation = adapter.validate(profile)
+    report.artifact["validation"] = validation.model_dump(mode="json")
+    if validation.state is not ValidationState.SUPPORTED:
+        report.record(
+            3,
+            LayerState.UNSUPPORTED
+            if validation.state is ValidationState.UNSUPPORTED
+            else LayerState.UNKNOWN,
+            validation.rationale,
+        )
+        checkpoint()
+        return report
+
+    report.record(3, LayerState.PASS, validation.rationale)
+    report.record(4, LayerState.PASS, "GGUF artifact present")
+    request = ExecutionRequest(
+        request_id=str(uuid4()),
+        profile=profile,
+        prompt="Return exactly: LONG_HAUL_OK",
+        max_tokens=12,
+        timeout_seconds=timeout_seconds,
+    )
+    events.append(
+        Event(
+            event_type="request",
+            source="reference",
+            payload={"request_id": request.request_id, "state": "started"},
+        )
+    )
+    report.record(
+        5,
+        LayerState.UNKNOWN,
+        "inference is in progress; a runner interruption leaves this checkpoint intact",
+    )
+    checkpoint()
+    direct = adapter.execute(request)
+    if not direct.success:
+        failure = (
+            LayerState.FAIL_RESOURCE
+            if direct.error_class and direct.error_class.value == "FAIL_RESOURCE"
+            else LayerState.FAIL_RUNTIME
+        )
+        report.set_layer(5, failure, direct.error_detail or "inference failed")
+        checkpoint()
+        return report
+
+    validation.depth = ValidationDepth.EXECUTION
+    validation.provenance = "measured"
+    report.artifact["validation"] = validation.model_dump(mode="json")
+    report.set_layer(5, LayerState.PASS, "normalized inference and model load succeeded")
+
+    benchmark = BenchmarkObservation(
+        profile=profile,
+        plan_mode=ExecutionMode.LOCAL,
+        resources=profile.participating_resources,
+        workload=Workload(name="exact-string", cold=True),
+        provenance="measured",
+        load_seconds=direct.timings.load_seconds,
+        ttft_seconds=direct.timings.ttft_seconds,
+        prefill_tps=direct.timings.prefill_tps,
+        decode_tps=direct.timings.decode_tps,
+    )
+    store = BenchmarkStore(out / "benchmarks.jsonl")
+    try:
+        store.append(benchmark)
+        queried = store.query(profile.id)
+    except (OSError, ValueError) as exc:
+        report.record(6, LayerState.FAIL_SYSTEM, f"benchmark persistence/query failed: {exc}")
+        checkpoint()
+        return report
+    if not queried:
+        report.record(
+            6,
+            LayerState.FAIL_SYSTEM,
+            "benchmark persistence/query returned no observation",
+        )
+        checkpoint()
+        return report
+
+    validation.depth = ValidationDepth.BENCHMARK
+    report.artifact["validation"] = validation.model_dump(mode="json")
+    report.record(6, LayerState.PASS, "measured benchmark persisted and queried")
+
+    scheduler = Scheduler(
+        [vessel],
+        benchmarks=store.query(profile.id),
+        validations=[validation],
+    )
+    selected = scheduler.select(
+        MissionRequirements(id="reference", allow_modes={ExecutionMode.LOCAL}),
+        [profile],
+    )
+    report.artifact["selected_plan"] = selected.plan.model_dump()
+    report.record(7, LayerState.PASS, "scheduler selected validated LOCAL resident plan")
+
+    scheduled_request = ExecutionRequest(
+        request_id=str(uuid4()),
+        profile=profile,
+        prompt="Say hello.",
+        max_tokens=8,
+        timeout_seconds=timeout_seconds,
+    )
+    events.append(
+        Event(
+            event_type="decision",
+            source="scheduler",
+            payload={"plan_id": selected.plan.plan_id},
+        )
+    )
+    events.append(
+        Event(
+            event_type="request",
+            source="reference",
+            payload={"request_id": scheduled_request.request_id, "state": "started"},
+        )
+    )
+    report.record(
+        8,
+        LayerState.UNKNOWN,
+        "scheduled execution is in progress; a runner interruption leaves this checkpoint intact",
+    )
+    checkpoint()
+    scheduled = adapter.execute(scheduled_request)
+    if not scheduled.success:
+        failure = (
+            LayerState.FAIL_RESOURCE
+            if scheduled.error_class and scheduled.error_class.value == "FAIL_RESOURCE"
+            else LayerState.FAIL_RUNTIME
+        )
+        report.set_layer(8, failure, scheduled.error_detail or "scheduled execution failed")
+        report.artifact["execution_result"] = scheduled.model_dump(mode="json")
+        checkpoint()
+        return report
+
+    report.set_layer(8, LayerState.PASS, "scheduler-selected plan executed")
+    events.append(
+        Event(
+            event_type="observation",
+            source="runtime",
+            payload={"success": True, "output": scheduled.output},
+        )
+    )
+    report.record(9, LayerState.PASS, "execution events persisted")
+    materialize(events.events())
+    report.record(10, LayerState.PASS, "fresh event-log replay completed")
+    report.artifact["execution_result"] = scheduled.model_dump(mode="json")
+    checkpoint()
+    return report
