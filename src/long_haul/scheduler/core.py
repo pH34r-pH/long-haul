@@ -56,8 +56,30 @@ class Scheduler:
         if plan.mode is ExecutionMode.PIPELINE and cross_node and mission.requires_synchronous_cross_node:
             matching = [link for link in self.links if {link.source,link.target} == set(plan.vessels)]
             if not any(link.kind == "tailscale" and link.direct and link.path == "direct" for link in matching): reasons.append("synchronous PIPELINE requires acceptable direct Tailscale path")
-        evidence = next((b for b in self.benchmarks if b.profile.id == profile.id and b.plan_mode is plan.mode and set(plan.resources) <= set(b.resources) and b.provenance == "measured"), None)
-        if evidence is None: evidence = next((b for b in self.benchmarks if b.profile.id == profile.id and b.plan_mode is plan.mode and set(plan.resources) <= set(b.resources)), None)
+        evidence = next(
+            (
+                b
+                for b in self.benchmarks
+                if b.profile.id == profile.id
+                and b.plan_mode is plan.mode
+                and set(plan.resources) <= set(b.resources)
+                and b.provenance == "measured"
+                and b.error is None
+            ),
+            None,
+        )
+        if evidence is None:
+            evidence = next(
+                (
+                    b
+                    for b in self.benchmarks
+                    if b.profile.id == profile.id
+                    and b.plan_mode is plan.mode
+                    and set(plan.resources) <= set(b.resources)
+                    and b.error is None
+                ),
+                None,
+            )
         if evidence is None: reasons.append("no comparable benchmark evidence; uncertainty retained")
         return CandidateResult(plan, not reasons or reasons == ["no comparable benchmark evidence; uncertainty retained"], reasons, evidence)
     def rank(self, candidates: Iterable[CandidateResult]) -> list[CandidateResult]:
