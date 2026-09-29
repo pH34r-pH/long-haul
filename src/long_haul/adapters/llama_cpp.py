@@ -191,6 +191,39 @@ def _gpu_layers(profile: InferenceProfile) -> int:
         return 0
 
 
+def _append_cpu_options(command: list[str], options: dict[str, object]) -> None:
+    """Append upstream llama.cpp CPU placement controls from an edge profile."""
+    for key, flag in (
+        ("threads", "--threads"),
+        ("threads_batch", "--threads-batch"),
+    ):
+        value = options.get(key)
+        if value is not None and not isinstance(value, bool):
+            command.extend([flag, str(value)])
+
+    for key, flag in (
+        ("cpu_range", "--cpu-range"),
+        ("cpu_range_batch", "--cpu-range-batch"),
+    ):
+        value = options.get(key)
+        if value:
+            command.extend([flag, str(value)])
+
+    for key, flag in (
+        ("cpu_strict", "--cpu-strict"),
+        ("cpu_strict_batch", "--cpu-strict-batch"),
+    ):
+        value = options.get(key)
+        if value is not None:
+            command.extend([flag, "1" if bool(value) else "0"])
+
+    if options.get("cpu_moe"):
+        command.append("--cpu-moe")
+    n_cpu_moe = options.get("n_cpu_moe")
+    if n_cpu_moe is not None and not isinstance(n_cpu_moe, bool):
+        command.extend(["--n-cpu-moe", str(n_cpu_moe)])
+
+
 class LlamaCppAdapter:
     runtime_id = "llama.cpp"
 
@@ -337,36 +370,7 @@ class LlamaCppAdapter:
 
         # CPU placement is part of an inference profile because thread count and
         # affinity can materially change performance on multi-CCD hosts.
-        for key, flag in (
-            ("threads", "--threads"),
-            ("threads_batch", "--threads-batch"),
-        ):
-            value = options.get(key)
-            if value is not None and not isinstance(value, bool):
-                command.extend([flag, str(value)])
-
-        for key, flag in (
-            ("cpu_range", "--cpu-range"),
-            ("cpu_range_batch", "--cpu-range-batch"),
-        ):
-            value = options.get(key)
-            if value:
-                command.extend([flag, str(value)])
-
-        for key, flag in (
-            ("cpu_strict", "--cpu-strict"),
-            ("cpu_strict_batch", "--cpu-strict-batch"),
-        ):
-            value = options.get(key)
-            if value is not None:
-                command.extend([flag, "1" if bool(value) else "0"])
-
-        if options.get("cpu_moe"):
-            command.append("--cpu-moe")
-        n_cpu_moe = options.get("n_cpu_moe")
-        if n_cpu_moe is not None and not isinstance(n_cpu_moe, bool):
-            command.extend(["--n-cpu-moe", str(n_cpu_moe)])
-
+        _append_cpu_options(command, options)
         return command
 
     def execute(self, request: ExecutionRequest) -> ExecutionResult:
