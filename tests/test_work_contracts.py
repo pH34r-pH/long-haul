@@ -61,3 +61,11 @@ def test_failure_predicate_rejects_even_with_passing_checks():
     evidence = [PredicateEvidence(predicate_id="tests", state=EvidenceState.PASS, source="pytest exit 0")]
     result = evaluate_work(item, evidence, failure=FailureKind.SCOPE_VIOLATION)
     assert result.disposition is WorkDisposition.REJECTED
+
+
+@pytest.mark.parametrize('states', [('FAIL', 'PASS'), ('PASS', 'FAIL'), ('PASS', 'PASS'), ('UNKNOWN', 'UNKNOWN')])
+@pytest.mark.parametrize('failure', [None, FailureKind.TIMEOUT])
+def test_direct_evaluator_rejects_all_duplicate_observations(states, failure):
+    evidence = [PredicateEvidence(predicate_id='tests', state=EvidenceState(state), source='fixture') for state in states]
+    with pytest.raises(ValueError, match='unique within an attempt'):
+        evaluate_work(contract(), evidence, failure)
