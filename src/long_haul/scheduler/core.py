@@ -100,7 +100,8 @@ class Scheduler:
         metrics.extend(benchmark.residency_mib.values())
         metrics.extend(benchmark.utilization.values())
         metrics.extend(value for value in benchmark.network.values() if isinstance(value, (int, float)))
-        return benchmark.decode_tps is not None and all(value is None or (math.isfinite(value) and value >= 0) for value in metrics)
+        metric = benchmark.prefill_tps if benchmark.workload.prompt_tokens and not benchmark.workload.output_tokens else benchmark.decode_tps
+        return metric is not None and all(value is None or (math.isfinite(value) and value >= 0) for value in metrics)
 
     def evaluate(self, mission: MissionRequirements, plan: ExecutionPlan, profile: InferenceProfile) -> CandidateResult:
         reasons: list[str] = []
@@ -155,7 +156,9 @@ class Scheduler:
             measured = int(result.evidence is not None and result.evidence.provenance == "measured")
             # Measurement establishes performance provenance, never output correctness.
             continuity = int(result.plan.mode is not ExecutionMode.PIPELINE)
-            efficiency = -(result.evidence.decode_tps if result.evidence and result.evidence.decode_tps else 0.0)
+            evidence = result.evidence
+            throughput = (evidence.prefill_tps if evidence.workload.prompt_tokens and not evidence.workload.output_tokens else evidence.decode_tps) if evidence else None
+            efficiency = -(throughput or 0.0)
             result.rank = (0, 0, 0, -measured, -continuity, efficiency)
         return sorted(candidates, key=lambda c: (not c.eligible, c.rank or (99,)*6, c.plan.plan_id))
     def select(self, mission: MissionRequirements, profiles: Iterable[InferenceProfile]) -> CandidateResult:

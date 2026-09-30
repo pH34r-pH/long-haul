@@ -1,6 +1,8 @@
 import json
+from datetime import UTC, datetime
 
 from long_haul.llama_bench_import import import_profile
+from long_haul.runtime import RuntimeIdentity
 
 
 def test_import_native_llama_bench_updates_matrix_report_and_store(tmp_path):
@@ -75,3 +77,17 @@ workloads:
     report = json.loads((tmp_path / "out" / "matrix-report.json").read_text())
     assert report["profiles"][0]["profile"]["id"] == "anc-g0"
     assert report["profiles"][0]["measured_validation"]["runtime"]["build_id"] == "abcdef1234"
+
+
+
+def test_import_retains_exact_runtime_identity_and_measurement_time(tmp_path):
+    test_import_native_llama_bench_updates_matrix_report_and_store(tmp_path)
+    manifest = tmp_path / "matrix.yaml"
+    raw = tmp_path / "raw.json"
+    identity = RuntimeIdentity(runtime_id="llama.cpp", version="b11146", build_id="source:binary:sm61", capabilities={"binary_sha256": "a" * 64})
+    measured_at = datetime(2026, 9, 30, tzinfo=UTC)
+    bound = import_profile(manifest, "anc-g0", raw, tmp_path / "bound", runtime_identity=identity, measured_at=measured_at)
+    rows = [json.loads(line) for line in (tmp_path / "bound" / "benchmarks.jsonl").read_text().splitlines()]
+    assert rows[0]["runtime"] == identity.model_dump(mode="json")
+    assert datetime.fromisoformat(rows[0]["timestamp"]) == measured_at
+    assert bound["measured_validation"]["runtime"] == identity.model_dump(mode="json")
