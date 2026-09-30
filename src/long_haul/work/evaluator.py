@@ -4,7 +4,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Literal, Protocol
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from .contracts import (
     EvidenceState,
@@ -51,6 +51,12 @@ class EvidencePacket(BaseModel):
     unresolved: list[str] = Field(default_factory=list)
     regressions: list[str] = Field(default_factory=list)
     schema_version: Literal[1] = EVIDENCE_PACKET_SCHEMA_VERSION
+
+    @model_validator(mode="after")
+    def unique_checks(self) -> EvidencePacket:
+        if len({check.predicate_id for check in self.checks}) != len(self.checks):
+            raise ValueError("evidence predicate ids must be unique within an attempt")
+        return self
 
     def predicate_evidence(self) -> list[PredicateEvidence]:
         return [
@@ -116,6 +122,7 @@ class EvaluationRunner:
 
 
 def evaluate_packet(contract: WorkContract, packet: EvidencePacket, candidate_fingerprint: str) -> WorkEvaluation:
+    packet.unique_checks()  # Also guard model_copy/model_construct or later mutation.
     if packet.contract_id != contract.contract_id:
         raise ValueError("evidence packet belongs to a different work contract")
     if packet.candidate.fingerprint != candidate_fingerprint:
