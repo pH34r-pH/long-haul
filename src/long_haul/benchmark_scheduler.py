@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 
 from .benchmarks import BenchmarkObservation
+from .benchmarks.store import Workload
 from .models import ExecutionMode, InferenceProfile
 from .registry import load_vessel
-from .runtime import ProfileValidation
+from .runtime import ProfileValidation, RuntimeIdentity
 from .scheduler import CandidateResult, MissionRequirements, Scheduler
 
 
@@ -78,6 +80,9 @@ def run(
     benchmark_path: str,
     *,
     workload: str | None = None,
+    current_runtimes: tuple[RuntimeIdentity, ...] = (),
+    workload_spec: Workload | None = None,
+    evidence_not_before: datetime | None = None,
 ) -> dict[str, object]:
     vessel = load_vessel(vessel_path)
     matrix = json.loads(Path(matrix_report_path).read_text())
@@ -85,10 +90,12 @@ def run(
         raise ValueError("unsupported benchmark matrix report")
     profiles, validations = _profiles_and_validations(matrix)
     observations = _load_observations(benchmark_path, workload)
-    scheduler = Scheduler([vessel], benchmarks=observations, validations=validations)
+    scheduler = Scheduler([vessel], benchmarks=observations, validations=validations, current_runtimes=current_runtimes)
     mission = MissionRequirements(
         id=f"benchmark-replay:{workload or 'all'}",
         allow_modes={ExecutionMode.LOCAL},
+        workload=workload_spec,
+        evidence_not_before=evidence_not_before,
     )
     ranked = scheduler.rank(_local_candidates(scheduler, mission, profiles))
     selected = next((candidate for candidate in ranked if candidate.eligible), None)
