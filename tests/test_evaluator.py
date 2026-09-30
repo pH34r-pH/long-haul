@@ -102,3 +102,23 @@ def test_packet_rejects_cross_contract_use():
     other = contract().model_copy(update={"contract_id": "wc-2"})
     with pytest.raises(ValueError):
         evaluate_packet(other, packet, "abc")
+
+
+@pytest.mark.parametrize('states', [('FAIL', 'PASS'), ('PASS', 'FAIL'), ('PASS', 'PASS')])
+def test_packet_admission_rejects_duplicate_predicate_ids(states):
+    from pydantic import ValidationError
+
+    from long_haul.work.evaluator import EvidencePacket
+    packet, _ = EvaluationRunner(ReadOnlyTarget(), evaluator()).evaluate(contract(), 'a', 'p', 'commit:abc')
+    value = packet.model_dump()
+    value['checks'] = [{'predicate_id': 'tests', 'state': state} for state in states]
+    with pytest.raises(ValidationError, match='unique within an attempt'):
+        EvidencePacket.model_validate(value)
+
+
+@pytest.mark.parametrize('fingerprint', ['abc', 'changed'])
+def test_packet_evaluation_guards_duplicate_checks_after_mutation(fingerprint):
+    packet, _ = EvaluationRunner(ReadOnlyTarget(), evaluator()).evaluate(contract(), 'a', 'p', 'commit:abc')
+    packet.checks.append(packet.checks[0])
+    with pytest.raises(ValueError, match='unique within an attempt'):
+        evaluate_packet(contract(), packet, fingerprint)
