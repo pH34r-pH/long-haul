@@ -60,6 +60,12 @@ def _candidate_record(candidate: CandidateResult) -> dict[str, object]:
         "rank": candidate.rank,
         "evidence_id": candidate.evidence.id if candidate.evidence else None,
         "decode_tps": candidate.evidence.decode_tps if candidate.evidence else None,
+        "prefill_tps": candidate.evidence.prefill_tps if candidate.evidence else None,
+        "explanation": (
+            f"comparable measured evidence {candidate.evidence.id}; ranked by "
+            + ("prefill" if candidate.evidence.workload.prompt_tokens and not candidate.evidence.workload.output_tokens else "decode")
+            + " throughput after eligibility constraints"
+        ) if candidate.evidence else "no comparable measurement",
     }
 
 

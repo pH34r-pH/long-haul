@@ -127,3 +127,25 @@ def test_scheduler_replay_keeps_failed_only_profile_without_evidence(tmp_path):
     candidate = result["candidates"][0]
     assert candidate["evidence_id"] is None
     assert "no comparable benchmark evidence; uncertainty retained" in candidate["reasons"]
+
+
+def test_prefill_replay_ranks_prompt_measurements_and_rejects_other_runtime(tmp_path):
+    vessel = _write_vessel(tmp_path)
+    cpu = _profile("cpu", "ANC-C0")
+    gpu = _profile("gpu", "ANC-G0")
+    matrix = _write_matrix(tmp_path, [cpu, gpu])
+    workload = Workload(name="pp512", prompt_tokens=512)
+    observations = []
+    for profile, rate in [(cpu, 100), (gpu, 200)]:
+        observation = _observation(profile, rate)
+        observation.workload = workload
+        observation.prefill_tps = rate
+        observation.decode_tps = None
+        observations.append(observation)
+    benchmarks = _write_benchmarks(tmp_path, observations)
+    result = run(str(vessel), str(matrix), str(benchmarks), workload="pp512", current_runtimes=(RuntimeIdentity(runtime_id="llama.cpp", build_id="fixture"),), workload_spec=workload, evidence_not_before=datetime(2000, 1, 1, tzinfo=UTC))
+    assert result["selected"]["plan"]["inference_profile_id"] == "gpu"
+    assert result["candidates"][0]["prefill_tps"] == 200
+    assert result["candidates"][0]["evidence_id"] in result["candidates"][0]["explanation"]
+    changed = run(str(vessel), str(matrix), str(benchmarks), workload="pp512", current_runtimes=(RuntimeIdentity(runtime_id="llama.cpp", build_id="different-binary"),), workload_spec=workload, evidence_not_before=datetime(2000, 1, 1, tzinfo=UTC))
+    assert changed["selected"] is None

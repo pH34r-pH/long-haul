@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .benchmark_matrix import MatrixManifest, _profile, load_manifest
 from .benchmarks import BenchmarkObservation, BenchmarkStore, Workload
@@ -29,7 +30,7 @@ class LlamaBenchRow(BaseModel):
     n_prompt: int = 0
     n_gen: int = 0
     n_depth: int = 0
-    avg_ts: float
+    avg_ts: float = Field(gt=0, allow_inf_nan=False)
     stddev_ts: float | None = None
 
 
@@ -75,11 +76,14 @@ def _append_observations(
     store: BenchmarkStore,
     profile,
     rows: list[LlamaBenchRow],
+    runtime_identity: RuntimeIdentity | None = None,
+    measured_at: datetime | None = None,
 ) -> list[str]:
     observation_ids = []
     for row in rows:
         observation = BenchmarkObservation(
-            runtime=_runtime(row),
+            runtime=runtime_identity or _runtime(row),
+            **({"timestamp": measured_at} if measured_at is not None else {}),
             profile=profile,
             plan_mode=ExecutionMode.LOCAL,
             resources=profile.participating_resources,
@@ -97,9 +101,10 @@ def _append_observations(
     return observation_ids
 
 
-def _validation(profile, row: LlamaBenchRow) -> ProfileValidation:
+def _validation(profile, row: LlamaBenchRow, runtime_identity=None, measured_at=None) -> ProfileValidation:
     return ProfileValidation(
-        runtime=_runtime(row),
+        runtime=runtime_identity or _runtime(row),
+        **({"timestamp": measured_at} if measured_at is not None else {}),
         profile_id=profile.id,
         artifact_key=profile.artifact.key,
         resources=profile.participating_resources,
@@ -148,7 +153,12 @@ def import_profile(
     profile_id: str,
     raw_path: str | Path,
     output_dir: str | Path,
+    *,
+    runtime_identity: RuntimeIdentity | None = None,
+    measured_at: datetime | None = None,
 ) -> dict[str, object]:
+    if measured_at is not None and measured_at.tzinfo is None:
+        raise ValueError("measured_at must be timezone-aware")
     manifest = load_manifest(manifest_path)
     specification = next((item for item in manifest.profiles if item.id == profile_id), None)
     if specification is None:
@@ -159,8 +169,8 @@ def import_profile(
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     benchmark_path = out / "benchmarks.jsonl"
-    observation_ids = _append_observations(BenchmarkStore(benchmark_path), profile, rows)
-    validation = _validation(profile, rows[0])
+    observation_ids = _append_observations(BenchmarkStore(benchmark_path), profile, rows, runtime_identity, measured_at)
+    validation = _validation(profile, rows[0], runtime_identity, measured_at)
     record = _record(profile, validation, observation_ids)
 
     report_path = out / "matrix-report.json"
