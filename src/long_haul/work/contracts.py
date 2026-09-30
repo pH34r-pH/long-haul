@@ -126,6 +126,10 @@ class WorkEvaluation(BaseModel):
 
 def evaluate_work(contract: WorkContract, evidence: list[PredicateEvidence], failure: FailureKind | None = None) -> WorkEvaluation:
     """Evaluate only external evidence. Worker/model prose is never an acceptance input."""
+    # One packet/attempt supplies exactly one observation per predicate. Both
+    # identical and conflicting duplicates are invalid, regardless of order.
+    if len({item.predicate_id for item in evidence}) != len(evidence):
+        raise ValueError("evidence predicate ids must be unique within an attempt")
     by_id = {item.predicate_id: item for item in evidence}
     expected = {item.predicate_id for item in contract.success_predicates}
     reasons: list[str] = []
