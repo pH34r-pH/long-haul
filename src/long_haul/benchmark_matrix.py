@@ -69,6 +69,7 @@ def _observation(
         label = result.error_class.value if result.error_class else "FAIL"
         error = f"{label}: {result.error_detail or 'execution failed'}"
     return BenchmarkObservation(
+        runtime=result.runtime,
         profile=profile,
         plan_mode=ExecutionMode.LOCAL,
         resources=profile.participating_resources,
