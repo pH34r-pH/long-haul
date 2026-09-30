@@ -79,6 +79,7 @@ def _append_observations(
     observation_ids = []
     for row in rows:
         observation = BenchmarkObservation(
+            runtime=_runtime(row),
             profile=profile,
             plan_mode=ExecutionMode.LOCAL,
             resources=profile.participating_resources,
