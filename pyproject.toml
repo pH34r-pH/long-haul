@@ -14,7 +14,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "ruff>=0.6"]
+epistemic = ["rdflib>=7.1,<8", "PyLD>=2.0.4,<3", "pyshacl>=0.30,<0.31"]
+dev = ["pytest>=8.0", "ruff>=0.6", "long-haul[epistemic]"]
 
 [tool.setuptools]
 license-files = ["LICENSE", "NOTICE"]
@@ -24,3 +25,6 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+
+[tool.setuptools.package-data]
+"long_haul.epistemic" = ["shapes.ttl"]

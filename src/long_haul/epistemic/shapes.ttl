@@ -1,0 +1,88 @@
+@prefix lh: <urn:long-haul:epistemic:v1:terms:> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+lh:ProjectionShape a sh:NodeShape ;
+    sh:targetNode <urn:long-haul:epistemic:v1:projection> ;
+    sh:class lh:Projection ;
+    sh:property [ sh:path lh:version ; sh:datatype xsd:integer ; sh:hasValue 1 ; sh:minCount 1 ; sh:maxCount 1 ] .
+
+lh:EventShape a sh:NodeShape ;
+    sh:targetClass lh:AuthoritativeEvent ; sh:nodeKind sh:IRI ; sh:class prov:Entity ;
+    sh:property [ sh:path lh:eventId ; sh:datatype xsd:string ; sh:minLength 1 ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path lh:eventSchemaVersion ; sh:datatype xsd:integer ; sh:hasValue 1 ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path lh:eventType ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] .
+
+lh:ObjectShape a sh:NodeShape ;
+    sh:targetClass lh:Claim, lh:Evidence, lh:Assumption, lh:Contradiction, lh:Retraction ;
+    sh:targetSubjectsOf prov:wasGeneratedBy ;
+    sh:xone ( [ sh:class lh:Claim ] [ sh:class lh:Evidence ] [ sh:class lh:Assumption ]
+        [ sh:class lh:Contradiction ] [ sh:class lh:Retraction ] ) ;
+    sh:nodeKind sh:IRI ; sh:class prov:Entity ;
+    sh:property [ sh:path prov:wasDerivedFrom ; sh:nodeKind sh:IRI ;
+        sh:qualifiedValueShape [ sh:class lh:AuthoritativeEvent ] ;
+        sh:qualifiedMinCount 1 ; sh:qualifiedMaxCount 1 ] ;
+    sh:property [ sh:path prov:wasGeneratedBy ; sh:class prov:Activity ; sh:nodeKind sh:IRI ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path prov:generatedAtTime ; sh:datatype xsd:dateTime ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path prov:wasAttributedTo ; sh:class prov:Agent ; sh:nodeKind sh:IRI ] ;
+    sh:sparql [ sh:message "Generating activity must use the exact source event." ; sh:select """
+        PREFIX prov: <http://www.w3.org/ns/prov#>
+        PREFIX lh: <urn:long-haul:epistemic:v1:terms:>
+        SELECT $this WHERE {
+            $this prov:wasDerivedFrom ?event ; prov:wasGeneratedBy ?activity .
+            ?event a lh:AuthoritativeEvent .
+            FILTER NOT EXISTS { ?activity prov:used ?event }
+        }
+    """ ] .
+
+lh:DescribedShape a sh:NodeShape ;
+    sh:targetClass lh:Claim, lh:Evidence, lh:Assumption ;
+    sh:property [ sh:path dct:description ; sh:datatype xsd:string ; sh:minLength 1 ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path lh:supports ; sh:node lh:DescribedObject ] ;
+    sh:property [ sh:path lh:negates ; sh:class lh:Claim ; sh:nodeKind sh:IRI ; sh:maxCount 1 ] ;
+    sh:property [ sh:path prov:wasInvalidatedBy ; sh:nodeKind sh:IRI ; sh:class prov:Activity ] ;
+    sh:property [ sh:path prov:invalidatedAtTime ; sh:datatype xsd:dateTime ; sh:maxCount 1 ] .
+
+lh:DescribedObject a sh:NodeShape ; sh:nodeKind sh:IRI ;
+    sh:or ( [ sh:class lh:Claim ] [ sh:class lh:Evidence ] [ sh:class lh:Assumption ] ) .
+
+lh:ContradictionShape a sh:NodeShape ; sh:targetClass lh:Contradiction ;
+    sh:property [ sh:path lh:target ; sh:minCount 2 ; sh:maxCount 2 ; sh:nodeKind sh:IRI ;
+        sh:or ( [ sh:class lh:Claim ] [ sh:class lh:Assumption ] ) ] .
+
+lh:RetractionShape a sh:NodeShape ; sh:targetClass lh:Retraction ;
+    sh:property [ sh:path lh:target ; sh:node lh:DescribedObject ; sh:minCount 1 ; sh:maxCount 1 ] .
+
+lh:ArtifactShape a sh:NodeShape ; sh:targetClass lh:Artifact ; sh:targetSubjectsOf lh:artifactFingerprint ;
+    sh:nodeKind sh:IRI ; sh:class prov:Entity ;
+    sh:property [ sh:path lh:artifactFingerprint ; sh:datatype xsd:string ; sh:minLength 1 ; sh:minCount 1 ; sh:maxCount 1 ] .
+
+lh:AgentShape a sh:NodeShape ; sh:targetClass prov:Agent ; sh:nodeKind sh:IRI ;
+    sh:property [ sh:path dct:identifier ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] .
+
+
+lh:NonClaimShape a sh:NodeShape ; sh:targetClass lh:Evidence, lh:Assumption ;
+    sh:property [ sh:path lh:negates ; sh:maxCount 0 ] .
+
+lh:ConflictLinksShape a sh:NodeShape ; sh:targetClass lh:Contradiction ;
+    sh:sparql [ sh:message "Contradiction must retain both directional links." ; sh:select """
+        PREFIX lh: <urn:long-haul:epistemic:v1:terms:>
+        SELECT $this WHERE {
+            $this lh:target ?a, ?b . FILTER (?a != ?b)
+            FILTER NOT EXISTS { ?a lh:contradicts ?b }
+        }
+    """ ] .
+
+lh:InvalidationShape a sh:NodeShape ; sh:targetClass lh:Retraction ;
+    sh:sparql [ sh:message "Retraction must retain its invalidating activity and time." ; sh:select """
+        PREFIX lh: <urn:long-haul:epistemic:v1:terms:>
+        PREFIX prov: <http://www.w3.org/ns/prov#>
+        SELECT $this WHERE {
+            $this lh:target ?target ; prov:wasGeneratedBy ?activity .
+            FILTER NOT EXISTS {
+                ?target prov:wasInvalidatedBy ?activity ; prov:invalidatedAtTime ?time .
+            }
+        }
+    """ ] .
