@@ -89,3 +89,15 @@ The event log is authoritative history. A `WorkCheckpoint` is a deterministic co
 ## Hardware boundary
 
 The core consumes normalized vessel, resource, link, and benchmark records. Discovery and runtime adapters are edge protocols; fixture data is conspicuously marked simulated and is never a measurement. Hardware access therefore validates probes and produces evidence without redesigning the core.
+
+## Scheduler admission and evidence reuse
+
+Capacity amounts must be finite, nonnegative, and paired with compatible units. Memory and storage convert from bytes, MiB, or GiB through the same binary conversion. Each resource has at most one capacity entry per kind; repeated profile requirements are independent lower bounds whose maximum applies. Neither resource capacities nor shared RAM/VRAM are summed.
+
+Scheduler callers supply current runtime identities explicitly. Feasibility requires one distinct validation matching the runtime, complete artifact identity, resource placement, strategy, and options. Artifact keys use a versioned hash of all declared components, preserving adapter and auxiliary-artifact order. Historical keys remain readable but cannot certify the new identity. Conflicting current identities or validations fail closed.
+
+Performance reuse additionally requires an exact workload including token counts and cold/cache state, an explicit timezone-aware evidence cutoff, exact profile and placement, successful measured provenance, current runtime identity, and finite nonnegative metrics with a decode-throughput measurement. The scheduler defines no global TTL. Exactly one distinct compatible observation may influence ranking; duplicate identical payloads (excluding record ID) collapse deterministically. Multiple distinct observations retain uncertainty pending an explicit aggregation/sample policy. This is a performance observation, not statistical qualification, task correctness, latency-objective achievement, or authority.
+
+A feasible candidate with no reusable performance evidence may still be selected for exploration, with the uncertainty reason retained. Historical store queries retrieve records without certifying them; failed, legacy-unbound, and non-comparable records remain in history and receive no favorable ranking. Invalid historical capacity encodings fail schema admission without rewriting source records.
+
+Acceptance packets and direct work evaluations require unique predicate IDs within each attempt. Identical and conflicting duplicates both raise validation errors; observations in independent attempts remain separate history.

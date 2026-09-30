@@ -8,6 +8,7 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from ..models import ExecutionMode, InferenceProfile
+from ..runtime import RuntimeIdentity
 
 Provenance = Literal["measured", "imported", "simulated", "estimated"]
 class Workload(BaseModel):
@@ -20,6 +21,7 @@ class BenchmarkObservation(BaseModel):
     residency_mib: dict[str, float] = Field(default_factory=dict); utilization: dict[str, float] = Field(default_factory=dict)
     network: dict[str, float | str] = Field(default_factory=dict); power_watts: float | None = None
     error: str | None = None; schema_version: int = 1
+    runtime: RuntimeIdentity | None = None  # unbound historical records remain readable
 
 class BenchmarkStore:
     def __init__(self, path: str | Path): self.path = Path(path)
@@ -28,5 +30,21 @@ class BenchmarkStore:
         with self.path.open("a") as f: f.write(observation.model_dump_json() + "\n")
         return observation
     def query(self, profile_id: str | None = None, mode: ExecutionMode | None = None, resources: set[str] | None = None) -> list[BenchmarkObservation]:
-        values = [] if not self.path.exists() else [BenchmarkObservation.model_validate_json(l) for l in self.path.read_text().splitlines() if l]
-        return [x for x in values if (profile_id is None or x.profile.id == profile_id) and (mode is None or x.plan_mode == mode) and (resources is None or resources <= set(x.resources))]
+        """Retrieve history; these legacy filters do not certify comparability."""
+        values = [] if not self.path.exists() else [BenchmarkObservation.model_validate_json(line) for line in self.path.read_text().splitlines() if line]
+        return [x for x in values if (profile_id is None or x.profile.id == profile_id)
+                and (mode is None or x.plan_mode == mode)
+                and (resources is None or resources <= set(x.resources))]
+
+    def query_compatible(self, profile: InferenceProfile, runtime: RuntimeIdentity, workload: Workload, not_before: datetime, mode: ExecutionMode | None = None) -> list[BenchmarkObservation]:
+        """Retrieve bound successful measurements; repetition policy is a consumer gate."""
+        return [x for x in self.query(mode=mode) if
+                x.profile.identity == profile.identity and x.runtime == runtime and x.workload == workload
+                and x.resources == profile.participating_resources
+                and x.provenance == "measured" and x.error is None
+                and evidence_is_fresh(x.timestamp, not_before)]
+
+
+def evidence_is_fresh(timestamp: datetime, not_before: datetime) -> bool:
+    return (timestamp.tzinfo is not None and not_before.tzinfo is not None
+            and not_before <= timestamp <= datetime.now(UTC))

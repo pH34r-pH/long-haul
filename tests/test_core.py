@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -29,7 +30,7 @@ def test_manifests_and_compositional_artifacts():
     assert (a.id, k.id) == ("station-example", "ship-example")
     assert any(r.kind.value=="storage" for r in a.resources) and any(r.kind.value=="storage" for r in k.resources)
     assert all(not link.measured for vessel in (a, k) for link in vessel.links)
-    assert profile().artifact.key == "test@Q4"
+    assert profile().artifact.key.startswith("artifact-v2:")
     assert len({ExecutionMode.LOCAL,ExecutionMode.POOL,ExecutionMode.PIPELINE,ExecutionMode.COMPOSE}) == 4
 
 def test_event_replay_preserves_identity_across_embodiment_replacement(tmp_path):
@@ -50,13 +51,13 @@ def test_decision_protocol_blocks_erasure_and_preference_veto():
 
 def test_scheduler_respects_link_and_measured_evidence():
     resident=profile("resident",["ANC-G0"]); split=profile("split",["ANC-G0","KST-G0"],"pipeline_parallel")
-    observation=BenchmarkObservation(profile=resident,plan_mode=ExecutionMode.LOCAL,resources=["ANC-G0"],workload={"name":"fixture"},provenance="measured",decode_tps=9)
-    validation=ProfileValidation(runtime=RuntimeIdentity(runtime_id="fixture"),profile_id="resident",artifact_key=resident.artifact.key,resources=resident.participating_resources,strategy="resident",state=ValidationState.SUPPORTED,rationale="fixture")
-    split_validation=ProfileValidation(runtime=RuntimeIdentity(runtime_id="fixture"),profile_id="split",artifact_key=split.artifact.key,resources=split.participating_resources,strategy="pipeline_parallel",state=ValidationState.SUPPORTED,rationale="fixture")
-    scheduler=Scheduler([anchorage(),kestrel()],[tailscale("relay")],[observation],[validation,split_validation])
+    observation=BenchmarkObservation(runtime=RuntimeIdentity(runtime_id="fixture", build_id="fixture"),profile=resident,plan_mode=ExecutionMode.LOCAL,resources=["ANC-G0"],workload={"name":"fixture"},provenance="measured",decode_tps=9)
+    validation=ProfileValidation(runtime=RuntimeIdentity(runtime_id="fixture", build_id="fixture"),profile_id="resident",artifact_key=resident.artifact.key,resources=resident.participating_resources,strategy="resident",state=ValidationState.SUPPORTED,rationale="fixture")
+    split_validation=ProfileValidation(runtime=RuntimeIdentity(runtime_id="fixture", build_id="fixture"),profile_id="split",artifact_key=split.artifact.key,resources=split.participating_resources,strategy="pipeline_parallel",state=ValidationState.SUPPORTED,rationale="fixture")
+    scheduler=Scheduler([anchorage(),kestrel()],[tailscale("relay")],[observation],[validation,split_validation], current_runtimes=[validation.runtime])
     mission=MissionRequirements(id="m",requires_synchronous_cross_node=True)
     results=[scheduler.evaluate(mission,p,resident if p.inference_profile_id=="resident" else split) for p in scheduler.generate([resident,split])]
     assert any(any("no comparable benchmark evidence" in reason for reason in r.reasons) for r in results)
     pipeline=next(r for r in results if r.plan.mode is ExecutionMode.PIPELINE and r.plan.inference_profile_id=="split")
     assert not pipeline.eligible and any("direct Tailscale" in x for x in pipeline.reasons)
-    assert scheduler.select(MissionRequirements(id="local",allow_modes={ExecutionMode.LOCAL}),[resident]).evidence.provenance == "measured"
+    assert scheduler.select(MissionRequirements(id="local",allow_modes={ExecutionMode.LOCAL},workload=observation.workload,evidence_not_before=datetime(2000,1,1,tzinfo=UTC)),[resident]).evidence.provenance == "measured"

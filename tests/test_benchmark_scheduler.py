@@ -1,7 +1,9 @@
 import json
+from datetime import UTC, datetime
 
 from long_haul.benchmark_scheduler import run
 from long_haul.benchmarks import BenchmarkObservation
+from long_haul.benchmarks.store import Workload
 from long_haul.models import ExecutionMode, InferenceProfile, ModelArtifact
 from long_haul.runtime import ProfileValidation, RuntimeIdentity, ValidationState
 
@@ -69,6 +71,7 @@ def _write_matrix(tmp_path, profiles):
 
 def _observation(profile, rate, *, error=None):
     return BenchmarkObservation(
+        runtime=RuntimeIdentity(runtime_id="llama.cpp", build_id="fixture"),
         profile=profile,
         plan_mode=ExecutionMode.LOCAL,
         resources=profile.participating_resources,
@@ -99,7 +102,7 @@ def test_scheduler_replay_ignores_failed_measurements_and_selects_fastest(tmp_pa
         ],
     )
 
-    result = run(str(vessel), str(matrix), str(benchmarks), workload="exact-string")
+    result = run(str(vessel), str(matrix), str(benchmarks), workload="exact-string", current_runtimes=(RuntimeIdentity(runtime_id="llama.cpp", build_id="fixture"),), workload_spec=Workload(name="exact-string"), evidence_not_before=datetime(2000,1,1,tzinfo=UTC))
 
     assert result["selected"]["plan"]["inference_profile_id"] == "gpu"
     gpu_candidate = next(
@@ -119,7 +122,7 @@ def test_scheduler_replay_keeps_failed_only_profile_without_evidence(tmp_path):
         [_observation(gpu, 999, error="FAIL_RUNTIME: fixture failure")],
     )
 
-    result = run(str(vessel), str(matrix), str(benchmarks))
+    result = run(str(vessel), str(matrix), str(benchmarks), current_runtimes=(RuntimeIdentity(runtime_id="llama.cpp", build_id="fixture"),))
 
     candidate = result["candidates"][0]
     assert candidate["evidence_id"] is None

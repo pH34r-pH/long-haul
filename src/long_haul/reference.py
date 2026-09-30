@@ -132,6 +132,7 @@ class _ReferenceRun:
     def benchmark(self) -> BenchmarkStore | None:
         result = self.direct_result
         observation = BenchmarkObservation(
+            runtime=result.runtime,
             profile=self.profile,
             plan_mode=ExecutionMode.LOCAL,
             resources=self.profile.participating_resources,
@@ -164,6 +165,7 @@ class _ReferenceRun:
             [self.vessel],
             benchmarks=store.query(self.profile.id),
             validations=[self.validation],
+            current_runtimes=[self.adapter.identity()],
         )
         selected = scheduler.select(
             MissionRequirements(id="reference", allow_modes={ExecutionMode.LOCAL}),
