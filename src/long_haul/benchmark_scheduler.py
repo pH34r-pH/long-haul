@@ -40,6 +40,52 @@ def _profiles_and_validations(
     return profiles, validations
 
 
+def _contract_runtime(record: dict[str, Any]) -> RuntimeIdentity:
+    return RuntimeIdentity(
+        runtime_id=record["runtime_id"],
+        version=record.get("version"),
+        build_id=record.get("build_id"),
+        backends=record.get("backends", []),
+        capabilities={
+            "source_commit": record.get("source_commit", ""),
+            "binary_sha256": record.get("binary_sha256", ""),
+            "cuda_architectures": record.get("cuda_architectures", ""),
+        },
+    )
+
+
+def _contract_profile(record: dict[str, Any], artifact: ModelArtifact) -> InferenceProfile:
+    return InferenceProfile(
+        id=record["id"],
+        runtime_id=record["runtime_id"],
+        strategy=record["strategy"],
+        artifact=artifact,
+        participating_resources=record["resources"],
+        options=record.get("options", {}),
+        schema_version=record.get("schema_version", 1),
+    )
+
+
+def _contract_validation(
+    record: dict[str, Any],
+    profile: InferenceProfile,
+    runtime: RuntimeIdentity,
+) -> ProfileValidation:
+    details = record.get("validation", {})
+    return ProfileValidation(
+        runtime=runtime,
+        profile_id=profile.id,
+        artifact_key=profile.artifact.key,
+        resources=profile.participating_resources,
+        strategy=profile.strategy,
+        options=profile.options,
+        state=ValidationState(details["state"]),
+        depth=ValidationDepth(details.get("depth", "BENCHMARK")),
+        rationale=f"measured runtime-profile contract; {details.get('measured_runs', 0)} runs",
+        provenance=details.get("provenance", "measured"),
+    )
+
+
 def load_profile_contract(
     path: str | Path,
 ) -> tuple[list[InferenceProfile], list[ProfileValidation]]:
@@ -52,52 +98,19 @@ def load_profile_contract(
         raise ValueError("runtime profile contract must preserve hardware_qualified=false")
     if qualification.get("authorization") != "operator-risk-accepted-unqualified":
         raise ValueError("runtime profile contract authorization is not accepted")
-    runtime_record = contract.get("runtime", {})
-    runtime = RuntimeIdentity(
-        runtime_id=runtime_record["runtime_id"],
-        version=runtime_record.get("version"),
-        build_id=runtime_record.get("build_id"),
-        backends=runtime_record.get("backends", []),
-        capabilities={
-            "source_commit": runtime_record.get("source_commit", ""),
-            "binary_sha256": runtime_record.get("binary_sha256", ""),
-            "cuda_architectures": runtime_record.get("cuda_architectures", ""),
-        },
-    )
-    model_record = contract.get("model", {})
+    runtime = _contract_runtime(contract["runtime"])
+    model = contract["model"]
     artifact = ModelArtifact(
-        foundation=model_record["foundation"],
-        revision=model_record.get("revision"),
-        quantization=model_record.get("quantization"),
+        foundation=model["foundation"],
+        revision=model.get("revision"),
+        quantization=model.get("quantization"),
     )
     profiles: list[InferenceProfile] = []
     validations: list[ProfileValidation] = []
     for record in contract.get("profiles", []):
-        profile = InferenceProfile(
-            id=record["id"],
-            runtime_id=record["runtime_id"],
-            strategy=record["strategy"],
-            artifact=artifact,
-            participating_resources=record["resources"],
-            options=record.get("options", {}),
-            schema_version=record.get("schema_version", 1),
-        )
-        validation_record = record.get("validation", {})
+        profile = _contract_profile(record, artifact)
         profiles.append(profile)
-        validations.append(
-            ProfileValidation(
-                runtime=runtime,
-                profile_id=profile.id,
-                artifact_key=profile.artifact.key,
-                resources=profile.participating_resources,
-                strategy=profile.strategy,
-                options=profile.options,
-                state=ValidationState(validation_record["state"]),
-                depth=ValidationDepth(validation_record.get("depth", "BENCHMARK")),
-                rationale=f"measured runtime-profile contract; {validation_record.get('measured_runs', 0)} runs",
-                provenance=validation_record.get("provenance", "measured"),
-            )
-        )
+        validations.append(_contract_validation(record, profile, runtime))
     return profiles, validations
 
 
