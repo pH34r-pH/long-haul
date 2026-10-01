@@ -3,7 +3,6 @@
 import json
 from pathlib import Path
 
-
 PROFILE = Path(__file__).parents[1] / "contracts" / "anchorage-7b-profile.json"
 
 
