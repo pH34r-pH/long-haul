@@ -1,0 +1,229 @@
+{
+  "schema": "long-haul-runtime-profile/v1",
+  "vessel": "anchorage",
+  "qualification": {
+    "hardware_qualified": false,
+    "authorization": "operator-risk-accepted-unqualified",
+    "evidence_scope": "bounded measured benchmark; not hardware qualification"
+  },
+  "runtime": {
+    "runtime_id": "llama.cpp",
+    "version": "b11146",
+    "source_commit": "7fe450e19305b828c199d602c23a8337aaa1f03b",
+    "build_id": "7fe450e19305b828c199d602c23a8337aaa1f03b:native-cuda:207cf9f241ed688595f1d1c1eceac9e68de6f60218407b7a9978cc9732ace1d0",
+    "binary_sha256": "207cf9f241ed688595f1d1c1eceac9e68de6f60218407b7a9978cc9732ace1d0",
+    "backends": [
+      "cpu",
+      "cuda"
+    ],
+    "cuda_architectures": "61",
+    "identity_depth": "historical-runtime-hash-only"
+  },
+  "model": {
+    "foundation": "Qwen2.5-7B-Instruct.Q4_K_M.gguf",
+    "quantization": "Q4_K_M",
+    "revision": "4e9221217000d0fc8f5ffdbae51a7201fcc3613de18ff1b1cd8c7c01f924437b"
+  },
+  "profiles": [
+    {
+      "id": "anc-native-cpu-7b",
+      "strategy": "resident",
+      "resources": [
+        "ANC-C0"
+      ],
+      "options": {
+        "authorization": "operator-risk-accepted-unqualified",
+        "hardware_qualified": false,
+        "cuda_visible_devices": null,
+        "gpu_layers": 0,
+        "threads": 12,
+        "cpu_mask": "0x0"
+      },
+      "runtime_id": "llama.cpp",
+      "schema_version": 1,
+      "validation": {
+        "state": "SUPPORTED",
+        "depth": "BENCHMARK",
+        "provenance": "measured",
+        "measured_runs": 12
+      }
+    },
+    {
+      "id": "anc-native-g0-full-7b",
+      "strategy": "gpu_offload",
+      "resources": [
+        "ANC-G0"
+      ],
+      "options": {
+        "authorization": "operator-risk-accepted-unqualified",
+        "hardware_qualified": false,
+        "cuda_visible_devices": "0",
+        "gpu_layers": 999,
+        "threads": 12,
+        "cpu_mask": "0x0",
+        "tensor_split": "0.00"
+      },
+      "runtime_id": "llama.cpp",
+      "schema_version": 1,
+      "validation": {
+        "state": "SUPPORTED",
+        "depth": "BENCHMARK",
+        "provenance": "measured",
+        "measured_runs": 12
+      }
+    },
+    {
+      "id": "anc-native-g1-full-7b",
+      "strategy": "gpu_offload",
+      "resources": [
+        "ANC-G1"
+      ],
+      "options": {
+        "authorization": "operator-risk-accepted-unqualified",
+        "hardware_qualified": false,
+        "cuda_visible_devices": "1",
+        "gpu_layers": 999,
+        "threads": 12,
+        "cpu_mask": "0x0",
+        "tensor_split": "0.00"
+      },
+      "runtime_id": "llama.cpp",
+      "schema_version": 1,
+      "validation": {
+        "state": "SUPPORTED",
+        "depth": "BENCHMARK",
+        "provenance": "measured",
+        "measured_runs": 12
+      }
+    },
+    {
+      "id": "anc-native-cpu-g0-partial-7b",
+      "strategy": "gpu_offload",
+      "resources": [
+        "ANC-C0",
+        "ANC-G0"
+      ],
+      "options": {
+        "authorization": "operator-risk-accepted-unqualified",
+        "hardware_qualified": false,
+        "cuda_visible_devices": "0",
+        "gpu_layers": 20,
+        "threads": 12,
+        "cpu_mask": "0x0"
+      },
+      "runtime_id": "llama.cpp",
+      "schema_version": 1,
+      "validation": {
+        "state": "SUPPORTED",
+        "depth": "BENCHMARK",
+        "provenance": "measured",
+        "measured_runs": 12
+      }
+    },
+    {
+      "id": "anc-native-cpu-g1-partial-7b",
+      "strategy": "gpu_offload",
+      "resources": [
+        "ANC-C0",
+        "ANC-G1"
+      ],
+      "options": {
+        "authorization": "operator-risk-accepted-unqualified",
+        "hardware_qualified": false,
+        "cuda_visible_devices": "1",
+        "gpu_layers": 20,
+        "threads": 12,
+        "cpu_mask": "0x0"
+      },
+      "runtime_id": "llama.cpp",
+      "schema_version": 1,
+      "validation": {
+        "state": "SUPPORTED",
+        "depth": "BENCHMARK",
+        "provenance": "measured",
+        "measured_runs": 12
+      }
+    },
+    {
+      "id": "anc-native-dual-balanced-7b",
+      "strategy": "gpu_offload",
+      "resources": [
+        "ANC-G0",
+        "ANC-G1"
+      ],
+      "options": {
+        "authorization": "operator-risk-accepted-unqualified",
+        "hardware_qualified": false,
+        "cuda_visible_devices": "0,1",
+        "gpu_layers": 999,
+        "threads": 12,
+        "cpu_mask": "0x0",
+        "tensor_split": "0.50/0.50"
+      },
+      "runtime_id": "llama.cpp",
+      "schema_version": 1,
+      "validation": {
+        "state": "SUPPORTED",
+        "depth": "BENCHMARK",
+        "provenance": "measured",
+        "measured_runs": 12
+      }
+    },
+    {
+      "id": "anc-native-dual-g0-heavy-7b",
+      "strategy": "gpu_offload",
+      "resources": [
+        "ANC-G0",
+        "ANC-G1"
+      ],
+      "options": {
+        "authorization": "operator-risk-accepted-unqualified",
+        "hardware_qualified": false,
+        "cuda_visible_devices": "0,1",
+        "gpu_layers": 999,
+        "threads": 12,
+        "cpu_mask": "0x0",
+        "tensor_split": "0.75/0.25"
+      },
+      "runtime_id": "llama.cpp",
+      "schema_version": 1,
+      "validation": {
+        "state": "SUPPORTED",
+        "depth": "BENCHMARK",
+        "provenance": "measured",
+        "measured_runs": 12
+      }
+    },
+    {
+      "id": "anc-native-dual-g1-heavy-7b",
+      "strategy": "gpu_offload",
+      "resources": [
+        "ANC-G0",
+        "ANC-G1"
+      ],
+      "options": {
+        "authorization": "operator-risk-accepted-unqualified",
+        "hardware_qualified": false,
+        "cuda_visible_devices": "0,1",
+        "gpu_layers": 999,
+        "threads": 12,
+        "cpu_mask": "0x0",
+        "tensor_split": "0.25/0.75"
+      },
+      "runtime_id": "llama.cpp",
+      "schema_version": 1,
+      "validation": {
+        "state": "SUPPORTED",
+        "depth": "BENCHMARK",
+        "provenance": "measured",
+        "measured_runs": 12
+      }
+    }
+  ],
+  "replay": {
+    "valid_rows": 110,
+    "decisions": 16,
+    "failed_observations_excluded": true,
+    "replay_path": "analysis/replay-after-14b-stop"
+  }
+}
