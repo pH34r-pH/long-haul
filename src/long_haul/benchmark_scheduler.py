@@ -4,12 +4,13 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from .benchmarks import BenchmarkObservation
 from .benchmarks.store import Workload
-from .models import ExecutionMode, InferenceProfile
+from .models import ExecutionMode, InferenceProfile, ModelArtifact
 from .registry import load_vessel
-from .runtime import ProfileValidation, RuntimeIdentity
+from .runtime import ProfileValidation, RuntimeIdentity, ValidationDepth, ValidationState
 from .scheduler import CandidateResult, MissionRequirements, Scheduler
 
 
@@ -36,6 +37,67 @@ def _profiles_and_validations(
         measured = record.get("measured_validation")
         if measured is not None:
             validations.append(ProfileValidation.model_validate(measured))
+    return profiles, validations
+
+
+def load_profile_contract(
+    path: str | Path,
+) -> tuple[list[InferenceProfile], list[ProfileValidation]]:
+    """Load a measured runtime-profile handoff into scheduler-native models."""
+    contract: dict[str, Any] = json.loads(Path(path).read_text())
+    if contract.get("schema") != "long-haul-runtime-profile/v1":
+        raise ValueError("unsupported runtime profile contract")
+    qualification = contract.get("qualification", {})
+    if qualification.get("hardware_qualified") is not False:
+        raise ValueError("runtime profile contract must preserve hardware_qualified=false")
+    if qualification.get("authorization") != "operator-risk-accepted-unqualified":
+        raise ValueError("runtime profile contract authorization is not accepted")
+    runtime_record = contract.get("runtime", {})
+    runtime = RuntimeIdentity(
+        runtime_id=runtime_record["runtime_id"],
+        version=runtime_record.get("version"),
+        build_id=runtime_record.get("build_id"),
+        backends=runtime_record.get("backends", []),
+        capabilities={
+            "source_commit": runtime_record.get("source_commit", ""),
+            "binary_sha256": runtime_record.get("binary_sha256", ""),
+            "cuda_architectures": runtime_record.get("cuda_architectures", ""),
+        },
+    )
+    model_record = contract.get("model", {})
+    artifact = ModelArtifact(
+        foundation=model_record["foundation"],
+        revision=model_record.get("revision"),
+        quantization=model_record.get("quantization"),
+    )
+    profiles: list[InferenceProfile] = []
+    validations: list[ProfileValidation] = []
+    for record in contract.get("profiles", []):
+        profile = InferenceProfile(
+            id=record["id"],
+            runtime_id=record["runtime_id"],
+            strategy=record["strategy"],
+            artifact=artifact,
+            participating_resources=record["resources"],
+            options=record.get("options", {}),
+            schema_version=record.get("schema_version", 1),
+        )
+        validation_record = record.get("validation", {})
+        profiles.append(profile)
+        validations.append(
+            ProfileValidation(
+                runtime=runtime,
+                profile_id=profile.id,
+                artifact_key=profile.artifact.key,
+                resources=profile.participating_resources,
+                strategy=profile.strategy,
+                options=profile.options,
+                state=ValidationState(validation_record["state"]),
+                depth=ValidationDepth(validation_record.get("depth", "BENCHMARK")),
+                rationale=f"measured runtime-profile contract; {validation_record.get('measured_runs', 0)} runs",
+                provenance=validation_record.get("provenance", "measured"),
+            )
+        )
     return profiles, validations
 
 
@@ -89,12 +151,17 @@ def run(
     current_runtimes: tuple[RuntimeIdentity, ...] = (),
     workload_spec: Workload | None = None,
     evidence_not_before: datetime | None = None,
+    profile_contract_path: str | Path | None = None,
 ) -> dict[str, object]:
     vessel = load_vessel(vessel_path)
     matrix = json.loads(Path(matrix_report_path).read_text())
     if matrix.get("schema") != "long-haul-benchmark-matrix/v1":
         raise ValueError("unsupported benchmark matrix report")
-    profiles, validations = _profiles_and_validations(matrix)
+    profiles, validations = (
+        load_profile_contract(profile_contract_path)
+        if profile_contract_path is not None
+        else _profiles_and_validations(matrix)
+    )
     observations = _load_observations(benchmark_path, workload)
     scheduler = Scheduler([vessel], benchmarks=observations, validations=validations, current_runtimes=current_runtimes)
     mission = MissionRequirements(
