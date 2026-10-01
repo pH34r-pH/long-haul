@@ -29,3 +29,4 @@ Read [`docs/repository-map.md`](docs/repository-map.md) for the source-grounded 
 - [`contracts/AGENTS.md`](contracts/AGENTS.md) — durable requirements and vessel schemas.
 - [`docs/AGENTS.md`](docs/AGENTS.md) — documentation authority and historical records.
 - [`infra/azure/AGENTS.md`](infra/azure/AGENTS.md) — public reference infrastructure boundary.
+- [`scripts/AGENTS.md`](scripts/AGENTS.md) — packaging and changed-documentation validation.

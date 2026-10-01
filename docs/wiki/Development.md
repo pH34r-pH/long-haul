@@ -22,4 +22,4 @@ Changes that touch scheduling or execution must preserve typed resource/topology
 
 Run the full repository test/validation path before opening a pull request. See [CONTRIBUTING.md](https://github.com/pH34r-pH/long-haul/blob/main/CONTRIBUTING.md).
 
-For a narrow change, begin with the relevant command from the repository map, for example `python -m pytest -q tests/test_scheduler_evidence.py tests/test_benchmark_scheduler.py` for scheduler/evidence work or `python -m unittest tools.test_requirements tools.test_requirements_boundaries` for requirements contracts.
+For a narrow change, begin with the relevant command from the repository map, for example `python -m pytest -q tests/test_scheduler_evidence.py tests/test_benchmark_scheduler.py` for scheduler/evidence work or `python -m unittest tools.test_requirements tools.test_requirements_boundaries` for requirements contracts. Pull requests also run the changed-file documentation/artifact guard in the structural audit; it checks only living Markdown and preserves explicit historical/evidence roots.

@@ -8,6 +8,92 @@ permissions:
   contents: read
 
 jobs:
+  documentation:
+    name: Changed documentation and artifact guard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Resolve comparison base
+        id: base
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            echo "sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=$(git rev-parse HEAD^ 2>/dev/null || git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run changed-file documentation and artifact guard
+        run: python scripts/check_documentation_artifacts.py --base '${{ steps.base.outputs.sha }}'
+
+      - name: Run guard regression tests
+        run: python scripts/test_documentation_artifacts.py
+
+      - name: Markdown style on changed living docs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t docs < <(python scripts/check_documentation_artifacts.py --base '${{ steps.base.outputs.sha }}' --print-living-markdown)
+          if ((${#docs[@]} == 0)); then
+            echo 'No changed living Markdown files.'
+            exit 0
+          fi
+          npx --yes markdownlint-cli2@0.18.1 --config .markdownlint-cli2.yaml "${docs[@]}"
+
+      - name: Resolve changed living docs for link validation
+        id: links
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/check_documentation_artifacts.py --base '${{ steps.base.outputs.sha }}' --print-living-markdown > changed-docs.txt
+          if [[ -s changed-docs.txt ]]; then
+            echo 'any=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'any=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install pinned lychee
+        if: steps.links.outputs.any == 'true'
+        uses: lycheeverse/lychee-action@v2.4.1
+        with:
+          lycheeVersion: v0.20.1
+          args: --version
+          failIfEmpty: false
+
+      - name: Prove lychee rejects a broken local link
+        if: steps.links.outputs.any == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          fixture="$RUNNER_TEMP/long-haul-broken-link.md"
+          printf '%s\n' '[broken](missing-target.md)' > "$fixture"
+          if lychee --offline --no-progress --root-dir "$RUNNER_TEMP" "$fixture"; then
+            echo 'lychee unexpectedly accepted a broken local link' >&2
+            exit 1
+          fi
+
+      - name: Lychee local-link check on changed living docs
+        if: steps.links.outputs.any == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t docs < changed-docs.txt
+          lychee --offline --no-progress --root-dir "$GITHUB_WORKSPACE" "${docs[@]}"
+
   audit:
     name: Native + Lizard + jscpd
     runs-on: ubuntu-24.04

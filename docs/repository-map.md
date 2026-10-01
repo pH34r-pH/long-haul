@@ -61,8 +61,8 @@ Use the narrowest command that covers the changed boundary, then run the full re
 | Any Python source | `python -m ruff check src tests` |
 | Documentation-only edits | `git diff --check`; verify every relative link in the changed Markdown resolves from its file directory |
 
-The current CI-equivalent source checks are in [`ci.yml`](../.github/workflows/ci.yml), the requirements workflow, and the audit workflow. The wiki is synchronized by [`wiki-sync.yml`](../.github/workflows/wiki-sync.yml) only from `main`.
+The current CI-equivalent source checks are in [`ci.yml`](../.github/workflows/ci.yml), the requirements workflow, and the audit workflow. The audit workflow includes the changed-file documentation/artifact guard, pinned Markdown style/link checks, and a broken-link fixture; it runs with the existing read-only PR runner admission. The wiki is synchronized by [`wiki-sync.yml`](../.github/workflows/wiki-sync.yml) only from `main`.
 
-## Smallest future CI integration
+## CI integration boundary
 
-This wave intentionally adds no new guard and changes no workflow behavior. Existing CI already runs on pull requests, and the structural audit is pull-request-wide. After the Fleet/DSL/Portfolio coherence review, the smallest useful integration is one shared relative-link/reference check added to that existing audit job, with no parallel workflow and no duplicate repository-specific guard.
+The guard is intentionally changed-file-only: living Markdown is checked for style and actual relative links; explicit historical/scientific roots are preserved, while new incidental cache/temp paths are rejected even below those roots. It does not inventory or duplicate the repository map. Tool versions are pinned in the workflow (`markdownlint-cli2` 0.18.1 and `lychee` 0.20.1).
