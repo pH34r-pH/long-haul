@@ -1,0 +1,125 @@
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix lh: <urn:long-haul:epistemic:v1:terms:> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<urn:long-haul:epistemic:v1:object:conflict%3A1> a prov:Entity,
+        lh:Contradiction ;
+    prov:generatedAtTime "2026-09-29T12:04:00+00:00"^^xsd:dateTime ;
+    prov:wasDerivedFrom <urn:long-haul:epistemic:v1:event:conflict%3A1> ;
+    prov:wasGeneratedBy <urn:long-haul:epistemic:v1:activity:conflict%3A1> ;
+    lh:target <urn:long-haul:epistemic:v1:object:claim%3A%2FP%20%25%CE%B1>,
+        <urn:long-haul:epistemic:v1:object:claim%3Anot-P> .
+
+<urn:long-haul:epistemic:v1:object:evidence%3A1> a prov:Entity,
+        lh:Evidence ;
+    dcterms:description "Synthetic predicate observation." ;
+    prov:generatedAtTime "2026-09-29T12:01:00+00:00"^^xsd:dateTime ;
+    prov:wasAttributedTo <urn:long-haul:epistemic:v1:agent:crew%3A%2FENG-01> ;
+    prov:wasDerivedFrom <urn:long-haul:epistemic:v1:artifact:sha256%3Asynthetic%2F%25%CE%B1>,
+        <urn:long-haul:epistemic:v1:event:evidence%3A1> ;
+    prov:wasGeneratedBy <urn:long-haul:epistemic:v1:activity:evidence%3A1> ;
+    lh:supports <urn:long-haul:epistemic:v1:object:claim%3A%2FP%20%25%CE%B1> .
+
+<urn:long-haul:epistemic:v1:object:retraction%3A1> a prov:Entity,
+        lh:Retraction ;
+    prov:generatedAtTime "2026-09-29T12:05:00+00:00"^^xsd:dateTime ;
+    prov:wasDerivedFrom <urn:long-haul:epistemic:v1:event:retraction%3A1> ;
+    prov:wasGeneratedBy <urn:long-haul:epistemic:v1:activity:retraction%3A1> ;
+    lh:target <urn:long-haul:epistemic:v1:object:assumption%3A1> .
+
+<urn:long-haul:epistemic:v1:projection> a lh:Projection ;
+    lh:version 1 .
+
+<urn:long-haul:epistemic:v1:activity:assumption%3A1> a prov:Activity ;
+    prov:used <urn:long-haul:epistemic:v1:event:assumption%3A1> .
+
+<urn:long-haul:epistemic:v1:activity:claim%3A%2FP%20%25%CE%B1> a prov:Activity ;
+    prov:used <urn:long-haul:epistemic:v1:event:claim%3A%2FP%20%25%CE%B1> ;
+    prov:wasAssociatedWith <urn:long-haul:epistemic:v1:agent:crew%3A%2FENG-01> .
+
+<urn:long-haul:epistemic:v1:activity:claim%3Anot-P> a prov:Activity ;
+    prov:used <urn:long-haul:epistemic:v1:event:claim%3Anot-P> .
+
+<urn:long-haul:epistemic:v1:activity:conflict%3A1> a prov:Activity ;
+    prov:used <urn:long-haul:epistemic:v1:event:conflict%3A1> .
+
+<urn:long-haul:epistemic:v1:activity:evidence%3A1> a prov:Activity ;
+    prov:used <urn:long-haul:epistemic:v1:event:evidence%3A1> ;
+    prov:wasAssociatedWith <urn:long-haul:epistemic:v1:agent:crew%3A%2FENG-01> .
+
+<urn:long-haul:epistemic:v1:artifact:sha256%3Asynthetic%2F%25%CE%B1> a prov:Entity,
+        lh:Artifact ;
+    lh:artifactFingerprint "sha256:synthetic/%α" .
+
+<urn:long-haul:epistemic:v1:object:assumption%3A1> a prov:Entity,
+        lh:Assumption ;
+    dcterms:description "The synthetic sensor is calibrated." ;
+    prov:generatedAtTime "2026-09-29T12:02:00+00:00"^^xsd:dateTime ;
+    prov:invalidatedAtTime "2026-09-29T12:05:00+00:00"^^xsd:dateTime ;
+    prov:wasDerivedFrom <urn:long-haul:epistemic:v1:event:assumption%3A1> ;
+    prov:wasGeneratedBy <urn:long-haul:epistemic:v1:activity:assumption%3A1> ;
+    prov:wasInvalidatedBy <urn:long-haul:epistemic:v1:activity:retraction%3A1> ;
+    lh:supports <urn:long-haul:epistemic:v1:object:claim%3A%2FP%20%25%CE%B1> .
+
+<urn:long-haul:epistemic:v1:activity:retraction%3A1> a prov:Activity ;
+    prov:used <urn:long-haul:epistemic:v1:event:retraction%3A1> .
+
+<urn:long-haul:epistemic:v1:event:assumption%3A1> a prov:Entity,
+        lh:AuthoritativeEvent ;
+    lh:eventId "assumption:1" ;
+    lh:eventSchemaVersion 1 ;
+    lh:eventType "inference" .
+
+<urn:long-haul:epistemic:v1:event:claim%3A%2FP%20%25%CE%B1> a prov:Entity,
+        lh:AuthoritativeEvent ;
+    dcterms:source "fixture://synthetic" ;
+    lh:eventId "claim:/P %α" ;
+    lh:eventSchemaVersion 1 ;
+    lh:eventType "work_fact" .
+
+<urn:long-haul:epistemic:v1:event:claim%3Anot-P> a prov:Entity,
+        lh:AuthoritativeEvent ;
+    lh:eventId "claim:not-P" ;
+    lh:eventSchemaVersion 1 ;
+    lh:eventType "inference" .
+
+<urn:long-haul:epistemic:v1:event:conflict%3A1> a prov:Entity,
+        lh:AuthoritativeEvent ;
+    lh:eventId "conflict:1" ;
+    lh:eventSchemaVersion 1 ;
+    lh:eventType "decision" .
+
+<urn:long-haul:epistemic:v1:event:evidence%3A1> a prov:Entity,
+        lh:AuthoritativeEvent ;
+    lh:eventId "evidence:1" ;
+    lh:eventSchemaVersion 1 ;
+    lh:eventType "work_evidence" .
+
+<urn:long-haul:epistemic:v1:event:retraction%3A1> a prov:Entity,
+        lh:AuthoritativeEvent ;
+    lh:eventId "retraction:1" ;
+    lh:eventSchemaVersion 1 ;
+    lh:eventType "decision" .
+
+<urn:long-haul:epistemic:v1:object:claim%3Anot-P> a prov:Entity,
+        lh:Claim ;
+    dcterms:description "The synthetic sample fails the predicate." ;
+    prov:generatedAtTime "2026-09-29T12:03:00+00:00"^^xsd:dateTime ;
+    prov:wasDerivedFrom <urn:long-haul:epistemic:v1:event:claim%3Anot-P> ;
+    prov:wasGeneratedBy <urn:long-haul:epistemic:v1:activity:claim%3Anot-P> ;
+    lh:contradicts <urn:long-haul:epistemic:v1:object:claim%3A%2FP%20%25%CE%B1> ;
+    lh:negates <urn:long-haul:epistemic:v1:object:claim%3A%2FP%20%25%CE%B1> .
+
+<urn:long-haul:epistemic:v1:agent:crew%3A%2FENG-01> a prov:Agent ;
+    dcterms:identifier "crew:/ENG-01" .
+
+<urn:long-haul:epistemic:v1:object:claim%3A%2FP%20%25%CE%B1> a prov:Entity,
+        lh:Claim ;
+    dcterms:description "The synthetic sample meets the predicate." ;
+    prov:generatedAtTime "2026-09-29T12:00:00+00:00"^^xsd:dateTime ;
+    prov:wasAttributedTo <urn:long-haul:epistemic:v1:agent:crew%3A%2FENG-01> ;
+    prov:wasDerivedFrom <urn:long-haul:epistemic:v1:event:claim%3A%2FP%20%25%CE%B1> ;
+    prov:wasGeneratedBy <urn:long-haul:epistemic:v1:activity:claim%3A%2FP%20%25%CE%B1> ;
+    lh:contradicts <urn:long-haul:epistemic:v1:object:claim%3Anot-P> .
+
