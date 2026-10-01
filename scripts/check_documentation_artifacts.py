@@ -33,7 +33,7 @@ FORBIDDEN_PARTS = {
 }
 FORBIDDEN_SUFFIXES = {".bak", ".pyc", ".pyo", ".swp", ".tmp"}
 INCIDENTAL_DOC_NAMES = {"cache.md", "scratch.md", "temp.md", "tmp.md", "untitled.md"}
-DESCRIPTIVE_SLUG = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
+DESCRIPTIVE_SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 ISSUE_ONLY = re.compile(r"^(?:issue[-_]?)?\d+$", re.IGNORECASE)
 
 
@@ -70,9 +70,9 @@ def _check_artifact(path: Path, new_path: bool) -> list[str]:
         return []
     parts = {part.lower() for part in path.parts}
     if parts & FORBIDDEN_PARTS or path.suffix.lower() in FORBIDDEN_SUFFIXES:
-        return [f"{path}: new or changed path is an unapproved temporary/build artifact"]
+        return [f"{path}: added, renamed, or copied path is an unapproved temporary/build artifact"]
     if path.name in {".DS_Store", "Thumbs.db"}:
-        return [f"{path}: new or changed path is an unapproved temporary/build artifact"]
+        return [f"{path}: added, renamed, or copied path is an unapproved temporary/build artifact"]
     return []
 
 
@@ -131,7 +131,9 @@ def main() -> int:
     root = Path(__file__).resolve().parents[1]
     records = changed_files(root, args.base)
     if args.print_living_markdown:
-        print("\n".join(changed_living_markdown(root, args.base)))
+        selected = changed_living_markdown(root, args.base)
+        if selected:
+            print("\n".join(selected))
         return 0
     errors = check_paths(root, records)
     if errors:

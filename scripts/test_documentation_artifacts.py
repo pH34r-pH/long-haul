@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import subprocess
+import contextlib
+import io
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from check_documentation_artifacts import changed_files, changed_living_markdown, check_paths
+from check_documentation_artifacts import changed_files, changed_living_markdown, check_paths, main
 
 
 class DocumentationArtifactTests(unittest.TestCase):
@@ -22,8 +25,25 @@ class DocumentationArtifactTests(unittest.TestCase):
 
     def test_allows_single_word_descriptive_name_but_rejects_issue_only(self):
         self.assertEqual([], check_paths(Path("."), [("A", "docs/architecture.md")]))
+        self.assertEqual([], check_paths(Path("."), [("A", "docs/014-descriptive-topic.md")]))
         self.assertTrue(check_paths(Path("."), [("A", "docs/issue-123.md")]))
         self.assertTrue(check_paths(Path("."), [("A", "docs/123.md")]))
+
+    def test_cli_prints_no_bytes_for_code_only_changes_but_guard_still_runs(self):
+        with patch("check_documentation_artifacts.changed_files", return_value=[("M", "src/module.py")]):
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output), patch.object(
+                sys, "argv", ["check_documentation_artifacts.py", "--base", "base", "--print-living-markdown"]
+            ):
+                self.assertEqual(0, main())
+            self.assertEqual("", output.getvalue())
+
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output), patch.object(
+                sys, "argv", ["check_documentation_artifacts.py", "--base", "base"]
+            ):
+                self.assertEqual(0, main())
+            self.assertIn("guard passed for 1 changed path(s)", output.getvalue())
 
     def test_changed_files_uses_real_git_rename_and_copy_output(self):
         with tempfile.TemporaryDirectory() as directory:
