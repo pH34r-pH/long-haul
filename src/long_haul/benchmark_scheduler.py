@@ -4,12 +4,18 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from .benchmarks import BenchmarkObservation
 from .benchmarks.store import Workload
-from .models import ExecutionMode, InferenceProfile
+from .models import ExecutionMode, InferenceProfile, ModelArtifact
 from .registry import load_vessel
-from .runtime import ProfileValidation, RuntimeIdentity
+from .runtime import (
+    ProfileValidation,
+    RuntimeIdentity,
+    ValidationDepth,
+    ValidationState,
+)
 from .scheduler import CandidateResult, MissionRequirements, Scheduler
 
 
@@ -37,6 +43,94 @@ def _profiles_and_validations(
         if measured is not None:
             validations.append(ProfileValidation.model_validate(measured))
     return profiles, validations
+
+
+def _contract_runtime(record: dict[str, Any]) -> RuntimeIdentity:
+    return RuntimeIdentity(
+        runtime_id=record["runtime_id"],
+        version=record.get("version"),
+        build_id=record.get("build_id"),
+        backends=record.get("backends", []),
+        capabilities={
+            "source_commit": record.get("source_commit", ""),
+            "binary_sha256": record.get("binary_sha256", ""),
+            "cuda_architectures": record.get("cuda_architectures", ""),
+        },
+    )
+
+
+def _contract_profile(record: dict[str, Any], artifact: ModelArtifact) -> InferenceProfile:
+    return InferenceProfile(
+        id=record["id"],
+        runtime_id=record["runtime_id"],
+        strategy=record["strategy"],
+        artifact=artifact,
+        participating_resources=record["resources"],
+        options=record.get("options", {}),
+        schema_version=record.get("schema_version", 1),
+    )
+
+
+def _contract_validation(
+    record: dict[str, Any],
+    profile: InferenceProfile,
+    runtime: RuntimeIdentity,
+) -> ProfileValidation:
+    details = record.get("validation", {})
+    return ProfileValidation(
+        runtime=runtime,
+        profile_id=profile.id,
+        artifact_key=profile.artifact.key,
+        resources=profile.participating_resources,
+        strategy=profile.strategy,
+        options=profile.options,
+        state=ValidationState(details["state"]),
+        depth=ValidationDepth(details.get("depth", "BENCHMARK")),
+        rationale=f"measured runtime-profile contract; {details.get('measured_runs', 0)} runs",
+        provenance=details.get("provenance", "measured"),
+    )
+
+
+def _validate_contract(contract: dict[str, Any]) -> None:
+    if contract.get("schema") != "long-haul-runtime-profile/v1":
+        raise ValueError("unsupported runtime profile contract")
+    qualification = contract.get("qualification", {})
+    if qualification.get("hardware_qualified") is not False:
+        raise ValueError("runtime profile contract must preserve hardware_qualified=false")
+    if qualification.get("authorization") != "operator-risk-accepted-unqualified":
+        raise ValueError("runtime profile contract authorization is not accepted")
+
+
+def _contract_artifact(record: dict[str, Any]) -> ModelArtifact:
+    return ModelArtifact(
+        foundation=record["foundation"],
+        revision=record.get("revision"),
+        quantization=record.get("quantization"),
+    )
+
+
+def _contract_entries(
+    records: list[dict[str, Any]],
+    artifact: ModelArtifact,
+    runtime: RuntimeIdentity,
+) -> tuple[list[InferenceProfile], list[ProfileValidation]]:
+    profiles = [_contract_profile(record, artifact) for record in records]
+    validations = [
+        _contract_validation(record, profile, runtime)
+        for record, profile in zip(records, profiles, strict=True)
+    ]
+    return profiles, validations
+
+
+def load_profile_contract(
+    path: str | Path,
+) -> tuple[list[InferenceProfile], list[ProfileValidation]]:
+    """Load a measured runtime-profile handoff into scheduler-native models."""
+    contract: dict[str, Any] = json.loads(Path(path).read_text())
+    _validate_contract(contract)
+    runtime = _contract_runtime(contract["runtime"])
+    artifact = _contract_artifact(contract["model"])
+    return _contract_entries(contract.get("profiles", []), artifact, runtime)
 
 
 def _local_candidates(
