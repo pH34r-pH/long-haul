@@ -1,5 +1,4 @@
 """Regression checks for the measured Anchorage 7B profile handoff."""
-from __future__ import annotations
 
 import json
 from pathlib import Path
