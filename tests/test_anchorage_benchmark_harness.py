@@ -7,7 +7,7 @@ import pytest
 import yaml
 
 from long_haul.adapters.llama_cpp import LlamaCppAdapter
-from long_haul.benchmark_matrix import run
+from long_haul.benchmark_matrix import load_manifest, run
 from long_haul.models import InferenceProfile, ModelArtifact
 from long_haul.runtime import ExecutionRequest, FailureClass, ValidationState
 
@@ -133,3 +133,182 @@ def test_manifest_matrix_records_cpu_and_exploratory_gpu(fixture_runtime, tmp_pa
     gpu = next(item for item in report["profiles"] if item["profile"]["id"] == "anc-g0")
     assert gpu["preflight"]["state"] == "UNKNOWN"
     assert gpu["measured_validation"]["state"] == "SUPPORTED"
+
+
+def test_llama_command_exposes_cpu_affinity_and_moe_controls(fixture_runtime, tmp_path):
+    model = tmp_path / "model.gguf"
+    model.write_bytes(b"fixture")
+    profile = InferenceProfile(
+        id="anc-hybrid-affinity",
+        runtime_id="llama.cpp",
+        strategy="gpu_offload",
+        artifact=ModelArtifact(foundation="fixture", quantization="Q4"),
+        participating_resources=["ANC-C0", "ANC-G0"],
+        options={
+            "model_path": str(model),
+            "gpu_layers": 20,
+            "threads": 6,
+            "threads_batch": 12,
+            "cpu_range": "0-5",
+            "cpu_range_batch": "0-11",
+            "cpu_strict": True,
+            "cpu_strict_batch": True,
+            "n_cpu_moe": 8,
+        },
+    )
+    adapter = LlamaCppAdapter(fixture_runtime)
+    command = adapter._command(
+        ExecutionRequest(request_id="affinity", profile=profile, prompt="test")
+    )
+
+    expected_pairs = {
+        "--threads": "6",
+        "--threads-batch": "12",
+        "--cpu-range": "0-5",
+        "--cpu-range-batch": "0-11",
+        "--cpu-strict": "1",
+        "--cpu-strict-batch": "1",
+        "--n-cpu-moe": "8",
+    }
+    for flag, value in expected_pairs.items():
+        position = command.index(flag)
+        assert command[position + 1] == value
+
+
+def test_llama_command_exposes_all_cpu_moe_flag(fixture_runtime, tmp_path):
+    model = tmp_path / "model.gguf"
+    model.write_bytes(b"fixture")
+    profile = InferenceProfile(
+        id="anc-cpu-moe",
+        runtime_id="llama.cpp",
+        strategy="gpu_offload",
+        artifact=ModelArtifact(foundation="fixture", quantization="Q4"),
+        participating_resources=["ANC-C0", "ANC-G0"],
+        options={
+            "model_path": str(model),
+            "gpu_layers": 20,
+            "cpu_moe": True,
+        },
+    )
+    command = LlamaCppAdapter(fixture_runtime)._command(
+        ExecutionRequest(request_id="cpu-moe", profile=profile, prompt="test")
+    )
+    assert "--cpu-moe" in command
+
+
+def test_llama_command_exposes_speculative_placement_controls(fixture_runtime, tmp_path):
+    model = tmp_path / "model.gguf"
+    draft = tmp_path / "draft.gguf"
+    model.write_bytes(b"fixture")
+    draft.write_bytes(b"draft")
+    profile = InferenceProfile(
+        id="anc-speculative",
+        runtime_id="llama.cpp",
+        strategy="gpu_offload",
+        artifact=ModelArtifact(foundation="fixture", quantization="Q4"),
+        participating_resources=["ANC-C0", "ANC-G0", "ANC-G1"],
+        options={
+            "model_path": str(model),
+            "gpu_layers": 20,
+            "spec_type": "draft-simple",
+            "draft_model_path": str(draft),
+            "draft_device": "CUDA1",
+            "draft_gpu_layers": "all",
+            "draft_threads": 6,
+            "draft_threads_batch": 12,
+            "draft_cpu_range": "6-11",
+            "draft_n_max": 5,
+            "draft_n_min": 1,
+            "draft_n_cpu_moe": 4,
+        },
+    )
+    command = LlamaCppAdapter(fixture_runtime)._command(
+        ExecutionRequest(request_id="spec", profile=profile, prompt="test")
+    )
+    expected_pairs = {
+        "--spec-type": "draft-simple",
+        "--spec-draft-model": str(draft),
+        "--spec-draft-device": "CUDA1",
+        "--spec-draft-ngl": "all",
+        "--spec-draft-threads": "6",
+        "--spec-draft-threads-batch": "12",
+        "--spec-draft-cpu-range": "6-11",
+        "--spec-draft-n-max": "5",
+        "--spec-draft-n-min": "1",
+        "--spec-draft-n-cpu-moe": "4",
+    }
+    for flag, value in expected_pairs.items():
+        position = command.index(flag)
+        assert command[position + 1] == value
+
+
+def test_llama_command_exposes_ngram_speculation_without_draft_model(fixture_runtime, tmp_path):
+    model = tmp_path / "model.gguf"
+    model.write_bytes(b"fixture")
+    profile = InferenceProfile(
+        id="anc-ngram-spec",
+        runtime_id="llama.cpp",
+        strategy="resident",
+        artifact=ModelArtifact(foundation="fixture", quantization="Q4"),
+        participating_resources=["ANC-C0"],
+        options={
+            "model_path": str(model),
+            "spec_type": "ngram-simple",
+        },
+    )
+    command = LlamaCppAdapter(fixture_runtime)._command(
+        ExecutionRequest(request_id="ngram", profile=profile, prompt="test")
+    )
+    assert command[command.index("--spec-type") + 1] == "ngram-simple"
+    assert "--spec-draft-model" not in command
+
+
+def test_checked_in_anchorage_cpu_sweep_manifest_is_valid():
+    manifest_path = (
+        Path(__file__).parents[1]
+        / "docs"
+        / "benchmarks"
+        / "anchorage-cpu-thread-sweep.yaml"
+    )
+    manifest = load_manifest(manifest_path)
+    assert [profile.options["threads"] for profile in manifest.profiles] == [
+        1,
+        2,
+        4,
+        6,
+        12,
+        24,
+    ]
+    assert all(profile.resources == ["ANC-C0"] for profile in manifest.profiles)
+
+
+def test_gpu_draft_on_resident_target_requires_explicit_exploration(
+    fixture_runtime, tmp_path
+):
+    model = tmp_path / "model.gguf"
+    draft = tmp_path / "draft.gguf"
+    model.write_bytes(b"fixture")
+    draft.write_bytes(b"draft")
+    profile = InferenceProfile(
+        id="anc-cpu-target-gpu-draft",
+        runtime_id="llama.cpp",
+        strategy="resident",
+        artifact=ModelArtifact(foundation="fixture", quantization="Q4"),
+        participating_resources=["ANC-C0", "ANC-G1"],
+        options={
+            "model_path": str(model),
+            "spec_type": "draft-simple",
+            "draft_model_path": str(draft),
+            "draft_device": "CUDA1",
+            "draft_gpu_layers": "all",
+        },
+    )
+    adapter = LlamaCppAdapter(fixture_runtime)
+
+    validation = adapter.validate(profile)
+    assert validation.state is ValidationState.UNKNOWN
+    denied = adapter.execute(
+        ExecutionRequest(request_id="draft-denied", profile=profile, prompt="test")
+    )
+    assert denied.success is False
+    assert denied.error_class is FailureClass.RUNTIME

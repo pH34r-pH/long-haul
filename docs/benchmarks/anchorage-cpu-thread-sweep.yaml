@@ -1,0 +1,53 @@
+artifact:
+  foundation: replace-with-qualified-small-gguf
+  quantization: replace-with-qualified-quantization
+
+profiles:
+  - id: anc-cpu-t1
+    strategy: resident
+    resources: [ANC-C0]
+    options:
+      threads: 1
+      threads_batch: 1
+
+  - id: anc-cpu-t2
+    strategy: resident
+    resources: [ANC-C0]
+    options:
+      threads: 2
+      threads_batch: 2
+
+  - id: anc-cpu-t4
+    strategy: resident
+    resources: [ANC-C0]
+    options:
+      threads: 4
+      threads_batch: 4
+
+  - id: anc-cpu-t6
+    strategy: resident
+    resources: [ANC-C0]
+    options:
+      threads: 6
+      threads_batch: 6
+
+  - id: anc-cpu-t12
+    strategy: resident
+    resources: [ANC-C0]
+    options:
+      threads: 12
+      threads_batch: 12
+
+  - id: anc-cpu-t24
+    strategy: resident
+    resources: [ANC-C0]
+    options:
+      threads: 24
+      threads_batch: 24
+
+workloads:
+  - name: short-deterministic
+    prompt: "Return exactly: LONG_HAUL_OK"
+    max_tokens: 8
+    temperature: 0
+    repetitions: 3

@@ -177,8 +177,27 @@ def _parse_timings(stderr: str, total_seconds: float) -> Timing:
     return timing
 
 
-def _accelerated(profile: InferenceProfile) -> bool:
+def _target_accelerated(profile: InferenceProfile) -> bool:
     return profile.strategy in _ACCELERATED_STRATEGIES
+
+
+def _draft_accelerated(profile: InferenceProfile) -> bool:
+    device = profile.options.get("draft_device")
+    if device is not None:
+        return str(device).strip().lower() not in {"", "none", "cpu"}
+    value = profile.options.get("draft_gpu_layers")
+    if value is None or isinstance(value, bool):
+        return False
+    if isinstance(value, str) and value.lower() in {"auto", "all"}:
+        return True
+    try:
+        return int(value) > 0
+    except (TypeError, ValueError):
+        return False
+
+
+def _accelerated(profile: InferenceProfile) -> bool:
+    return _target_accelerated(profile) or _draft_accelerated(profile)
 
 
 def _gpu_layers(profile: InferenceProfile) -> int:
@@ -189,6 +208,61 @@ def _gpu_layers(profile: InferenceProfile) -> int:
         return int(value)
     except (TypeError, ValueError):
         return 0
+
+
+def _append_cpu_options(command: list[str], options: dict[str, object]) -> None:
+    """Append upstream llama.cpp CPU placement controls from an edge profile."""
+    for key, flag in (
+        ("threads", "--threads"),
+        ("threads_batch", "--threads-batch"),
+    ):
+        value = options.get(key)
+        if value is not None and not isinstance(value, bool):
+            command.extend([flag, str(value)])
+
+    for key, flag in (
+        ("cpu_range", "--cpu-range"),
+        ("cpu_range_batch", "--cpu-range-batch"),
+    ):
+        value = options.get(key)
+        if value:
+            command.extend([flag, str(value)])
+
+    for key, flag in (
+        ("cpu_strict", "--cpu-strict"),
+        ("cpu_strict_batch", "--cpu-strict-batch"),
+    ):
+        value = options.get(key)
+        if value is not None:
+            command.extend([flag, "1" if bool(value) else "0"])
+
+    if options.get("cpu_moe"):
+        command.append("--cpu-moe")
+    n_cpu_moe = options.get("n_cpu_moe")
+    if n_cpu_moe is not None and not isinstance(n_cpu_moe, bool):
+        command.extend(["--n-cpu-moe", str(n_cpu_moe)])
+
+
+def _append_speculative_options(command: list[str], options: dict[str, object]) -> None:
+    """Append upstream speculative-decoding controls without owning the policy."""
+    for key, flag in (
+        ("spec_type", "--spec-type"),
+        ("draft_model_path", "--spec-draft-model"),
+        ("draft_device", "--spec-draft-device"),
+        ("draft_gpu_layers", "--spec-draft-ngl"),
+        ("draft_threads", "--spec-draft-threads"),
+        ("draft_threads_batch", "--spec-draft-threads-batch"),
+        ("draft_cpu_range", "--spec-draft-cpu-range"),
+        ("draft_n_max", "--spec-draft-n-max"),
+        ("draft_n_min", "--spec-draft-n-min"),
+        ("draft_n_cpu_moe", "--spec-draft-n-cpu-moe"),
+    ):
+        value = options.get(key)
+        if value is not None and not isinstance(value, bool):
+            command.extend([flag, str(value)])
+
+    if options.get("draft_cpu_moe"):
+        command.append("--spec-draft-cpu-moe")
 
 
 class LlamaCppAdapter:
@@ -272,12 +346,7 @@ class LlamaCppAdapter:
             state, rationale = ValidationState.UNKNOWN, "profile has no adapter model_path option"
         elif not Path(str(profile.options["model_path"])).is_file():
             state, rationale = ValidationState.UNSUPPORTED, "GGUF model artifact is missing"
-        elif profile.strategy == "resident":
-            state = ValidationState.SUPPORTED
-            rationale = (
-                "CPU resident prerequisites available; model loading and execution remain unverified"
-            )
-        elif _accelerated(profile):
+        elif _target_accelerated(profile):
             if _gpu_layers(profile) <= 0:
                 state = ValidationState.UNSUPPORTED
                 rationale = "accelerated profile requires a positive gpu_layers option"
@@ -287,6 +356,17 @@ class LlamaCppAdapter:
                     "accelerated profile requires measured execution qualification; "
                     "preflight does not infer CUDA support from GPU presence"
                 )
+        elif _draft_accelerated(profile):
+            state = ValidationState.UNKNOWN
+            rationale = (
+                "accelerated draft profile requires measured execution qualification; "
+                "preflight does not infer CUDA support from draft placement"
+            )
+        elif profile.strategy == "resident":
+            state = ValidationState.SUPPORTED
+            rationale = (
+                "CPU resident prerequisites available; model loading and execution remain unverified"
+            )
         else:
             state, rationale = (
                 ValidationState.UNSUPPORTED,
@@ -334,6 +414,11 @@ class LlamaCppAdapter:
         main_gpu = options.get("main_gpu")
         if main_gpu is not None and not isinstance(main_gpu, bool):
             command.extend(["--main-gpu", str(main_gpu)])
+
+        # CPU placement is part of an inference profile because thread count and
+        # affinity can materially change performance on multi-CCD hosts.
+        _append_cpu_options(command, options)
+        _append_speculative_options(command, options)
         return command
 
     def execute(self, request: ExecutionRequest) -> ExecutionResult:
