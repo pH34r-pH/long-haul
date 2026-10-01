@@ -91,11 +91,7 @@ def _contract_validation(
     )
 
 
-def load_profile_contract(
-    path: str | Path,
-) -> tuple[list[InferenceProfile], list[ProfileValidation]]:
-    """Load a measured runtime-profile handoff into scheduler-native models."""
-    contract: dict[str, Any] = json.loads(Path(path).read_text())
+def _validate_contract(contract: dict[str, Any]) -> None:
     if contract.get("schema") != "long-haul-runtime-profile/v1":
         raise ValueError("unsupported runtime profile contract")
     qualification = contract.get("qualification", {})
@@ -103,20 +99,38 @@ def load_profile_contract(
         raise ValueError("runtime profile contract must preserve hardware_qualified=false")
     if qualification.get("authorization") != "operator-risk-accepted-unqualified":
         raise ValueError("runtime profile contract authorization is not accepted")
-    runtime = _contract_runtime(contract["runtime"])
-    model = contract["model"]
-    artifact = ModelArtifact(
-        foundation=model["foundation"],
-        revision=model.get("revision"),
-        quantization=model.get("quantization"),
+
+
+def _contract_artifact(record: dict[str, Any]) -> ModelArtifact:
+    return ModelArtifact(
+        foundation=record["foundation"],
+        revision=record.get("revision"),
+        quantization=record.get("quantization"),
     )
-    profiles: list[InferenceProfile] = []
-    validations: list[ProfileValidation] = []
-    for record in contract.get("profiles", []):
-        profile = _contract_profile(record, artifact)
-        profiles.append(profile)
-        validations.append(_contract_validation(record, profile, runtime))
+
+
+def _contract_entries(
+    records: list[dict[str, Any]],
+    artifact: ModelArtifact,
+    runtime: RuntimeIdentity,
+) -> tuple[list[InferenceProfile], list[ProfileValidation]]:
+    profiles = [_contract_profile(record, artifact) for record in records]
+    validations = [
+        _contract_validation(record, profile, runtime)
+        for record, profile in zip(records, profiles, strict=True)
+    ]
     return profiles, validations
+
+
+def load_profile_contract(
+    path: str | Path,
+) -> tuple[list[InferenceProfile], list[ProfileValidation]]:
+    """Load a measured runtime-profile handoff into scheduler-native models."""
+    contract: dict[str, Any] = json.loads(Path(path).read_text())
+    _validate_contract(contract)
+    runtime = _contract_runtime(contract["runtime"])
+    artifact = _contract_artifact(contract["model"])
+    return _contract_entries(contract.get("profiles", []), artifact, runtime)
 
 
 def _local_candidates(
