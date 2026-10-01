@@ -47,7 +47,7 @@ discovery + benchmarks -> normalized topology -> candidate plans
 
 Execution modes are `LOCAL`, `POOL`, `PIPELINE`, and `COMPOSE`. Runtime strategies such as resident, offloaded, split, or streaming execution are described by validated inference profiles rather than overloaded into those modes.
 
-Read [Architecture](docs/architecture.md), the detailed [North-Star Architecture](docs/north-star.md), or the [Wiki](https://github.com/pH34r-pH/long-haul/wiki).
+Read [Architecture](docs/architecture.md), the detailed [North-Star Architecture](docs/north-star.md), the [repository map](docs/repository-map.md), or the [Wiki](https://github.com/pH34r-pH/long-haul/wiki).
 
 ## Public runtime, private Fleet
 
@@ -64,6 +64,7 @@ See [repository boundary](docs/repository-boundary.md) and [exact-source Fleet h
 - `crew/` — public crew/fixture definitions.
 - `tests/` — behavior and contract tests.
 - `docs/` — authoritative architecture, experiment, requirement, and validation documents.
+- `docs/repository-map.md` and scoped `AGENTS.md` files — contributor maps with change routing and focused validation commands.
 - `docs/wiki/` — canonical source for the GitHub Wiki.
 - `infra/azure/` — public reference infrastructure only.
 - `scripts/`, `tools/` — packaging and validation helpers.
