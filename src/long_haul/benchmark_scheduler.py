@@ -183,17 +183,12 @@ def run(
     current_runtimes: tuple[RuntimeIdentity, ...] = (),
     workload_spec: Workload | None = None,
     evidence_not_before: datetime | None = None,
-    profile_contract_path: str | Path | None = None,
 ) -> dict[str, object]:
     vessel = load_vessel(vessel_path)
     matrix = json.loads(Path(matrix_report_path).read_text())
     if matrix.get("schema") != "long-haul-benchmark-matrix/v1":
         raise ValueError("unsupported benchmark matrix report")
-    profiles, validations = (
-        load_profile_contract(profile_contract_path)
-        if profile_contract_path is not None
-        else _profiles_and_validations(matrix)
-    )
+    profiles, validations = _profiles_and_validations(matrix)
     observations = _load_observations(benchmark_path, workload)
     scheduler = Scheduler([vessel], benchmarks=observations, validations=validations, current_runtimes=current_runtimes)
     mission = MissionRequirements(
