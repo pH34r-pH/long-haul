@@ -231,7 +231,7 @@ test("stop and actual navigation terminate the page-owned worker", browserTestOp
     await assertNoStoredState(page);
     await assertWorkerLoaded(page, false);
 
-    const operationsLink = page.getByRole("link", { name: "Owner-private operations dashboard (Grafana); sign-in required" });
+    const operationsLink = page.getByRole("link", { name: "Owner ops, private Grafana dashboard; sign-in required; opens in a new tab" });
     assert.equal(await operationsLink.getAttribute("href"), "https://dashboard.ph34r.dev/");
     const operationsTabPromise = page.context().waitForEvent("page");
     await operationsLink.click();
