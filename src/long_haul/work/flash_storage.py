@@ -86,14 +86,13 @@ class DurableFlashDelivery:
                  lease_seconds: int, clock: Callable[[], float],
                  verifier: Callable[[WorkContract, Any], bool],
                  notifier: Callable[[str, str, Any], None],
-                 token_factory: Callable[[], str] = lambda: secrets.token_urlsafe(32),
-                 visibility_seconds: int | None = None) -> None:
+                 token_factory: Callable[[], str] = lambda: secrets.token_urlsafe(32)) -> None:
         if lease_seconds <= 0:
             raise ValueError("lease_seconds must be positive")
         self.queue = queue
         self.container = container
         self.lease_seconds = lease_seconds
-        self.visibility_seconds = visibility_seconds or lease_seconds
+        self.visibility_seconds = lease_seconds
         self.clock = clock
         self.verifier = verifier
         self.notifier = notifier

@@ -1,6 +1,7 @@
 """HTTP-boundary tests for the offline, synthetic Flash delivery adapter."""
 import io
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -55,17 +56,26 @@ def build(clock=None, *, contract=None, verifier=None, lease_seconds=10,
     ), fixture, clock
 
 
-def request(app, path, value=None, *, raw=None, method="POST", content_type="application/json", content_length=None,
-            include_headers=False):
-    body = raw if raw is not None else json.dumps(value, allow_nan=False).encode()
+@dataclass
+class RequestOptions:
+    raw: bytes | None = None
+    method: str = "POST"
+    content_type: str = "application/json"
+    content_length: str | None = None
+    include_headers: bool = False
+
+
+def request(app, path, value=None, *, options=None):
+    options = options or RequestOptions()
+    body = options.raw if options.raw is not None else json.dumps(value, allow_nan=False).encode()
     status_headers = {}
     environ = {
-        "REQUEST_METHOD": method, "PATH_INFO": path,
-        "CONTENT_TYPE": content_type,
+        "REQUEST_METHOD": options.method, "PATH_INFO": path,
+        "CONTENT_TYPE": options.content_type,
         "wsgi.input": io.BytesIO(body),
     }
-    if content_length is not None:
-        environ["CONTENT_LENGTH"] = content_length
+    if options.content_length is not None:
+        environ["CONTENT_LENGTH"] = options.content_length
     else:
         environ["CONTENT_LENGTH"] = str(len(body))
 
@@ -76,7 +86,7 @@ def request(app, path, value=None, *, raw=None, method="POST", content_type="app
     response = b"".join(app(environ, start_response))
     parsed = json.loads(response) if response else None
     result = (int(status_headers["status"].split()[0]), parsed)
-    return (*result, status_headers["headers"]) if include_headers else result
+    return (*result, status_headers["headers"]) if options.include_headers else result
 
 
 def claim(app):
@@ -96,11 +106,11 @@ def test_claim_no_work_invalid_admission_and_http_request_validation():
     assert request(app, "/v1/jobs/claim", {}) == (200, {"reason": "synthetic_f0_policy", "status": "declined"})
     app, _, _ = build()
     assert request(app, "/v1/jobs/claim", {"controller_override": True})[0] == 400
-    assert request(app, "/v1/jobs/claim", raw=b"{")[0] == 400
+    assert request(app, "/v1/jobs/claim", options=RequestOptions(raw=b"{"))[0] == 400
     assert request(app, "/v1/jobs/claim", {})[0] == 200
     assert request(app, "/v1/jobs/claim", {})[0:2] == (200, {"status": "no_work"})
-    assert request(app, "/v1/jobs/claim", {}, content_type="text/plain")[0] == 400
-    status, body, headers = request(app, "/v1/jobs/claim", {}, method="GET", include_headers=True)
+    assert request(app, "/v1/jobs/claim", {}, options=RequestOptions(content_type="text/plain"))[0] == 400
+    status, body, headers = request(app, "/v1/jobs/claim", {}, options=RequestOptions(method="GET", include_headers=True))
     assert status == 405 and headers["Allow"] == "POST"
     assert body == {"error": "method_not_allowed"}
     assert request(app, "/v1/jobs/other/renew", {})[0] == 404
@@ -108,9 +118,9 @@ def test_claim_no_work_invalid_admission_and_http_request_validation():
 
 def test_malformed_and_oversized_payloads_are_rejected_at_http_boundary():
     app, _, _ = build()
-    assert request(app, "/v1/jobs/claim", raw=b"[]")[0] == 400
+    assert request(app, "/v1/jobs/claim", options=RequestOptions(raw=b"[]"))[0] == 400
     oversized = b" " * (16 * 1024 + 1)
-    assert request(app, "/v1/jobs/claim", raw=oversized)[0] == 413
+    assert request(app, "/v1/jobs/claim", options=RequestOptions(raw=oversized))[0] == 413
     delivery = claim(app)
     assert request(app, f"/v1/jobs/{delivery['job_id']}/renew", {"lease_id": 4})[0] == 400
     assert request(app, f"/v1/jobs/{delivery['job_id']}/complete", {
@@ -121,12 +131,12 @@ def test_malformed_and_oversized_payloads_are_rejected_at_http_boundary():
 def test_malformed_truncated_and_invalid_utf8_content_lengths_are_fixed_errors():
     app, _, _ = build()
     for length in ("+2", "1.5", "-1", "x"):
-        status, body = request(app, "/v1/jobs/claim", raw=b"{}", content_length=length)
+        status, body = request(app, "/v1/jobs/claim", options=RequestOptions(raw=b"{}", content_length=length))
         assert (status, body) == (400, {
             "error": "invalid_request", "message": "request is malformed or invalid",
         })
-    assert request(app, "/v1/jobs/claim", raw=b"{}", content_length="3")[0] == 400
-    assert request(app, "/v1/jobs/claim", raw=b"\xff")[0] == 400
+    assert request(app, "/v1/jobs/claim", options=RequestOptions(raw=b"{}", content_length="3"))[0] == 400
+    assert request(app, "/v1/jobs/claim", options=RequestOptions(raw=b"\xff"))[0] == 400
 
 
 def test_http_renew_abandon_redelivery_stale_fencing_and_invalid_result():
