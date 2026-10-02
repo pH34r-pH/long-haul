@@ -1,34 +1,508 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="light dark">
-    <title>Flash Vessel capability prototype</title>
-    <style>
-      :root { font: 16px/1.5 system-ui, sans-serif; color-scheme: light dark; }
-      body { max-width: 52rem; margin: 3rem auto; padding: 0 1rem; }
-      h1 { line-height: 1.15; }
-      .notice { border: 1px solid #8888; border-radius: 0.5rem; padding: 1rem; }
-      .controls { display: flex; gap: 0.75rem; margin: 1.25rem 0; }
-      button { font: inherit; padding: 0.55rem 0.9rem; }
-      button:disabled { opacity: 0.6; }
-      #status { min-height: 1.5em; }
-      pre { overflow: auto; padding: 1rem; border-radius: 0.5rem; background: #8882; }
-    </style>
-  </head>
-  <body>
-    <main>
-      <h1>Flash Vessel capability prototype</h1>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f4f9fd" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#00070d" media="(prefers-color-scheme: dark)">
+  <meta name="description" content="A capability-only browser prototype. Join this tab to view a small set of exposed browser hints.">
+  <title>Flash Vessel capability prototype</title>
+  <style>
+    :root {
+      --header-height: 58px;
+      --bg: #f4f9fd;
+      --panel: rgba(255, 255, 255, .82);
+      --glass-fill: rgba(255, 255, 255, .74);
+      --ink: #071724;
+      --muted: #425768;
+      --line: #9bb2c3;
+      --accent: #006fc7;
+      --accent-strong: #0059b8;
+      --accent-ink: #fff;
+      --signal-soft: rgba(41, 167, 255, .14);
+      --depth: #dcecf6;
+      --shadow: rgba(8, 55, 86, .14);
+      --glass-border: rgba(34, 105, 145, .48);
+      --surface-specular: rgba(255, 255, 255, .92);
+      --ease-mechanical: cubic-bezier(.2, .8, .2, 1);
+      color-scheme: light dark;
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #00070d;
+        --panel: rgba(7, 19, 30, .88);
+        --glass-fill: rgba(7, 22, 35, .82);
+        --ink: #edf7ff;
+        --muted: #9db5c6;
+        --line: #24445c;
+        --accent: #29a7ff;
+        --accent-strong: #73c7ff;
+        --accent-ink: #00111f;
+        --signal-soft: rgba(41, 167, 255, .16);
+        --depth: #001827;
+        --shadow: rgba(0, 0, 0, .42);
+        --glass-border: rgba(93, 181, 236, .5);
+        --surface-specular: rgba(173, 224, 255, .18);
+      }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html {
+      min-width: 320px;
+      scroll-behavior: smooth;
+      scroll-padding-top: calc(var(--header-height) + 20px);
+      background: var(--bg);
+      color: var(--ink);
+      accent-color: var(--accent);
+    }
+
+    body {
+      position: relative;
+      min-height: 100vh;
+      min-height: 100dvh;
+      margin: 0;
+      padding-top: var(--header-height);
+      overflow-x: hidden;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.58;
+      text-rendering: optimizeLegibility;
+    }
+
+    body::before {
+      position: fixed;
+      z-index: -1;
+      inset: var(--header-height) 0 0;
+      content: "";
+      pointer-events: none;
+      background: radial-gradient(circle at 74% 0%, var(--signal-soft), transparent 34rem),
+        linear-gradient(180deg, color-mix(in srgb, var(--bg) 96%, var(--accent) 4%), var(--bg));
+    }
+
+    ::selection { color: var(--accent-ink); background: var(--accent); }
+    [hidden] { display: none !important; }
+    button { font: inherit; }
+
+    :where(a, button):focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 4px;
+      box-shadow: 0 0 0 1px var(--bg), 0 0 0 5px color-mix(in srgb, var(--accent) 25%, transparent);
+    }
+
+    .skip-link {
+      position: fixed;
+      z-index: 200;
+      top: 8px;
+      left: 12px;
+      padding: 10px 12px;
+      transform: translateY(-160%);
+      background: var(--ink);
+      color: var(--bg);
+      text-decoration: none;
+    }
+
+    .skip-link:focus { transform: none; }
+
+    main, footer {
+      width: min(1180px, calc(100% - 40px));
+      margin-inline: auto;
+    }
+
+    .topbar {
+      position: fixed;
+      z-index: 90;
+      inset: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      height: var(--header-height);
+      padding-inline: max(20px, calc((100vw - 1180px) / 2));
+      border-bottom: 1px solid var(--line);
+      background: color-mix(in srgb, var(--bg) 90%, transparent);
+      box-shadow: 0 1px 0 var(--surface-specular);
+      backdrop-filter: blur(18px) saturate(145%);
+      -webkit-backdrop-filter: blur(18px) saturate(145%);
+    }
+
+    .topbar::after {
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      width: clamp(72px, 13vw, 180px);
+      height: 1px;
+      content: "";
+      background: var(--accent);
+      box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 45%, transparent);
+    }
+
+    .brand {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      gap: 8px;
+      min-height: 48px;
+      color: var(--ink);
+      font: 800 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .11em;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+
+    .brand::before {
+      width: 8px;
+      height: 8px;
+      content: "";
+      border: 1px solid var(--accent);
+      box-shadow: inset 0 0 0 2px var(--bg), inset 0 0 0 5px var(--accent);
+      transform: rotate(45deg);
+    }
+
+    .brand span { color: var(--muted); font-weight: 600; }
+
+    .topbar nav {
+      display: flex;
+      align-items: stretch;
+      gap: 18px;
+      height: 100%;
+      margin-left: auto;
+    }
+
+    .topbar nav a {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      min-height: 48px;
+      color: var(--muted);
+      font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .12em;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+
+    .topbar nav a:hover { color: var(--ink); }
+    .topbar nav a.owner-ops {
+      margin-left: 2px;
+      padding-left: 12px;
+      border-left: 1px solid var(--line);
+    }
+    .topbar nav a[href="#session"]::after {
+      position: absolute;
+      right: 0;
+      bottom: 6px;
+      left: 0;
+      height: 1px;
+      content: "";
+      background: var(--accent);
+    }
+
+    .hero {
+      display: flex;
+      min-height: 58svh;
+      flex-direction: column;
+      justify-content: center;
+      padding: 68px 0 64px;
+    }
+
+    .register {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      max-width: 76ch;
+      margin-bottom: 28px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font: 800 9px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .signal, .eyebrow { color: var(--accent-strong); }
+    .eyebrow {
+      margin: 0 0 12px;
+      font: 800 9px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    h1, h2 { letter-spacing: -.035em; }
+    h1, h2 { line-height: .98; }
+    h1 {
+      max-width: 17ch;
+      margin: .15em 0 .3em;
+      font-family: "Arial Narrow", "Liberation Sans Narrow", "Roboto Condensed", system-ui, sans-serif;
+      font-size: clamp(3.2rem, 8.5vw, 6.6rem);
+      font-weight: 500;
+    }
+
+    .title-line { display: block; }
+    .title-accent { color: var(--accent-strong); }
+    .lede {
+      max-width: 66ch;
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(1.05rem, 1.7vw, 1.25rem);
+      line-height: 1.6;
+    }
+
+    .notice {
+      width: fit-content;
+      max-width: 900px;
+      margin: 26px 0 0;
+      padding: 15px 18px;
+      border: 2px solid var(--glass-border);
+      background: var(--glass-fill);
+      box-shadow: inset 0 1px 0 var(--surface-specular), 0 14px 34px var(--shadow);
+      color: var(--muted);
+      font-size: .93rem;
+      backdrop-filter: blur(16px) saturate(135%);
+      -webkit-backdrop-filter: blur(16px) saturate(135%);
+    }
+
+    .panels {
+      display: grid;
+      grid-template-columns: minmax(0, .88fr) minmax(0, 1.12fr);
+      gap: 14px;
+      padding: 26px 0 76px;
+    }
+
+    .panel {
+      position: relative;
+      min-width: 0;
+      padding: 24px;
+      border: 2px solid var(--glass-border);
+      background: var(--glass-fill);
+      box-shadow: inset 0 1px 0 var(--surface-specular), 0 18px 50px var(--shadow);
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+    }
+
+    .panel::before {
+      position: absolute;
+      top: -2px;
+      left: 0;
+      width: clamp(80px, 18vw, 220px);
+      height: 2px;
+      content: "";
+      background: var(--accent);
+      box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 45%, transparent);
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .panel-head .eyebrow { margin: 0; }
+    .panel-index {
+      color: var(--muted);
+      font: 800 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .08em;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-family: "Arial Narrow", "Liberation Sans Narrow", "Roboto Condensed", system-ui, sans-serif;
+      font-size: clamp(1.9rem, 3.4vw, 2.65rem);
+      font-weight: 500;
+    }
+
+    .panel-copy {
+      max-width: 52ch;
+      margin: 0;
+      color: var(--muted);
+      font-size: .93rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .controls button {
+      display: inline-flex;
+      min-height: 48px;
+      align-items: center;
+      justify-content: center;
+      padding: 11px 15px;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--ink);
+      cursor: pointer;
+      font: 800 9px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .045em;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: border-color 160ms linear, background 160ms linear, color 160ms linear, transform 160ms var(--ease-mechanical);
+    }
+
+    .controls button:hover:not(:disabled) {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .controls #join {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: var(--accent-ink);
+    }
+
+    .controls #join:hover:not(:disabled) { background: var(--accent-strong); }
+    .controls button:disabled { border-color: var(--line); background: var(--depth); color: var(--muted); cursor: not-allowed; }
+
+    #status {
+      min-height: 48px;
+      margin: 22px 0 0;
+      padding: 12px 14px;
+      border-left: 2px solid var(--line);
+      background: color-mix(in srgb, var(--accent) 7%, var(--panel));
+      color: var(--ink);
+      font-size: .92rem;
+    }
+
+    #status[data-state="active"], #status[data-state="joining"] { border-left-color: var(--accent); }
+    #status[data-state="paused"] { border-left-color: var(--accent-strong); }
+    #status[data-state="error"] { border-left-color: #a4232b; }
+
+    .snapshot-panel { display: flex; flex-direction: column; }
+    .snapshot-panel h2 { margin-bottom: 18px; }
+    #snapshot {
+      flex: 1;
+      min-height: 210px;
+      max-width: 100%;
+      margin: 0;
+      padding: 16px;
+      overflow: auto;
+      overflow-wrap: anywhere;
+      border: 1px solid var(--line);
+      background: var(--depth);
+      color: var(--ink);
+      font: .78rem/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: pre-wrap;
+    }
+
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 22px 0 48px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: .82rem;
+    }
+
+    footer a {
+      color: var(--ink);
+      text-decoration-color: color-mix(in srgb, var(--accent) 68%, transparent);
+      text-underline-offset: .22em;
+    }
+
+    @media (max-width: 760px) {
+      main, footer { width: calc(100% - 28px); }
+      .topbar { gap: 8px; padding-inline: 14px; }
+      .topbar nav { gap: 2px 12px; }
+      .topbar nav a { font-size: 8px; letter-spacing: .06em; }
+      .hero { min-height: auto; padding: 58px 0 34px; }
+      .register { margin-bottom: 24px; }
+      h1 { max-width: 16ch; font-size: clamp(3rem, 14vw, 5rem); }
+      .panels { grid-template-columns: 1fr; gap: 12px; padding: 18px 0 56px; }
+      .panel { padding: 20px; }
+      #snapshot { min-height: 180px; }
+    }
+
+    @media (max-width: 420px) {
+      .topbar { padding-inline: 12px; }
+      .brand { gap: 6px; font-size: 10px; }
+      .topbar nav { gap: 8px; }
+      .topbar nav a { font-size: 7px; letter-spacing: .035em; }
+      .register span:nth-child(2) { display: none; }
+      h1 { font-size: clamp(2.7rem, 13.5vw, 3.5rem); }
+      .notice { padding: 13px 14px; }
+      .controls { flex-direction: column; }
+      .controls button { width: 100%; }
+      footer { display: block; }
+      footer > * + * { display: inline-block; margin-top: 14px; }
+    }
+
+    @media (pointer: coarse) {
+      .brand, .topbar nav a { min-height: 48px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+
+    @media (prefers-contrast: more) {
+      :root { --muted: var(--ink); --line: var(--ink); --glass-border: var(--ink); --signal-soft: transparent; --shadow: transparent; }
+      .topbar, .notice, .panel { backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none; }
+      .notice, .panel { border-width: 2px; }
+    }
+
+    @media (forced-colors: active) {
+      body::before, .topbar::after, .panel::before { display: none; }
+      .topbar, .notice, .panel, #snapshot, #status { background: Canvas; color: CanvasText; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+      .controls #join { forced-color-adjust: auto; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="topbar">
+    <a class="brand" href="#main-content">TJHG <span>/ Flash</span></a>
+    <nav aria-label="Primary">
+      <a href="#session">Session</a>
+      <a href="https://experiments.tyharbin.com/">Experiments ↗</a>
+      <a class="owner-ops" href="https://dashboard.ph34r.dev/" target="_blank" rel="noopener" aria-label="Owner-private operations dashboard (Grafana); sign-in required">Owner ops ↗</a>
+    </nav>
+  </header>
+  <main id="main-content" tabindex="-1">
+    <section class="hero" aria-labelledby="page-title">
+      <div class="register"><span>TYLER J.H.G.</span><span>FLASH / BROWSER WORKER</span><span class="signal">CAPABILITY-ONLY PROTOTYPE</span></div>
+      <p class="eyebrow">EXPLICIT LOCAL SESSION</p>
+      <h1 id="page-title"><span class="title-line">Flash Vessel</span><span class="title-line title-accent">capability prototype.</span></h1>
+      <p class="lede">Join only this tab to read browser-exposed capability hints. This page-owned session never reserves host capacity.</p>
       <p class="notice">Capability-only prototype: after you select Join, this page reads a small set of exposed browser hints. It does not benchmark or run work, load a model, request sensor access, or contact a queue or backend. The hints may be coarse or unavailable and do not promise free capacity.</p>
-      <div class="controls">
-        <button id="join" type="button">Join for this tab</button>
-        <button id="stop" type="button" disabled>Stop this tab's worker</button>
-      </div>
-      <p id="status" data-state="idle" role="status" aria-live="polite">Not joined. No worker is active.</p>
-      <h2>Capability snapshot</h2>
-      <pre id="snapshot">No snapshot yet.</pre>
-    </main>
-    <script type="module" src="./main.mjs"></script>
-  </body>
+    </section>
+    <section class="panels" id="session" aria-label="Session controls and capability snapshot">
+      <section class="panel session-panel" aria-labelledby="session-heading">
+        <div class="panel-head">
+          <p class="eyebrow">THIS TAB / VOLATILE SESSION</p>
+          <span class="panel-index" aria-hidden="true">01</span>
+        </div>
+        <h2 id="session-heading">Local session</h2>
+        <p class="panel-copy">The worker starts only after your action below. Stop it here or close this tab to end the session.</p>
+        <div class="controls">
+          <button id="join" type="button">Join for this tab</button>
+          <button id="stop" type="button" disabled>Stop this tab's worker</button>
+        </div>
+        <p id="status" data-state="idle" role="status" aria-live="polite">Not joined. No worker is active.</p>
+      </section>
+      <section class="panel snapshot-panel" aria-labelledby="snapshot-heading">
+        <div class="panel-head">
+          <p class="eyebrow">BROWSER-EXPOSED HINTS</p>
+          <span class="panel-index" aria-hidden="true">02</span>
+        </div>
+        <h2 id="snapshot-heading">Capability snapshot</h2>
+        <pre id="snapshot">No snapshot yet.</pre>
+      </section>
+    </section>
+  </main>
+  <footer>
+    <span>CAPABILITY ONLY · NO WORK IS BEING RUN</span>
+    <a href="https://github.com/pH34r-pH/long-haul/tree/main/prototypes/flash-vessel">Source on GitHub</a>
+  </footer>
+  <script type="module" src="./main.mjs"></script>
+</body>
 </html>
