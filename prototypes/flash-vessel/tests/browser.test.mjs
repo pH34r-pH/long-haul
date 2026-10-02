@@ -274,14 +274,13 @@ test("native page visibility pauses and resumes its worker when available", {
     const page = context.pages()[0] ?? await context.newPage();
     await observePageLifecycle(page, "visibility");
     await page.goto(url);
-    await page.evaluate(() => { document.title = "flash-visibility-test"; });
     await page.getByRole("button", { name: "Join for this tab" }).click();
     await waitForWorkerState(page, ["active"]);
     await page.bringToFront();
 
     let windowId;
     try {
-      windowId = await waitForWindowId("flash-visibility-test");
+      windowId = await waitForWindowId("Flash Vessel capability prototype");
       await execFileAsync("xdotool", ["windowminimize", "--sync", windowId]);
     } catch (error) {
       t.skip(`Real visibility unverified: the test window manager could not hide the browser (${error.message}).`);
