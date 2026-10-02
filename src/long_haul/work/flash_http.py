@@ -83,38 +83,11 @@ class FlashHTTPAdapter:
                 raise ValueError("Content-Type must be application/json")
             body = self._read_body(environ)
             if path == "/v1/jobs/claim":
-                _ClaimRequest.model_validate(self._decode(body))
-                if not self.admitted:
-                    return _response(start_response, "200 OK", {"status": "declined", "reason": "synthetic_f0_policy"})
-                delivery = self.fixture.claim()
-                if delivery is None:
-                    return _response(start_response, "200 OK", {"status": "no_work"})
-                return _response(start_response, "200 OK", {
-                    "status": "claimed", "job_id": delivery.job_id,
-                    "contract_id": delivery.contract_id, "attempt_id": delivery.attempt_id,
-                    "lease_id": delivery.lease_id, "lease_expires_at": delivery.lease_expires_at,
-                })
-
-            parts = path.strip("/").split("/")
-            if len(parts) != 4 or parts[:2] != ["v1", "jobs"] or parts[2] != self.fixture.job_id:
+                return self._claim(body, start_response)
+            operation = self._operation_from_path(path)
+            if operation is None:
                 return _response(start_response, "404 Not Found", {"error": "not_found"})
-            operation = parts[3]
-            data = self._decode(body)
-            if operation == "complete":
-                request = _CompleteRequest.model_validate(data)
-                result = self.fixture.complete(request.lease_id, request.result)
-                return _response(start_response, "200 OK", {"status": "completed", "result": result})
-            request = _LeaseRequest.model_validate(data)
-            if operation == "renew":
-                delivery = self.fixture.renew(request.lease_id)
-                return _response(start_response, "200 OK", {
-                    "status": "renewed", "lease_id": delivery.lease_id,
-                    "lease_expires_at": delivery.lease_expires_at,
-                })
-            if operation == "abandon":
-                self.fixture.abandon(request.lease_id)
-                return _response(start_response, "200 OK", {"status": "abandoned"})
-            return _response(start_response, "404 Not Found", {"error": "not_found"})
+            return self._operate(operation, body, start_response)
         except _BodyTooLarge:
             return _response(start_response, "413 Payload Too Large", {"error": "body_too_large"})
         except (json.JSONDecodeError, UnicodeDecodeError, ValueError, ValidationError) as exc:
@@ -123,6 +96,43 @@ class FlashHTTPAdapter:
             if isinstance(exc, VerificationError):
                 return _response(start_response, "422 Unprocessable Entity", {"error": "invalid_result", "detail": str(exc)})
             return _response(start_response, "400 Bad Request", {"error": "invalid_request", "detail": str(exc)})
+
+    def _claim(self, body: bytes, start_response: StartResponse):
+        _ClaimRequest.model_validate(self._decode(body))
+        if not self.admitted:
+            return _response(start_response, "200 OK", {"status": "declined", "reason": "synthetic_f0_policy"})
+        delivery = self.fixture.claim()
+        if delivery is None:
+            return _response(start_response, "200 OK", {"status": "no_work"})
+        return _response(start_response, "200 OK", {
+            "status": "claimed", "job_id": delivery.job_id,
+            "contract_id": delivery.contract_id, "attempt_id": delivery.attempt_id,
+            "lease_id": delivery.lease_id, "lease_expires_at": delivery.lease_expires_at,
+        })
+
+    def _operate(self, operation: str, body: bytes, start_response: StartResponse):
+        data = self._decode(body)
+        if operation == "complete":
+            request = _CompleteRequest.model_validate(data)
+            result = self.fixture.complete(request.lease_id, request.result)
+            return _response(start_response, "200 OK", {"status": "completed", "result": result})
+        request = _LeaseRequest.model_validate(data)
+        if operation == "renew":
+            delivery = self.fixture.renew(request.lease_id)
+            return _response(start_response, "200 OK", {
+                "status": "renewed", "lease_id": delivery.lease_id,
+                "lease_expires_at": delivery.lease_expires_at,
+            })
+        if operation == "abandon":
+            self.fixture.abandon(request.lease_id)
+            return _response(start_response, "200 OK", {"status": "abandoned"})
+        return _response(start_response, "404 Not Found", {"error": "not_found"})
+
+    def _operation_from_path(self, path: str) -> str | None:
+        parts = path.strip("/").split("/")
+        if len(parts) != 4 or parts[:2] != ["v1", "jobs"] or parts[2] != self.fixture.job_id:
+            return None
+        return parts[3]
 
     def _read_body(self, environ: WSGIEnvironment) -> bytes:
         try:
