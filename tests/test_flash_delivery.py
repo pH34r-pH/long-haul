@@ -47,12 +47,12 @@ def toy_verifier(expected):
     return verify
 
 
-def make_fixture(clock, *, contract=None, expected=None):
+def make_fixture(clock, *, contract=None, expected=None, lease_seconds=10, verifier=None):
     payload = json.loads(FIXTURE.read_text())
     return FlashDeliveryFixture(
-        job_id="toy-job-1", contract=contract or WorkContract.model_validate(payload["contract"]), lease_seconds=10,
+        job_id="toy-job-1", contract=contract or WorkContract.model_validate(payload["contract"]), lease_seconds=lease_seconds,
         clock=clock, id_factory=lambda value: value,
-        verifier=toy_verifier(expected or payload["expected_result"]),
+        verifier=verifier or toy_verifier(expected or payload["expected_result"]),
     )
 
 
@@ -173,3 +173,39 @@ def test_duplicate_completion_survives_lost_response_and_lease_time():
     queue.complete(delivery.lease_id, {"count": 5})
     clock.advance(1000)
     assert queue.complete(delivery.lease_id, {"count": 5}) == {"count": 5}
+
+
+@pytest.mark.parametrize(
+    ("lease_seconds", "wall_seconds", "verify_delay", "redeliver"),
+    [(5, 100, 6, True), (100, 5, 6, False)],
+)
+def test_expiry_during_verification_prevents_finalization_and_obeys_remaining_budget(
+    lease_seconds, wall_seconds, verify_delay, redeliver,
+):
+    clock = FakeClock()
+    contract = toy_contract()
+    contract.budget.max_attempts = 2
+    contract.budget.wall_seconds = wall_seconds
+    calls = 0
+
+    def slow_once_then_verify(current_contract, result):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            clock.advance(verify_delay)
+        return toy_verifier({"count": 5})(current_contract, result)
+
+    queue = make_fixture(
+        clock, contract=contract, lease_seconds=lease_seconds, verifier=slow_once_then_verify,
+    )
+    first = queue.claim()
+    with pytest.raises(LeaseError, match="expired"):
+        queue.complete(first.lease_id, {"count": 5})
+    assert not queue.completed
+    assert queue.completed_result is None
+    second = queue.claim()
+    if redeliver:
+        assert second.attempt_id != first.attempt_id
+        assert queue.complete(second.lease_id, {"count": 5}) == {"count": 5}
+    else:
+        assert second is None

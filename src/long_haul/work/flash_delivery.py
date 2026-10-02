@@ -111,6 +111,9 @@ class FlashDeliveryFixture:
         # Worker result fields cannot assert their own acceptance.
         if not self.verifier(self.contract, normalized_result):
             raise VerificationError("trusted verifier rejected result")
+        # Verification may be slow or yield; the lease and contract deadline
+        # must still be valid at the acceptance commit point.
+        self._require_current(lease_id)
         self._accepted_result_json = result_json
         self.completed = True
         return self.completed_result
