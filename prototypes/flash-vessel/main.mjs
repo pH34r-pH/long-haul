@@ -1,3 +1,5 @@
+import { forwardVisibilityChanges } from "./page-visibility.mjs";
+
 const joinButton = document.querySelector("#join");
 const stopButton = document.querySelector("#stop");
 const status = document.querySelector("#status");
@@ -86,8 +88,6 @@ joinButton.addEventListener("click", () => {
 
 stopButton.addEventListener("click", () => stopSession("user"));
 
-document.addEventListener("visibilitychange", () => {
-  if (worker) worker.postMessage({ type: "VISIBILITY", visibility: document.visibilityState });
-});
+forwardVisibilityChanges(document, () => worker);
 
 window.addEventListener("pagehide", () => stopSession("pagehide", true));

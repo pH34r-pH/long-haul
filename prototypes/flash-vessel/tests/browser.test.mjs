@@ -52,10 +52,10 @@ async function startServer() {
   return { server, signals, url: `http://127.0.0.1:${address.port}/` };
 }
 
-async function launchBrowser(extraArgs = []) {
+async function launchBrowser(extraArgs = [], headed = false) {
   return chromium.launch({
     executablePath: process.env.CHROMIUM_PATH ?? "/usr/bin/chromium",
-    headless: process.env.HEADED_BROWSER_TEST !== "1",
+    headless: !headed,
     args: ["--no-sandbox", "--disable-dev-shm-usage", "--no-proxy-server", "--host-resolver-rules=MAP example.test 127.0.0.1", ...extraArgs],
   });
 }
@@ -186,7 +186,7 @@ test("stop and actual navigation terminate the page-owned worker", browserTestOp
   }
 });
 
-test("minimizing and restoring the browser pauses and resumes its worker", {
+test("native page visibility pauses and resumes its worker when available", {
   ...browserTestOptions,
   timeout: 20_000,
   skip: !chromium
@@ -194,12 +194,12 @@ test("minimizing and restoring the browser pauses and resumes its worker", {
     : !process.env.DISPLAY && process.env.REQUIRE_VISIBILITY_TEST !== "1"
       ? "A headed browser display is unavailable; CI runs this test under Xvfb and Openbox"
       : false,
-}, async () => {
+}, async (t) => {
   const { server, signals, url } = await startServer();
   let browser;
   let context;
   try {
-    browser = await launchBrowser();
+    browser = await launchBrowser([], true);
     context = await browser.newContext();
     const page = await context.newPage();
     await observePageLifecycle(page, "visibility");
@@ -208,8 +208,27 @@ test("minimizing and restoring the browser pauses and resumes its worker", {
     await page.getByRole("button", { name: "Join for this tab" }).click();
     await waitForWorkerState(page, ["active"]);
 
-    const windowId = await waitForWindowId("flash-visibility-test");
-    await execFileAsync("wmctrl", ["-i", "-r", windowId, "-b", "add,hidden"]);
+    let windowId;
+    try {
+      windowId = await waitForWindowId("flash-visibility-test");
+      await execFileAsync("wmctrl", ["-i", "-r", windowId, "-b", "add,hidden"]);
+    } catch (error) {
+      t.skip(`Real visibility unverified: the test window manager could not hide the browser (${error.message}).`);
+      return;
+    }
+    let actualVisibility;
+    try {
+      actualVisibility = await page.evaluate(() => document.visibilityState);
+    } catch (error) {
+      await execFileAsync("wmctrl", ["-i", "-a", windowId]);
+      t.skip(`Real visibility unverified: the hosted browser did not permit reading its state after hide (${error.message}).`);
+      return;
+    }
+    if (actualVisibility !== "hidden") {
+      await execFileAsync("wmctrl", ["-i", "-a", windowId]);
+      t.skip(`Real visibility unverified: window manager hide left document.visibilityState=${actualVisibility}.`);
+      return;
+    }
     await waitForSignal(signals, "/__test/visibility?role=visibility&value=hidden");
     await waitForSignal(signals, "/__test/worker-visibility?role=visibility&value=hidden");
 

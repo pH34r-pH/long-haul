@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { collectCapabilitySnapshot } from "../capability-snapshot.mjs";
+import { forwardVisibilityChanges } from "../page-visibility.mjs";
 
 const unknown = { status: "unknown" };
 const unavailable = { status: "unavailable" };
@@ -121,4 +122,30 @@ test("instance identity requires a fresh secure random source", async () => {
     collectCapabilitySnapshot({ navigatorLike: {}, randomUUID: () => undefined }),
     /random UUID source/,
   );
+});
+
+test("page visibility events reach the current worker with the reported state", () => {
+  let visibility = "visible";
+  let worker = null;
+  const messages = [];
+  const documentLike = new EventTarget();
+  Object.defineProperty(documentLike, "visibilityState", { get: () => visibility });
+  const disconnect = forwardVisibilityChanges(documentLike, () => worker);
+
+  documentLike.dispatchEvent(new Event("visibilitychange"));
+  assert.deepEqual(messages, []);
+
+  worker = { postMessage: (message) => messages.push(message) };
+  visibility = "hidden";
+  documentLike.dispatchEvent(new Event("visibilitychange"));
+  assert.deepEqual(messages, [{ type: "VISIBILITY", visibility: "hidden" }]);
+
+  visibility = "visible";
+  documentLike.dispatchEvent(new Event("visibilitychange"));
+  assert.deepEqual(messages.at(-1), { type: "VISIBILITY", visibility: "visible" });
+
+  disconnect();
+  visibility = "hidden";
+  documentLike.dispatchEvent(new Event("visibilitychange"));
+  assert.equal(messages.length, 2);
 });
