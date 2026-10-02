@@ -40,7 +40,7 @@ from .flash_delivery import (
     VerificationError,
 )
 from .flash_http import FlashHTTPAdapter
-from .flash_storage import DurableFlashDelivery
+from .flash_storage import DurableFlashDelivery, FlashStorageOptions
 from .progress import (
     AttemptStep,
     ProgressIntervention,
@@ -72,6 +72,7 @@ __all__ = [
     "FlashDeliveryFixture",
     "FlashExecutionExtensionV1",
     "FlashHTTPAdapter",
+    "FlashStorageOptions",
     "LeaseError",
     "PredicateEvidence",
     "PredicateKind",

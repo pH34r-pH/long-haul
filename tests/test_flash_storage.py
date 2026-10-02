@@ -8,6 +8,7 @@ import pytest
 from long_haul.work import (
     DurableFlashDelivery,
     EvidenceState,
+    FlashStorageOptions,
     LeaseError,
     PredicateEvidence,
     VerificationError,
@@ -140,10 +141,11 @@ class Fixture:
         self.notified = [] if notifier is None else notifier
         self.tokens = iter(tokens or [f"opaque-test-claim-token-{i:032d}" for i in range(20)])
         self.adapter = DurableFlashDelivery(
-            self.queue, self.container, lease_seconds=10, clock=self.clock,
+            self.queue, self.container, options=FlashStorageOptions(
+                lease_seconds=10, token_factory=lambda: next(self.tokens),
+            ), clock=self.clock,
             verifier=kwargs.get("verifier", verifier),
             notifier=lambda *args: self.notified.append(args),
-            token_factory=lambda: next(self.tokens),
         )
 
     def add_job(self, **kwargs):
@@ -162,9 +164,10 @@ def test_competing_claims_share_one_conditional_per_job_record_and_compact_queue
     first = f.adapter.claim()
     assert first is not None
     competing = DurableFlashDelivery(
-        f.queue, f.container, lease_seconds=10, clock=f.clock, verifier=verifier,
+        f.queue, f.container,
+        options=FlashStorageOptions(lease_seconds=10, token_factory=lambda: "opaque-test-competing-token-" + "x" * 32),
+        clock=f.clock, verifier=verifier,
         notifier=lambda *_: None,
-        token_factory=lambda: "opaque-test-competing-token-" + "x" * 32,
     )
     second = competing.claim()
     assert second is None
@@ -262,8 +265,10 @@ def test_acceptance_precedes_delete_lost_delete_response_and_restart_does_not_re
     # observes acceptance and settles the trigger without re-running work.
     f.clock.advance(10)
     restarted = DurableFlashDelivery(
-        f.queue, f.container, lease_seconds=10, clock=f.clock, verifier=lambda *_: pytest.fail("re-executed accepted work"),
-        notifier=lambda *args: f.notified.append(args), token_factory=lambda: "opaque-test-claim-token-" + "x" * 32,
+        f.queue, f.container, options=FlashStorageOptions(
+            lease_seconds=10, token_factory=lambda: "opaque-test-claim-token-" + "x" * 32,
+        ), clock=f.clock, verifier=lambda *_: pytest.fail("re-executed accepted work"),
+        notifier=lambda *args: f.notified.append(args),
     )
     assert restarted.claim() is None
     assert not f.queue.messages
@@ -283,7 +288,8 @@ def test_notification_recovery_is_idempotency_keyed_and_handles_crash_after_noti
     state.notification_sent = False
     f.adapter._write(state, etag)
     restarted = DurableFlashDelivery(
-        f.queue, f.container, lease_seconds=10, clock=f.clock, verifier=verifier,
+        f.queue, f.container, options=FlashStorageOptions(lease_seconds=10),
+        clock=f.clock, verifier=verifier,
         notifier=lambda *args: f.notified.append(args),
     )
     restarted.recover_notifications()
@@ -313,7 +319,8 @@ def test_completion_retry_after_process_restart_uses_only_hash_in_durable_state(
     state, _ = f.adapter._read("job-1")
     assert token not in json.dumps(state.model_dump())
     restarted = DurableFlashDelivery(
-        f.queue, f.container, lease_seconds=10, clock=f.clock, verifier=verifier,
+        f.queue, f.container, options=FlashStorageOptions(lease_seconds=10),
+        clock=f.clock, verifier=verifier,
         notifier=lambda *args: f.notified.append(args),
     )
     assert restarted.complete(token, {"count": 5}) == {"count": 5}
@@ -331,7 +338,8 @@ def test_delete_response_lost_after_queue_deleted_keeps_completion_retryable():
         f.adapter.complete(token, {"count": 5})
     assert not f.queue.messages
     restarted = DurableFlashDelivery(
-        f.queue, f.container, lease_seconds=10, clock=f.clock, verifier=verifier,
+        f.queue, f.container, options=FlashStorageOptions(lease_seconds=10),
+        clock=f.clock, verifier=verifier,
         notifier=lambda *args: f.notified.append(args),
     )
     assert restarted.complete(token, {"count": 5}) == {"count": 5}

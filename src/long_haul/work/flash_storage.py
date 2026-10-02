@@ -21,6 +21,20 @@ from .flash_delivery import Delivery, LeaseError, VerificationError
 STATE_VERSION = 1
 
 
+def _new_claim_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+@dataclass(frozen=True)
+class FlashStorageOptions:
+    lease_seconds: int
+    token_factory: Callable[[], str] = _new_claim_token
+
+    def __post_init__(self) -> None:
+        if self.lease_seconds <= 0:
+            raise ValueError("lease_seconds must be positive")
+
+
 class _Blob(Protocol):
     def upload_blob(self, data: bytes, **kwargs: Any) -> Any: ...
     def download_blob(self) -> Any: ...
@@ -83,20 +97,18 @@ class DurableFlashDelivery:
     """
 
     def __init__(self, queue: _Queue, container: _Container, *,
-                 lease_seconds: int, clock: Callable[[], float],
+                 options: FlashStorageOptions, clock: Callable[[], float],
                  verifier: Callable[[WorkContract, Any], bool],
-                 notifier: Callable[[str, str, Any], None],
-                 token_factory: Callable[[], str] = lambda: secrets.token_urlsafe(32)) -> None:
-        if lease_seconds <= 0:
-            raise ValueError("lease_seconds must be positive")
+                 notifier: Callable[[str, str, Any], None]) -> None:
         self.queue = queue
         self.container = container
-        self.lease_seconds = lease_seconds
-        self.visibility_seconds = lease_seconds
+        self.options = options
+        self.lease_seconds = options.lease_seconds
+        self.visibility_seconds = options.lease_seconds
         self.clock = clock
         self.verifier = verifier
         self.notifier = notifier
-        self.token_factory = token_factory
+        self.token_factory = options.token_factory
         self._claims: dict[str, _ClaimContext] = {}
 
     @staticmethod
