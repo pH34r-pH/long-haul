@@ -58,17 +58,17 @@ async function launchBrowser(extraArgs = []) {
 }
 
 async function observePageLifecycle(page, role) {
-  await page.addInitScript((pageRole) => {
-    const beacon = (event) => navigator.sendBeacon(`/__test/${event}?role=${pageRole}`, event);
-    const NativeWorker = window.Worker;
-    window.Worker = class ObservedWorker extends NativeWorker {
-      terminate() {
-        beacon("worker-terminated");
-        return super.terminate();
-      }
+  const observer = `(() => {
+    const pageRole = ${JSON.stringify(role)};
+    const signal = (event) => navigator.sendBeacon('/__test/' + event + '?role=' + pageRole, event);
+    const terminate = Worker.prototype.terminate;
+    Worker.prototype.terminate = function () {
+      signal("worker-terminated");
+      return terminate.call(this);
     };
-    window.addEventListener("pagehide", () => beacon("pagehide"), { once: true });
-  }, role);
+    addEventListener("pagehide", () => signal("pagehide"), { once: true });
+  })();`;
+  await page.addInitScript({ content: observer });
 }
 
 async function waitForSignal(signals, signal, expectedCount = 1) {
