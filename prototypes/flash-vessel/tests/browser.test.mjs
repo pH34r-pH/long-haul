@@ -218,6 +218,11 @@ test("stop and actual navigation terminate the page-owned worker", browserTestOp
   try {
     browser = await launchBrowser();
     const page = await browser.newPage();
+    await page.context().route("https://dashboard.ph34r.dev/**", (route) => route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: "<title>Dashboard route smoke</title><main>operations dashboard route</main>",
+    }));
     await observePageLifecycle(page, "primary");
     await page.goto(url);
 
@@ -225,6 +230,23 @@ test("stop and actual navigation terminate the page-owned worker", browserTestOp
     assert.equal(await page.locator("#snapshot").textContent(), "No snapshot yet.");
     await assertNoStoredState(page);
     await assertWorkerLoaded(page, false);
+
+    const operationsLink = page.getByRole("link", { name: "Owner ops, private Grafana dashboard; sign-in required; opens in a new tab" });
+    assert.equal(await operationsLink.getAttribute("href"), "https://dashboard.ph34r.dev/");
+    const operationsTabPromise = page.context().waitForEvent("page");
+    await operationsLink.click();
+    const operationsTab = await operationsTabPromise;
+    try {
+      await operationsTab.waitForLoadState("domcontentloaded");
+      assert.equal(operationsTab.url(), "https://dashboard.ph34r.dev/");
+      assert.equal(await operationsTab.title(), "Dashboard route smoke");
+      await assertWorkerLoaded(operationsTab, false);
+      await assertWorkerLoaded(page, false);
+      assert.equal(signals.some((signal) => signal.includes("worker-")), false);
+    } finally {
+      await operationsTab.close();
+    }
+    await assertNoStoredState(page);
 
     await page.getByRole("button", { name: "Join for this tab" }).click();
     await waitForWorkerState(page, ["active", "paused"]);
