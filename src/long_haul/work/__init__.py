@@ -14,6 +14,7 @@ from .contracts import (
     EvidenceState,
     FailureKind,
     FailurePredicate,
+    FlashExecutionExtensionV1,
     PredicateEvidence,
     PredicateKind,
     WorkBudget,
@@ -31,6 +32,12 @@ from .evaluator import (
     EvidencePacket,
     evaluate_packet,
     reopen_regressions,
+)
+from .flash_delivery import (
+    Delivery,
+    FlashDeliveryFixture,
+    LeaseError,
+    VerificationError,
 )
 from .progress import (
     AttemptStep,
@@ -51,6 +58,7 @@ __all__ = [
     "CandidateArtifact",
     "CheckRecord",
     "CheckpointFact",
+    "Delivery",
     "EvaluationAuthority",
     "EvaluationRunner",
     "EvaluatorIdentity",
@@ -58,6 +66,9 @@ __all__ = [
     "EvidenceState",
     "FailureKind",
     "FailurePredicate",
+    "FlashDeliveryFixture",
+    "FlashExecutionExtensionV1",
+    "LeaseError",
     "PredicateEvidence",
     "PredicateKind",
     "ProgressIntervention",
@@ -67,6 +78,7 @@ __all__ = [
     "ProgressState",
     "StepOutcome",
     "TaskDigest",
+    "VerificationError",
     "WorkBudget",
     "WorkCheckpoint",
     "WorkContract",

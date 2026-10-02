@@ -1,0 +1,27 @@
+{
+  "fixture_status": "synthetic_contract_test_only_not_hardware_qualification",
+  "contract": {
+    "contract_id": "toy-f0-contract-v1",
+    "mission_id": "toy-f0-mission",
+    "objective": "Count the items in a fixed public integer list",
+    "allowed_paths": ["toy-output"],
+    "budget": {"wall_seconds": 30, "max_attempts": 3},
+    "success_predicates": [
+      {"predicate_id": "count", "kind": "artifact", "description": "External checker matches the expected count", "artifact_path": "toy-output/count.json"}
+    ],
+    "flash_execution": {
+      "schema_version": 1,
+      "tier": "F0",
+      "runtime_class": "wasm-control",
+      "model_tier": "none",
+      "max_cpu_threads": 1,
+      "uses_gpu": false,
+      "requests_sensors": false,
+      "application_memory_mib": 32,
+      "fallback": "decline"
+    }
+  },
+  "input": [3, 1, 4, 1, 5],
+  "expected_result": {"count": 5},
+  "synthetic_admission_envelope": {"capability_state": "available", "observed_memory_mib": 64}
+}

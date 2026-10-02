@@ -8,6 +8,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 WORK_CONTRACT_SCHEMA_VERSION = 1
+FLASH_EXECUTION_SCHEMA_VERSION = 1
 
 
 def _validate_scope(path: str) -> str:
@@ -52,6 +53,30 @@ class WorkBudget(BaseModel):
     max_no_progress_steps: int | None = Field(default=None, ge=1)
 
 
+class FlashExecutionExtensionV1(BaseModel):
+    """Optional Flash delivery constraints; never replace WorkContract acceptance."""
+
+    schema_version: Literal[1] = FLASH_EXECUTION_SCHEMA_VERSION
+    tier: Literal["F0"] = "F0"
+    runtime_class: Literal["wasm-control"] = "wasm-control"
+    model_tier: Literal["none"] = "none"
+    max_cpu_threads: Literal[1] = 1
+    uses_gpu: Literal[False] = False
+    requests_sensors: Literal[False] = False
+    # No lab-qualified F0 memory figure is published yet. Unknown must decline.
+    application_memory_mib: int | None = Field(default=None, ge=1)
+    fallback: Literal["decline"] = "decline"
+
+    def admits(self, *, capability_state: Literal["available", "unavailable", "unknown"],
+               observed_memory_mib: int | None = None, initialization_succeeded: bool = True) -> bool:
+        """Fail closed on absent qualification inputs or failed ordinary initialization."""
+        if capability_state != "available" or not initialization_succeeded:
+            return False
+        if self.application_memory_mib is None or observed_memory_mib is None:
+            return False
+        return observed_memory_mib >= self.application_memory_mib
+
+
 class AcceptancePredicate(BaseModel):
     predicate_id: str = Field(min_length=1)
     kind: PredicateKind
@@ -88,6 +113,7 @@ class WorkContract(BaseModel):
     budget: WorkBudget
     success_predicates: list[AcceptancePredicate] = Field(min_length=1)
     failure_predicates: list[FailurePredicate] = Field(default_factory=list)
+    flash_execution: FlashExecutionExtensionV1 | None = None
     schema_version: Literal[1] = WORK_CONTRACT_SCHEMA_VERSION
 
     @model_validator(mode="after")
