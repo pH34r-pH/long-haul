@@ -58,3 +58,12 @@ notifier must dedupe on the stable accepted attempt ID. Conditional state
 updates choose one accepted generation/result. This adapter alone is not a
 production gateway, qualification, rate limiter, or cross-service atomicity
 guarantee.
+
+`FlashStorageOptions` caps notification scans, restart token-hash lookup,
+accepted-trigger draining, and process-local claims. Expired claim contexts are
+pruned as workers poll. The current scans stop at their configured cap; a live
+service must add fair, restart-safe continuation or an indexed lookup so jobs
+beyond that cap are not starved. Before wiring a production endpoint, pin and
+contract-test the Azure SDK version against Azurite or an injected SDK transport,
+including same-response download ETags, conditional writes, and rotated queue
+receipts. No emulator or live Azure qualification is part of this change.

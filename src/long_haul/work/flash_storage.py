@@ -11,6 +11,7 @@ import json
 import secrets
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from itertools import islice
 from typing import Any, Protocol
 
 from pydantic import BaseModel, ConfigDict
@@ -19,6 +20,7 @@ from .contracts import WorkContract
 from .flash_delivery import Delivery, LeaseError, VerificationError
 
 STATE_VERSION = 1
+_SETTLED_REFERENCE = object()
 
 
 def _new_claim_token() -> str:
@@ -29,16 +31,28 @@ def _new_claim_token() -> str:
 class FlashStorageOptions:
     lease_seconds: int
     token_factory: Callable[[], str] = _new_claim_token
+    recovery_scan_limit: int = 256
+    token_lookup_limit: int = 256
+    accepted_trigger_drain_limit: int = 8
+    max_local_claims: int = 128
 
     def __post_init__(self) -> None:
         if self.lease_seconds <= 0:
             raise ValueError("lease_seconds must be positive")
+        if min(self.recovery_scan_limit, self.token_lookup_limit,
+               self.accepted_trigger_drain_limit, self.max_local_claims) < 1:
+            raise ValueError("storage scan and claim limits must be positive")
 
 
 class _Blob(Protocol):
     def upload_blob(self, data: bytes, **kwargs: Any) -> Any: ...
     def download_blob(self) -> Any: ...
-    def get_blob_properties(self) -> Any: ...
+
+
+class _BlobDownload(Protocol):
+    properties: Any
+
+    def readall(self) -> bytes: ...
 
 
 class _Container(Protocol):
@@ -134,23 +148,36 @@ class DurableFlashDelivery:
         self.queue.send_message(json.dumps({"v": 1, "job_id": job_id}, separators=(",", ":")))
 
     def claim(self) -> tuple[Delivery, str] | None:
-        self.recover_notifications()
-        message = self.queue.receive_message(visibility_timeout=self.visibility_seconds)
-        if message is None:
+        self._prune_claims()
+        if len(self._claims) >= self.options.max_local_claims:
             return None
+        self.recover_notifications()
+        for _ in range(self.options.accepted_trigger_drain_limit):
+            message = self.queue.receive_message(visibility_timeout=self.visibility_seconds)
+            if message is None:
+                return None
+            result = self._claim_message(message)
+            if result is _SETTLED_REFERENCE:
+                continue
+            return result
+        return None
+
+    def _claim_message(self, message: Any) -> tuple[Delivery, str] | None | object:
         payload = self._message(message)
         job_id = payload["job_id"]
         state, etag = self._read(job_id)
         if state.accepted_result_json is not None:
             self._delete(message)
-            self.recover_notifications()
-            return self.claim()
+            return _SETTLED_REFERENCE
         if state.terminal_reason is not None:
             self._delete(message)
             return None
         now = self.clock()
         work_contract = WorkContract.model_validate(state.contract)
         deadline = state.started_at + work_contract.budget.wall_seconds
+        if (state.lease_expires_at is not None
+                and now < min(state.lease_expires_at, deadline)):
+            return None
         if state.attempt_number >= work_contract.budget.max_attempts or now >= deadline:
             state.terminal_reason = "attempt_budget_exhausted" if state.attempt_number >= work_contract.budget.max_attempts else "wall_budget_expired"
             try:
@@ -159,8 +186,6 @@ class DurableFlashDelivery:
                 return None
             # The durable terminal record precedes trigger settlement.
             self._delete(message)
-            return None
-        if state.lease_expires_at is not None and now < state.lease_expires_at:
             return None
         generation = state.generation + 1
         attempt = state.attempt_number + 1
@@ -196,8 +221,16 @@ class DurableFlashDelivery:
         # Record receipt rotation immediately after Queue returns it. If the
         # following Blob CAS fails, this process still owns the usable receipt.
         context.pop_receipt = new_receipt
-        state.lease_expires_at = expiry
-        self._write(state, etag)
+        # Queue I/O may block past the old lease/deadline. Re-read the
+        # conditional state and check the clock after that I/O before renewal.
+        renewed_at = self.clock()
+        current, etag = self._read(context.job_id)
+        self._require_claim(context, current)
+        expiry = min(renewed_at + self.lease_seconds, deadline)
+        if expiry <= renewed_at:
+            raise LeaseError("lease expired")
+        current.lease_expires_at = expiry
+        self._write(current, etag)
         context.delivery = Delivery(context.delivery.job_id, context.delivery.contract_id,
                                     context.delivery.attempt_id, token, expiry)
         return context.delivery
@@ -258,7 +291,8 @@ class DurableFlashDelivery:
 
     def recover_notifications(self) -> None:
         """Replay accepted-but-unnotified work; notifier deduplicates by attempt ID."""
-        for item in self.container.list_blobs(name_starts_with="flash-jobs/v1/"):
+        blobs = self.container.list_blobs(name_starts_with="flash-jobs/v1/")
+        for item in islice(blobs, self.options.recovery_scan_limit):
             name = item.name if hasattr(item, "name") else item["name"]
             if not name.endswith(".json"):
                 continue
@@ -291,8 +325,7 @@ class DurableFlashDelivery:
             # receipt; accepted state remains authoritative and is recoverable.
             if self._status(exc) not in (404, 400, 412):
                 raise
-        # Keep the current token as a short-lived in-process idempotency key;
-        # repeat completion after a lost response returns the accepted bytes.
+        self._claims.pop(context.token, None)
 
     def _current(self, token: str) -> tuple[_ClaimContext, _JobState, str]:
         context = self._claims.get(token)
@@ -304,7 +337,7 @@ class DurableFlashDelivery:
 
     def _require_claim(self, context: _ClaimContext, state: _JobState) -> None:
         if (state.generation != context.generation or state.lease_id != self._token_hash(context.token)
-                or state.accepted_result_json is not None):
+                or state.accepted_result_json is not None or state.terminal_reason is not None):
             raise LeaseError("stale claim generation")
         if self.clock() >= min(state.lease_expires_at or 0,
                                state.started_at + WorkContract.model_validate(state.contract).budget.wall_seconds):
@@ -312,8 +345,12 @@ class DurableFlashDelivery:
 
     def _read(self, job_id: str) -> tuple[_JobState, str]:
         blob = self.container.get_blob_client(self._blob_name(job_id))
-        raw = blob.download_blob().readall()
-        etag = blob.get_blob_properties().etag
+        download: _BlobDownload = blob.download_blob()
+        raw = download.readall()
+        # StorageStreamDownloader.properties is returned with this download
+        # response; a separate get_blob_properties call could pair old bytes
+        # with a newer ETag and make a stale conditional write appear current.
+        etag = download.properties.etag
         state = _JobState.model_validate_json(raw)
         state.validate_version()
         if state.job_id != job_id:
@@ -362,7 +399,8 @@ class DurableFlashDelivery:
 
     def _find_accepted_claim(self, token: str) -> _JobState | None:
         token_hash = self._token_hash(token)
-        for item in self.container.list_blobs(name_starts_with="flash-jobs/v1/"):
+        blobs = self.container.list_blobs(name_starts_with="flash-jobs/v1/")
+        for item in islice(blobs, self.options.token_lookup_limit):
             name = item.name if hasattr(item, "name") else item["name"]
             if name.endswith(".json"):
                 job_id = name.rsplit("/", 1)[-1][:-5]
@@ -370,6 +408,13 @@ class DurableFlashDelivery:
                 if state.accepted_claim_hash == token_hash:
                     return state
         return None
+
+    def _prune_claims(self) -> None:
+        now = self.clock()
+        expired = [token for token, context in self._claims.items()
+                   if now >= context.delivery.lease_expires_at]
+        for token in expired:
+            del self._claims[token]
 
     @staticmethod
     def _token_hash(token: str) -> str:

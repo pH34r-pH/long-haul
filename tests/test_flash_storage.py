@@ -52,17 +52,25 @@ class Blob:
         self.store.rows[self.name] = (bytes(data), version)
 
     def download_blob(self):
-        data, _ = self.store.rows[self.name]
-        return type("Download", (), {"readall": lambda self: data})()
+        data, etag = self.store.rows[self.name]
+        after_read = self.store.after_download
 
-    def get_blob_properties(self):
-        return type("Props", (), {"etag": self.store.rows[self.name][1]})()
+        class Download:
+            properties = type("Properties", (), {"etag": etag})()
+
+            def readall(inner_self):
+                if after_read is not None:
+                    after_read()
+                return data
+
+        return Download()
 
 
 class Container:
     def __init__(self):
         self.rows = {}
         self.conflict_next_write = False
+        self.after_download = None
 
     def get_blob_client(self, name):
         return Blob(self, name)
@@ -84,6 +92,8 @@ class Queue:
         self.clock, self.messages, self.serial = clock, [], 0
         self.delete_error = None
         self.delete_after_error = False
+        self.update_delay_seconds = 0
+        self.after_update = None
 
     def send_message(self, content, **kwargs):
         self.serial += 1
@@ -92,29 +102,42 @@ class Queue:
     def receive_message(self, visibility_timeout):
         for message in self.messages:
             if self.clock() >= message.visible_at:
+                version = int(message.pop_receipt.rsplit("-", 1)[1]) + 1
+                message.pop_receipt = f"r{message.id}-{version}"
                 message.visible_at = self.clock() + visibility_timeout
-                return message
+                # Azure SDK receive results are detached snapshots, not the
+                # mutable queue's backing record.
+                return Message(message.content, message.id, message.pop_receipt, message.visible_at)
         return None
 
     def update_message(self, message, pop_receipt, visibility_timeout):
-        if message not in self.messages or pop_receipt != message.pop_receipt:
+        current = next((item for item in self.messages if item.id == message.id), None)
+        if current is None or pop_receipt != current.pop_receipt:
             raise StorageError(404)
-        index = int(message.pop_receipt.rsplit("-", 1)[1]) + 1
-        message.pop_receipt = f"r{message.id}-{index}"
-        message.visible_at = self.clock() + visibility_timeout
-        return type("Update", (), {"pop_receipt": message.pop_receipt})()
+        index = int(current.pop_receipt.rsplit("-", 1)[1]) + 1
+        current.pop_receipt = f"r{current.id}-{index}"
+        current.visible_at = self.clock() + visibility_timeout
+        if self.update_delay_seconds:
+            self.clock.advance(self.update_delay_seconds)
+            self.update_delay_seconds = 0
+        if self.after_update is not None:
+            callback, self.after_update = self.after_update, None
+            callback()
+        return type("Update", (), {"pop_receipt": current.pop_receipt})()
 
     def delete_message(self, message, pop_receipt):
         if self.delete_error:
             error, self.delete_error = self.delete_error, None
-            if self.delete_after_error and message in self.messages and pop_receipt == message.pop_receipt:
-                self.messages.remove(message)
+            current = next((item for item in self.messages if item.id == message.id), None)
+            if self.delete_after_error and current is not None and pop_receipt == current.pop_receipt:
+                self.messages.remove(current)
                 self.delete_after_error = False
                 raise error
             raise error
-        if message not in self.messages or pop_receipt != message.pop_receipt:
+        current = next((item for item in self.messages if item.id == message.id), None)
+        if current is None or pop_receipt != current.pop_receipt:
             raise StorageError(404)
-        self.messages.remove(message)
+        self.messages.remove(current)
 
 
 def contract(*, attempts=3, wall=60):
@@ -176,6 +199,77 @@ def test_competing_claims_share_one_conditional_per_job_record_and_compact_queue
     assert len(f.container.rows) == 1
 
 
+def test_process_claim_map_expires_and_obeys_configured_capacity():
+    f = Fixture()
+    f.adapter.options = FlashStorageOptions(
+        lease_seconds=10, token_factory=lambda: next(f.tokens), max_local_claims=1,
+    )
+    f.adapter.lease_seconds = f.adapter.visibility_seconds = 10
+    f.add_job()
+    _delivery, token = f.adapter.claim()
+    f.adapter.enqueue("job-2", contract())
+    assert f.adapter.claim() is None
+    assert len(f.adapter._claims) == 1
+    f.clock.advance(10)
+    assert f.adapter.claim() is not None
+    assert token not in f.adapter._claims
+
+
+def test_notification_recovery_scan_respects_configured_bound():
+    f = Fixture()
+    f.add_job()
+    f.adapter.enqueue("job-2", contract())
+    for _ in range(2):
+        _delivery, token = f.adapter.claim()
+        assert f.adapter.complete(token, {"count": 5}) == {"count": 5}
+    for job_id in ("job-1", "job-2"):
+        state, etag = f.adapter._read(job_id)
+        state.notification_pending = True
+        state.notification_sent = False
+        f.adapter._write(state, etag)
+    f.notified.clear()
+    bounded = DurableFlashDelivery(
+        f.queue, f.container, options=FlashStorageOptions(lease_seconds=10, recovery_scan_limit=1),
+        clock=f.clock, verifier=verifier, notifier=lambda *args: f.notified.append(args),
+    )
+    bounded.recover_notifications()
+    assert len(f.notified) == 1
+
+
+def test_download_content_and_etag_are_one_snapshot_when_acceptance_races_claim():
+    f = Fixture()
+    f.add_job()
+    reads = 0
+
+    def competing_acceptance():
+        nonlocal reads
+        reads += 1
+        if reads != 2:  # recover scan is first; claim's state read is second
+            return
+        name = "flash-jobs/v1/job-1.json"
+        raw, version = f.container.rows[name]
+        accepted = json.loads(raw)
+        accepted.update({
+            "generation": 7,
+            "attempt_number": 1,
+            "lease_id": "newer-generation-hash",
+            "lease_expires_at": f.clock() + 10,
+            "accepted_generation": 7,
+            "accepted_attempt_id": "job-1-attempt-1",
+            "accepted_claim_hash": "accepted-claim-hash",
+            "accepted_result_json": '{"count":5}',
+            "notification_pending": True,
+        })
+        f.container.rows[name] = (json.dumps(accepted).encode(), version + 1)
+
+    f.container.after_download = competing_acceptance
+    assert f.adapter.claim() is None
+    persisted, _ = f.adapter._read("job-1")
+    assert persisted.generation == 7
+    assert persisted.accepted_result_json == '{"count":5}'
+    assert persisted.accepted_generation == 7
+
+
 def test_rotating_pop_receipt_stays_server_side_and_old_generation_is_fenced_after_expiry():
     f = Fixture()
     f.add_job()
@@ -189,6 +283,69 @@ def test_rotating_pop_receipt_stays_server_side_and_old_generation_is_fenced_aft
     with pytest.raises(LeaseError):
         f.adapter.renew(token1)
     assert f.adapter.complete(token2, {"count": 5}) == {"count": 5}
+
+
+def test_duplicate_reference_cannot_terminalize_a_live_final_attempt():
+    f = Fixture()
+    f.add_job(attempts=1)
+    f.queue.send_message(f.queue.messages[0].content)
+    _first, token = f.adapter.claim()
+    duplicate_adapter = DurableFlashDelivery(
+        f.queue, f.container, options=FlashStorageOptions(lease_seconds=10),
+        clock=f.clock, verifier=verifier, notifier=lambda *_: None,
+    )
+    assert duplicate_adapter.claim() is None
+    assert f.adapter._read("job-1")[0].terminal_reason is None
+    assert f.adapter.complete(token, {"count": 5}) == {"count": 5}
+    f.clock.advance(10)
+    assert duplicate_adapter.claim() is None  # accepted state settles the duplicate
+    assert not f.queue.messages
+    assert f.adapter._read("job-1")[0].terminal_reason is None
+
+
+@pytest.mark.parametrize(("wall", "lease", "delay", "can_reclaim"), [
+    (60, 10, 11, True),
+    (5, 100, 6, False),
+])
+def test_delayed_queue_renew_cannot_revive_expired_lease_or_deadline(wall, lease, delay, can_reclaim):
+    f = Fixture()
+    f.adapter.lease_seconds = lease
+    f.adapter.visibility_seconds = lease
+    f.add_job(wall=wall)
+    _delivery, token = f.adapter.claim()
+    original_expiry = f.adapter._read("job-1")[0].lease_expires_at
+    f.queue.update_delay_seconds = delay
+    with pytest.raises(LeaseError, match="expired"):
+        f.adapter.renew(token)
+    assert f.adapter._read("job-1")[0].lease_expires_at == original_expiry
+    context = f.adapter._claims[token]
+    assert context.pop_receipt == f.queue.messages[0].pop_receipt
+    if can_reclaim:
+        next_delivery = f.adapter.claim()
+        assert next_delivery is not None and next_delivery[0].attempt_id != _delivery.attempt_id
+    else:
+        assert f.adapter.claim() is None
+        assert f.adapter._read("job-1")[0].terminal_reason == "wall_budget_expired"
+
+
+def test_renew_rechecks_generation_after_queue_io_before_conditional_commit():
+    f = Fixture()
+    f.add_job()
+    _delivery, token = f.adapter.claim()
+
+    def competing_claim_generation():
+        state, etag = f.adapter._read("job-1")
+        state.generation += 1
+        state.lease_id = "newer-generation-hash"
+        f.adapter._write(state, etag)
+
+    f.queue.after_update = competing_claim_generation
+    with pytest.raises(LeaseError, match="stale"):
+        f.adapter.renew(token)
+    state, _ = f.adapter._read("job-1")
+    assert state.generation == 2
+    assert state.lease_id == "newer-generation-hash"
+    assert f.adapter._claims[token].pop_receipt == f.queue.messages[0].pop_receipt
 
 
 def test_verification_expiry_generation_and_wall_attempt_budgets_fence_finalization():
