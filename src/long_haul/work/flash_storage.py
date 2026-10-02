@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import secrets
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -20,6 +21,7 @@ from .flash_delivery import Delivery, LeaseError, VerificationError
 
 STATE_VERSION = 1
 _SETTLED_REFERENCE = object()
+_LOGGER = logging.getLogger(__name__)
 
 
 def _new_claim_token() -> str:
@@ -292,19 +294,27 @@ class DurableFlashDelivery:
         # ETag changes fence slow verifiers before the acceptance commit point.
         state, etag = self._read(context.job_id)
         self._require_claim(context, state)
-        state.accepted_generation = context.generation
-        state.accepted_attempt_id = context.attempt_id
-        state.accepted_claim_hash = self._token_hash(token)
-        state.accepted_result_json = result_json
-        state.notification_pending = True
-        state.notification_sent = False
+        claim_hash = self._token_hash(token)
         self._write_claim_index(_ClaimIndex(
             job_id=context.job_id,
             generation=context.generation,
             attempt_id=context.attempt_id,
-            claim_hash=self._token_hash(token),
+            claim_hash=claim_hash,
             expires_at=state.started_at + contract.budget.wall_seconds,
         ))
+        # Index creation is a separate Blob operation and may block long enough
+        # for the claim lease or work deadline to expire. Re-read both state and
+        # clock after that I/O; only this fresh snapshot may be used for the
+        # acceptance CAS. A crash after the index write leaves a harmless index
+        # entry because retry lookup validates it against accepted job state.
+        state, etag = self._read(context.job_id)
+        self._require_claim(context, state)
+        state.accepted_generation = context.generation
+        state.accepted_attempt_id = context.attempt_id
+        state.accepted_claim_hash = claim_hash
+        state.accepted_result_json = result_json
+        state.notification_pending = True
+        state.notification_sent = False
         self._write(state, etag)  # durable acceptance precedes queue settlement
         self._settle(context)
         self.recover_notifications()
@@ -320,6 +330,7 @@ class DurableFlashDelivery:
         listings = self.container.list_blobs(
             name_starts_with="flash-jobs/v1/",
             results_per_page=self.options.recovery_scan_limit,
+            maxresults=self.options.recovery_scan_limit,
         )
         pages = listings.by_page(continuation_token=cursor.continuation_token)
         try:
@@ -340,18 +351,25 @@ class DurableFlashDelivery:
             result = state.accepted_result_json
             if attempt is None or result is None:
                 continue
-            self.notifier(job_id, attempt, json.loads(result))
-            # CAS means concurrent recovery workers may both notify; stable key
-            # lets the downstream outbox suppress duplicates.
-            state.notification_pending = False
-            state.notification_sent = True
             try:
-                self._write(state, etag)
-            except LeaseError:
-                continue
-            except Exception as exc:
-                if self._status(exc) not in (409, 412):
-                    raise
+                self.notifier(job_id, attempt, json.loads(result))
+            except Exception:  # noqa: BLE001 - notifier implementations are injected
+                # Leave this record pending and keep the durable cursor moving;
+                # an unhealthy destination must not pin every later job behind
+                # one repeatedly failing notification.
+                _LOGGER.warning("notification delivery failed for job %s; leaving it pending", job_id)
+            else:
+                # CAS means concurrent recovery workers may both notify; stable key
+                # lets the downstream outbox suppress duplicates.
+                state.notification_pending = False
+                state.notification_sent = True
+                try:
+                    self._write(state, etag)
+                except LeaseError:
+                    continue
+                except Exception as exc:
+                    if self._status(exc) not in (409, 412):
+                        raise
         cursor.continuation_token = pages.continuation_token
         self._write_notification_cursor(cursor, cursor_etag)
 

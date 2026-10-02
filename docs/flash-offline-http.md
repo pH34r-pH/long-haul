@@ -44,12 +44,12 @@ reference is deleted, so duplicate triggers do not revive exhausted work.
 
 Claim tokens are generated with a cryptographically secure random factory by
 default. The service process keeps token-to-message and rotating pop-receipt
-state in memory; neither claim tokens nor queue receipts are persisted or
-returned by the adapter's worker claim result. A SHA-256 token index points to
-the claim generation and attempt, while the per-job blob remains authoritative
-and is checked before accepting a retry. A process restart drops outstanding
-receipt mappings, so Queue visibility expiry
-redelivers the reference and a new claim generation fences the prior worker.
+state in memory; workers receive the opaque claim token, but queue receipts
+remain server-side and plaintext tokens are not persisted. A SHA-256 token index
+points to the claim generation and attempt, while the per-job blob remains
+authoritative and is checked before accepting a retry. A process restart drops
+outstanding receipt mappings, so Queue visibility expiry redelivers the
+reference and a new claim generation fences the prior worker.
 
 Acceptance is committed to Blob state before the trigger message is deleted.
 If a process stops between those services, redelivery observes the accepted
@@ -57,8 +57,9 @@ record and removes the trigger without executing the work again. Accepted
 records whose output notification is pending are scanned and replayed before
 each claim or by calling the recovery method. A durable continuation cursor
 advances through bounded pages, wrapping after the end; a crash before cursor
-advancement replays the page. The notifier must dedupe on the stable accepted
-attempt ID. Queue and Blob do not share a transaction: execution and
+advancement replays the page. A notification failure leaves that job pending
+while the cursor continues, so later jobs can still be attempted on subsequent
+pages. The notifier must dedupe on the stable accepted attempt ID. Queue and Blob do not share a transaction: execution and
 notification delivery are at least once. Conditional state updates choose one
 accepted generation/result. This adapter alone is not a production gateway,
 qualification, rate limiter, or cross-service atomicity guarantee.
@@ -67,6 +68,8 @@ qualification, rate limiter, or cross-service atomicity guarantee.
 and process-local claims. Expired claim contexts are pruned as workers poll.
 Azure SDK versions are pinned in the development dependency set and exercised
 through an injected transport, including same-response download ETags,
-conditional writes, and rotated queue receipts. The transport contract test
-does not prove service behavior in Azurite or Azure. There is no emulator or
-live Azure qualification in this change.
+conditional writes, rotated queue receipts, continuation markers, and
+conditional-write conflicts. The adapter passes `maxresults` as well as the
+SDK's initial page-size option so resumed marker requests retain the configured
+page bound. The injected transport does not prove service behavior in Azurite or
+Azure. There is no emulator or live Azure qualification in this change.

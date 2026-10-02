@@ -5,7 +5,10 @@ import base64
 from urllib.parse import parse_qs, unquote, urlsplit
 from xml.etree import ElementTree
 
+import pytest
+from azure.core import MatchConditions
 from azure.core.credentials import AzureNamedKeyCredential
+from azure.core.exceptions import ResourceModifiedError
 from azure.core.pipeline.transport import HttpResponse, HttpTransport
 from azure.core.utils import CaseInsensitiveDict
 from azure.storage.blob import ContainerClient
@@ -96,41 +99,54 @@ class _OfflineAzureTransport(HttpTransport):
 
     def _blob(self, request, path: str, query: dict[str, list[str]]):
         if query.get("comp") == ["list"]:
-            prefix = query.get("prefix", [""])[0]
-            names = sorted(name for name in self.blobs if name.startswith(prefix))
-            blobs = "".join(self._listed_blob(name) for name in names)
-            body = ("<EnumerationResults><Blobs>" + blobs
-                    + "</Blobs><NextMarker></NextMarker></EnumerationResults>").encode()
-            return self._response(request, 200, {"Content-Type": "application/xml"}, body)
-
+            return self._list_blobs(request, query)
         name = path.split("/", 2)[-1]
         current = self.blobs.get(name)
         if request.method == "GET":
-            if current is None:
-                return self._error(request, 404, "BlobNotFound")
-            body, version = current
-            etag = self._etag(version)
-            start, end = self._range(request.headers.get("x-ms-range"), len(body))
-            payload = body[start:end + 1]
-            headers = {
-                "Content-Length": str(len(payload)),
-                "Content-Range": f"bytes {start}-{end}/{len(body)}",
-                "ETag": etag,
-                "Last-Modified": "Fri, 02 Oct 2026 20:00:00 GMT",
-                "Accept-Ranges": "bytes",
-                "x-ms-blob-type": "BlockBlob",
-            }
-            return self._response(request, 206, headers, payload)
+            return self._download_blob(request, name, current)
         if request.method == "PUT":
-            if_match = request.headers.get("If-Match")
-            if if_match and (current is None or if_match != self._etag(current[1])):
-                return self._error(request, 412, "ConditionNotMet")
-            if request.headers.get("If-None-Match") == "*" and current is not None:
-                return self._error(request, 412, "ConditionNotMet")
-            version = 1 if current is None else current[1] + 1
-            self.blobs[name] = (self._request_body(request), version)
-            return self._response(request, 201, {"ETag": self._etag(version)}, b"")
+            return self._upload_blob(request, name, current)
         raise AssertionError(f"unexpected Blob operation {request.method} {path}")
+
+    def _list_blobs(self, request, query: dict[str, list[str]]):
+        prefix = query.get("prefix", [""])[0]
+        names = sorted(name for name in self.blobs if name.startswith(prefix))
+        marker = int(query.get("marker", ["0"])[0] or 0)
+        page_size = int(query.get("maxresults", [str(len(names) or 1)])[0])
+        page = names[marker:marker + page_size]
+        blobs = "".join(self._listed_blob(name) for name in page)
+        next_marker = str(marker + len(page)) if marker + len(page) < len(names) else ""
+        body = ("<EnumerationResults><MaxResults>" + str(page_size) + "</MaxResults><Blobs>" + blobs
+                + "</Blobs><NextMarker>" + next_marker
+                + "</NextMarker></EnumerationResults>").encode()
+        return self._response(request, 200, {"Content-Type": "application/xml"}, body)
+
+    def _download_blob(self, request, name: str, current):
+        if current is None:
+            return self._error(request, 404, "BlobNotFound")
+        body, version = current
+        etag = self._etag(version)
+        start, end = self._range(request.headers.get("x-ms-range"), len(body))
+        payload = body[start:end + 1]
+        headers = {
+            "Content-Length": str(len(payload)),
+            "Content-Range": f"bytes {start}-{end}/{len(body)}",
+            "ETag": etag,
+            "Last-Modified": "Fri, 02 Oct 2026 20:00:00 GMT",
+            "Accept-Ranges": "bytes",
+            "x-ms-blob-type": "BlockBlob",
+        }
+        return self._response(request, 206, headers, payload)
+
+    def _upload_blob(self, request, name: str, current):
+        if_match = request.headers.get("If-Match")
+        if if_match and (current is None or if_match != self._etag(current[1])):
+            return self._error(request, 412, "ConditionNotMet")
+        if request.headers.get("If-None-Match") == "*" and current is not None:
+            return self._error(request, 412, "ConditionNotMet")
+        version = 1 if current is None else current[1] + 1
+        self.blobs[name] = (self._request_body(request), version)
+        return self._response(request, 201, {"ETag": self._etag(version)}, b"")
 
     def _queue(self, request, path: str, query: dict[str, list[str]]):
         if path.endswith("/messages") and request.method != "GET":
@@ -298,3 +314,36 @@ def test_pinned_azure_sdk_clients_execute_flash_storage_contract_over_injected_t
     assert blob_conditionals and blob_conditionals[-1].headers.get("If-Match") is not None
     assert all("offlineaccount" in request.url for request in transport.requests)
     assert not transport.messages
+
+
+def test_pinned_blob_sdk_paginates_and_surfaces_conditional_etag_conflicts():
+    transport = _OfflineAzureTransport()
+    credential = AzureNamedKeyCredential(
+        "offlineaccount", base64.b64encode(b"synthetic-offline-test-key").decode(),
+    )
+    container = ContainerClient(
+        account_url="https://offlineaccount.blob.core.windows.net",
+        container_name="flash", credential=credential, transport=transport,
+    )
+    transport.blobs = {
+        f"flash-jobs/v1/job-{number}.json": (b"{}", 1)
+        for number in range(3)
+    }
+    pages = container.list_blobs(
+        name_starts_with="flash-jobs/v1/", results_per_page=1, maxresults=1,
+    ).by_page()
+    assert [item.name for item in next(pages)] == ["flash-jobs/v1/job-0.json"]
+    assert pages.continuation_token
+    assert [item.name for item in next(pages)] == ["flash-jobs/v1/job-1.json"]
+    assert [item.name for item in next(pages)] == ["flash-jobs/v1/job-2.json"]
+    with pytest.raises(StopIteration):
+        next(pages)
+    assert "marker=1" in transport.requests[1].url
+    assert "maxresults=1" in transport.requests[1].url
+
+    blob = container.get_blob_client("flash-jobs/v1/job-0.json")
+    with pytest.raises(ResourceModifiedError):
+        blob.upload_blob(
+            b"stale-write", overwrite=True, etag='"wrong-etag"',
+            match_condition=MatchConditions.IfNotModified,
+        )

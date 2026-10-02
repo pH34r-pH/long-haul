@@ -50,6 +50,9 @@ class Blob:
             raise StorageError(412)
         version = (current[1] + 1) if current else 1
         self.store.rows[self.name] = (bytes(data), version)
+        if self.store.after_upload is not None:
+            callback, self.store.after_upload = self.store.after_upload, None
+            callback(self.name)
 
     def download_blob(self):
         if self.name not in self.store.rows:
@@ -73,11 +76,12 @@ class Container:
         self.rows = {}
         self.conflict_next_write = False
         self.after_download = None
+        self.after_upload = None
 
     def get_blob_client(self, name):
         return Blob(self, name)
 
-    def list_blobs(self, name_starts_with="", results_per_page=256):
+    def list_blobs(self, name_starts_with="", results_per_page=256, **_kwargs):
         items = [type("Item", (), {"name": name}) for name in sorted(self.rows)
                  if name.startswith(name_starts_with)]
         return BlobPager(items, results_per_page)
@@ -296,6 +300,37 @@ def test_notification_continuation_is_fair_across_process_restarts_beyond_each_p
     assert all(f.adapter._read(f"job-{number}")[0].notification_sent for number in range(5))
 
 
+def test_failing_notification_does_not_pin_later_jobs_on_the_page():
+    f = Fixture()
+    for number in range(2):
+        job_id = f"job-{number}"
+        f.adapter.enqueue(job_id, contract())
+        state, etag = f.adapter._read(job_id)
+        state.generation = state.accepted_generation = 1
+        state.accepted_attempt_id = f"{job_id}-attempt-1"
+        state.accepted_claim_hash = f"claim-hash-{number}"
+        state.accepted_result_json = '{"count":5}'
+        state.notification_pending = True
+        f.adapter._write(state, etag)
+
+    delivered = []
+
+    def notifier(job_id, *_args):
+        if job_id == "job-0":
+            raise RuntimeError("destination unavailable")
+        delivered.append(job_id)
+
+    recovering = DurableFlashDelivery(
+        f.queue, f.container,
+        options=FlashStorageOptions(lease_seconds=10, recovery_scan_limit=2),
+        clock=f.clock, verifier=verifier, notifier=notifier,
+    )
+    recovering.recover_notifications()
+    assert delivered == ["job-1"]
+    assert f.adapter._read("job-0")[0].notification_pending
+    assert f.adapter._read("job-1")[0].notification_sent
+
+
 def test_accepted_claim_retry_uses_index_beyond_prior_scan_limit():
     f = Fixture()
     f.adapter.options = FlashStorageOptions(
@@ -472,6 +507,59 @@ def test_verification_expiry_generation_and_wall_attempt_budgets_fence_finalizat
     assert h.adapter.claim() is None
     assert not h.queue.messages
     assert h.adapter._read("job-1")[0].terminal_reason == "wall_budget_expired"
+
+
+@pytest.mark.parametrize(("wall", "lease", "index_delay"), [
+    (60, 10, 11),  # index persistence runs past the claim lease
+    (5, 100, 6),   # index persistence runs past the work deadline
+])
+def test_claim_index_io_expiry_is_rechecked_before_acceptance_cas(wall, lease, index_delay):
+    f = Fixture()
+    f.adapter.lease_seconds = lease
+    f.adapter.visibility_seconds = lease
+    f.add_job(wall=wall)
+    _delivery, token = f.adapter.claim()
+
+    def delay_claim_index(blob_name):
+        if blob_name.startswith("flash-claim-index/v1/"):
+            f.clock.advance(index_delay)
+
+    f.container.after_upload = delay_claim_index
+    with pytest.raises(LeaseError, match="expired"):
+        f.adapter.complete(token, {"count": 5})
+    assert f.adapter.completed_result("job-1") is None
+    state, _ = f.adapter._read("job-1")
+    assert state.accepted_result_json is None
+    # The index write may have succeeded, but it is never treated as accepted
+    # without the authoritative per-job state CAS.
+    assert any(name.startswith("flash-claim-index/v1/") for name in f.container.rows)
+    restarted = DurableFlashDelivery(
+        f.queue, f.container, options=FlashStorageOptions(lease_seconds=lease),
+        clock=f.clock, verifier=verifier, notifier=lambda *_: None,
+    )
+    assert restarted._find_accepted_claim(token) is None
+
+
+def test_claim_index_io_rechecks_generation_before_acceptance_cas():
+    f = Fixture()
+    f.add_job()
+    _delivery, token = f.adapter.claim()
+
+    def competing_generation(blob_name):
+        if blob_name.startswith("flash-claim-index/v1/"):
+            state, etag = f.adapter._read("job-1")
+            state.generation += 1
+            state.lease_id = "newer-generation-hash"
+            state.lease_expires_at = f.clock() + 10
+            f.adapter._write(state, etag)
+
+    f.container.after_upload = competing_generation
+    with pytest.raises(LeaseError, match="stale"):
+        f.adapter.complete(token, {"count": 5})
+    state, _ = f.adapter._read("job-1")
+    assert state.generation == 2
+    assert state.lease_id == "newer-generation-hash"
+    assert state.accepted_result_json is None
 
 
 def test_etag_conflict_prevents_acceptance_and_bad_verification_never_settles():
