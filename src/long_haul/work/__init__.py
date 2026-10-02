@@ -33,7 +33,12 @@ from .evaluator import (
     evaluate_packet,
     reopen_regressions,
 )
-from .flash_delivery import Delivery, FlashDeliveryFixture, LeaseError
+from .flash_delivery import (
+    Delivery,
+    FlashDeliveryFixture,
+    LeaseError,
+    VerificationError,
+)
 from .progress import (
     AttemptStep,
     ProgressIntervention,
@@ -73,6 +78,7 @@ __all__ = [
     "ProgressState",
     "StepOutcome",
     "TaskDigest",
+    "VerificationError",
     "WorkBudget",
     "WorkCheckpoint",
     "WorkContract",
