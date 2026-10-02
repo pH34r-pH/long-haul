@@ -102,9 +102,11 @@ async function waitForSignal(signals, signal, expectedCount = 1) {
 }
 
 async function waitForWindowId(title) {
-  const { stdout } = await execFileAsync("xdotool", ["search", "--sync", "--onlyvisible", "--name", title]);
-  const windowId = stdout.trim().split(/\s+/, 1)[0];
+  const { stdout } = await execFileAsync("xdotool", ["getactivewindow"]);
+  const windowId = stdout.trim();
   assert.match(windowId, /^(?:0x)?[0-9a-f]+$/i);
+  const { stdout: actualTitle } = await execFileAsync("xdotool", ["getwindowname", windowId]);
+  assert.ok(actualTitle.includes(title), `Active X11 window title did not include ${title}: ${actualTitle.trim()}`);
   return windowId;
 }
 
@@ -206,6 +208,7 @@ test("native page visibility pauses and resumes its worker when available", {
 
     let windowId;
     try {
+      await page.bringToFront();
       windowId = await waitForWindowId("flash-visibility-test");
       await execFileAsync("xdotool", ["windowminimize", "--sync", windowId]);
     } catch (error) {
