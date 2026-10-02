@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { extname, resolve, sep } from "node:path";
+import { extname, join, resolve, sep } from "node:path";
+import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
@@ -60,6 +61,74 @@ async function launchBrowser(extraArgs = [], headed = false) {
   });
 }
 
+async function launchVisibilityBrowser() {
+  const userDataDir = await mkdtemp(join(tmpdir(), "flash-visibility-"));
+  const executablePath = process.env.CHROMIUM_PATH ?? "/usr/bin/chromium";
+  const child = spawn(executablePath, [
+    "--no-sandbox",
+    "--disable-dev-shm-usage",
+    "--no-proxy-server",
+    "--host-resolver-rules=MAP example.test 127.0.0.1",
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--remote-debugging-address=127.0.0.1",
+    "--remote-debugging-port=0",
+    `--user-data-dir=${userDataDir}`,
+    "about:blank",
+  ], { stdio: "ignore" });
+  let spawnError;
+  child.once("error", (error) => { spawnError = error; });
+
+  let browser;
+  try {
+    const activePortPath = join(userDataDir, "DevToolsActivePort");
+    const expires = Date.now() + 10_000;
+    let port;
+    while (Date.now() < expires) {
+      if (spawnError) throw spawnError;
+      if (child.exitCode !== null) throw new Error(`Chromium exited before CDP became ready (${child.exitCode}).`);
+      try {
+        port = Number((await readFile(activePortPath, "utf8")).split(/\r?\n/, 1)[0]);
+        if (Number.isInteger(port) && port > 0) break;
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
+      await new Promise((resolveWait) => setTimeout(resolveWait, 25));
+    }
+    if (!Number.isInteger(port) || port < 1) throw new Error("Chromium did not publish its CDP port within 10 seconds.");
+    // Avoid Playwright launch-time focus emulation so X11 minimization drives native visibility.
+    browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, { noDefaults: true });
+    return { browser, child, userDataDir };
+  } catch (error) {
+    await closeVisibilityBrowser(browser, child, userDataDir);
+    throw error;
+  }
+}
+
+async function waitForProcessExit(child, timeoutMs) {
+  if (child.exitCode !== null) return;
+  await new Promise((resolveExit) => {
+    const timeout = setTimeout(resolveExit, timeoutMs);
+    child.once("exit", () => {
+      clearTimeout(timeout);
+      resolveExit();
+    });
+  });
+}
+
+async function closeVisibilityBrowser(browser, child, userDataDir) {
+  await browser?.close().catch(() => {});
+  if (child && child.exitCode === null) {
+    child.kill("SIGTERM");
+    await waitForProcessExit(child, 2_000);
+  }
+  if (child && child.exitCode === null) {
+    child.kill("SIGKILL");
+    await waitForProcessExit(child, 2_000);
+  }
+  if (userDataDir) await rm(userDataDir, { recursive: true, force: true });
+}
+
 async function observePageLifecycle(page, role) {
   const observer = `(() => {
     const pageRole = ${JSON.stringify(role)};
@@ -92,8 +161,8 @@ async function observePageLifecycle(page, role) {
   await page.addInitScript({ content: observer });
 }
 
-async function waitForSignal(signals, signal, expectedCount = 1) {
-  const expires = Date.now() + 3_000;
+async function waitForSignal(signals, signal, expectedCount = 1, timeoutMs = 3_000) {
+  const expires = Date.now() + timeoutMs;
   while (Date.now() < expires) {
     if (signals.filter((item) => item === signal).length >= expectedCount) return;
     await new Promise((resolveWait) => setTimeout(resolveWait, 10));
@@ -196,53 +265,63 @@ test("native page visibility pauses and resumes its worker when available", {
   const { server, signals, url } = await startServer();
   let browser;
   let context;
+  let browserProcess;
+  let userDataDir;
   try {
-    browser = await launchBrowser([], true);
-    context = await browser.newContext();
-    const page = await context.newPage();
+    ({ browser, child: browserProcess, userDataDir } = await launchVisibilityBrowser());
+    context = browser.contexts()[0];
+    assert.ok(context, "CDP connection did not expose Chromium's default browser context");
+    const page = context.pages()[0] ?? await context.newPage();
     await observePageLifecycle(page, "visibility");
     await page.goto(url);
     await page.evaluate(() => { document.title = "flash-visibility-test"; });
     await page.getByRole("button", { name: "Join for this tab" }).click();
     await waitForWorkerState(page, ["active"]);
+    await page.bringToFront();
 
     let windowId;
     try {
-      await page.bringToFront();
       windowId = await waitForWindowId("flash-visibility-test");
       await execFileAsync("xdotool", ["windowminimize", "--sync", windowId]);
     } catch (error) {
       t.skip(`Real visibility unverified: the test window manager could not hide the browser (${error.message}).`);
       return;
     }
+    const hidden = "/__test/visibility?role=visibility&value=hidden";
     let actualVisibility;
     try {
+      await waitForSignal(signals, hidden, 1, 5_000);
       actualVisibility = await page.evaluate(() => document.visibilityState);
     } catch (error) {
-      await execFileAsync("wmctrl", ["-i", "-a", windowId]);
-      t.skip(`Real visibility unverified: the hosted browser did not permit reading its state after hide (${error.message}).`);
-      return;
+      try {
+        actualVisibility = await page.evaluate(() => document.visibilityState);
+      } catch (stateError) {
+        await execFileAsync("xdotool", ["windowactivate", "--sync", windowId]);
+        t.skip(`Real visibility unverified: no hidden event arrived and the minimized page state was unreadable (${stateError.message}).`);
+        return;
+      }
+      if (actualVisibility === "visible") {
+        await execFileAsync("xdotool", ["windowactivate", "--sync", windowId]);
+        t.skip(`Real visibility unverified: actual window minimization left document.visibilityState=${actualVisibility}; no hidden event arrived within 5 seconds.`);
+        return;
+      }
+      throw error;
     }
-    if (actualVisibility !== "hidden") {
-      await execFileAsync("xdotool", ["windowactivate", "--sync", windowId]);
-      t.skip(`Real visibility unverified: actual window minimization left document.visibilityState=${actualVisibility}.`);
-      return;
-    }
-    await waitForSignal(signals, "/__test/visibility?role=visibility&value=hidden");
+    assert.equal(actualVisibility, "hidden");
     await waitForSignal(signals, "/__test/worker-visibility?role=visibility&value=hidden");
     const paused = "/__test/worker-lifecycle?role=visibility&value=paused";
     await waitForSignal(signals, paused);
 
     await execFileAsync("xdotool", ["windowactivate", "--sync", windowId]);
-    await waitForSignal(signals, "/__test/visibility?role=visibility&value=visible");
+    await waitForSignal(signals, "/__test/visibility?role=visibility&value=visible", 1, 5_000);
+    assert.equal(await page.evaluate(() => document.visibilityState), "visible");
     await waitForSignal(signals, "/__test/worker-visibility?role=visibility&value=visible");
     const active = "/__test/worker-lifecycle?role=visibility&value=active";
     await waitForSignal(signals, active);
     assert.ok(signals.indexOf(paused) < signals.indexOf(active));
     await waitForWorkerState(page, ["active"], 5_000);
   } finally {
-    await context?.close();
-    await browser?.close();
+    await closeVisibilityBrowser(browser, browserProcess, userDataDir);
     await new Promise((resolveClose, rejectClose) => server.close((error) => error ? rejectClose(error) : resolveClose()));
   }
 });
