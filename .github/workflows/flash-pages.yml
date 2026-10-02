@@ -49,9 +49,9 @@ jobs:
           npm install --prefix "$deps" --no-save --no-package-lock --ignore-scripts playwright@1.63.0
           playwright="$deps/node_modules/.bin/playwright"
           "$playwright" install --with-deps chromium
-          if ! command -v xvfb-run >/dev/null 2>&1 || ! command -v openbox >/dev/null 2>&1; then
+          if ! command -v xvfb-run >/dev/null 2>&1 || ! command -v openbox >/dev/null 2>&1 || ! command -v wmctrl >/dev/null 2>&1; then
             sudo apt-get update
-            sudo apt-get install -y xvfb openbox
+            sudo apt-get install -y xvfb openbox wmctrl
           fi
           module_path="$deps/node_modules/playwright"
           chromium_path="$(PLAYWRIGHT_MODULE_PATH="$module_path" node -e 'process.stdout.write(require(process.env.PLAYWRIGHT_MODULE_PATH).chromium.executablePath())')"

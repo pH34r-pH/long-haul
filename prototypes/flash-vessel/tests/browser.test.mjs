@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { extname, resolve, sep } from "node:path";
+import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 let chromium;
+const execFileAsync = promisify(execFile);
 try {
   const modulePath = process.env.PLAYWRIGHT_MODULE_PATH ?? "playwright";
   ({ chromium } = createRequire(import.meta.url)(modulePath));
@@ -98,6 +101,17 @@ async function waitForSignal(signals, signal, expectedCount = 1) {
   assert.fail(`Timed out waiting for browser lifecycle signal ${signal}`);
 }
 
+async function waitForWindowId(title) {
+  const expires = Date.now() + 3_000;
+  while (Date.now() < expires) {
+    const { stdout } = await execFileAsync("wmctrl", ["-l"]);
+    const row = stdout.split("\n").find((line) => line.includes(title));
+    if (row) return row.trim().split(/\s+/, 1)[0];
+    await new Promise((resolveWait) => setTimeout(resolveWait, 10));
+  }
+  assert.fail(`Timed out waiting for browser window titled ${title}`);
+}
+
 async function waitForState(page, states, timeout = 30_000) {
   await page.waitForFunction((expected) => {
     const state = document.querySelector("#status")?.dataset.state;
@@ -178,7 +192,7 @@ test("minimizing and restoring the browser pauses and resumes its worker", {
   skip: !chromium
     ? "Playwright is not installed; browser visibility test unavailable"
     : !process.env.DISPLAY && process.env.REQUIRE_VISIBILITY_TEST !== "1"
-      ? "A headed browser display is unavailable; CI runs this test under Xvfb"
+      ? "A headed browser display is unavailable; CI runs this test under Xvfb and Openbox"
       : false,
 }, async () => {
   const { server, signals, url } = await startServer();
@@ -190,30 +204,24 @@ test("minimizing and restoring the browser pauses and resumes its worker", {
     const page = await context.newPage();
     await observePageLifecycle(page, "visibility");
     await page.goto(url);
+    await page.evaluate(() => { document.title = "flash-visibility-test"; });
     await page.getByRole("button", { name: "Join for this tab" }).click();
     await waitForWorkerState(page, ["active"]);
 
-    const cdp = await context.newCDPSession(page);
-    const { windowId, bounds } = await cdp.send("Browser.getWindowForTarget");
-    try {
-      await cdp.send("Browser.setWindowBounds", { windowId, bounds: { windowState: "minimized" } });
-      await waitForSignal(signals, "/__test/visibility?role=visibility&value=hidden");
-      await waitForSignal(signals, "/__test/worker-visibility?role=visibility&value=hidden");
+    const windowId = await waitForWindowId("flash-visibility-test");
+    await execFileAsync("wmctrl", ["-i", "-r", windowId, "-b", "add,hidden"]);
+    await waitForSignal(signals, "/__test/visibility?role=visibility&value=hidden");
+    await waitForSignal(signals, "/__test/worker-visibility?role=visibility&value=hidden");
 
-      await cdp.send("Browser.setWindowBounds", { windowId, bounds: { windowState: bounds.windowState } });
-      await page.bringToFront();
-      await waitForSignal(signals, "/__test/visibility?role=visibility&value=visible");
-      await waitForSignal(signals, "/__test/worker-visibility?role=visibility&value=visible");
-      const paused = "/__test/worker-lifecycle?role=visibility&value=paused";
-      const active = "/__test/worker-lifecycle?role=visibility&value=active";
-      await waitForSignal(signals, paused);
-      await waitForSignal(signals, active);
-      assert.ok(signals.indexOf(paused) < signals.indexOf(active));
-      await waitForWorkerState(page, ["active"], 5_000);
-    } finally {
-      await cdp.send("Browser.setWindowBounds", { windowId, bounds: { windowState: bounds.windowState } });
-      await cdp.detach();
-    }
+    await execFileAsync("wmctrl", ["-i", "-a", windowId]);
+    await waitForSignal(signals, "/__test/visibility?role=visibility&value=visible");
+    await waitForSignal(signals, "/__test/worker-visibility?role=visibility&value=visible");
+    const paused = "/__test/worker-lifecycle?role=visibility&value=paused";
+    const active = "/__test/worker-lifecycle?role=visibility&value=active";
+    await waitForSignal(signals, paused);
+    await waitForSignal(signals, active);
+    assert.ok(signals.indexOf(paused) < signals.indexOf(active));
+    await waitForWorkerState(page, ["active"], 5_000);
   } finally {
     await context?.close();
     await browser?.close();
