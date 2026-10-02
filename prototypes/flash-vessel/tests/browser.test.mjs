@@ -60,13 +60,31 @@ async function launchBrowser(extraArgs = []) {
 async function observePageLifecycle(page, role) {
   const observer = `(() => {
     const pageRole = ${JSON.stringify(role)};
-    const signal = (event) => navigator.sendBeacon('/__test/' + event + '?role=' + pageRole, event);
-    const terminate = Worker.prototype.terminate;
-    Worker.prototype.terminate = function () {
-      signal("worker-terminated");
-      return terminate.call(this);
+    const signal = (event, value = '') => navigator.sendBeacon(
+      '/__test/' + event + '?role=' + pageRole + (value ? '&value=' + value : ''),
+      value,
+    );
+    const NativeWorker = window.Worker;
+    window.Worker = class ObservedWorker extends NativeWorker {
+      constructor(...args) {
+        super(...args);
+        this.addEventListener('message', ({ data }) => {
+          if (data?.type === 'LIFECYCLE') signal('worker-lifecycle', data.lifecycle);
+        });
+      }
+
+      postMessage(message, ...args) {
+        if (message?.type === 'VISIBILITY') signal('worker-visibility', message.visibility);
+        return super.postMessage(message, ...args);
+      }
+
+      terminate() {
+        signal('worker-terminated');
+        return super.terminate();
+      }
     };
-    addEventListener("pagehide", () => signal("pagehide"), { once: true });
+    addEventListener('visibilitychange', () => signal('visibility', document.visibilityState));
+    addEventListener('pagehide', () => signal('pagehide'), { once: true });
   })();`;
   await page.addInitScript({ content: observer });
 }
@@ -154,7 +172,7 @@ test("stop and actual navigation terminate the page-owned worker", browserTestOp
   }
 });
 
-test("minimizing the browser hides the page and pauses its worker", {
+test("minimizing and restoring the browser pauses and resumes its worker", {
   ...browserTestOptions,
   timeout: 20_000,
   skip: !chromium
@@ -163,13 +181,14 @@ test("minimizing the browser hides the page and pauses its worker", {
       ? "A headed browser display is unavailable; CI runs this test under Xvfb"
       : false,
 }, async () => {
-  const { server, url } = await startServer();
+  const { server, signals, url } = await startServer();
   let browser;
   let context;
   try {
     browser = await launchBrowser();
     context = await browser.newContext();
     const page = await context.newPage();
+    await observePageLifecycle(page, "visibility");
     await page.goto(url);
     await page.getByRole("button", { name: "Join for this tab" }).click();
     await waitForWorkerState(page, ["active"]);
@@ -178,12 +197,18 @@ test("minimizing the browser hides the page and pauses its worker", {
     const { windowId, bounds } = await cdp.send("Browser.getWindowForTarget");
     try {
       await cdp.send("Browser.setWindowBounds", { windowId, bounds: { windowState: "minimized" } });
-      await page.waitForFunction(() => document.visibilityState === "hidden", undefined, { timeout: 5_000 });
-      await waitForWorkerState(page, ["paused"], 5_000);
+      await waitForSignal(signals, "/__test/visibility?role=visibility&value=hidden");
+      await waitForSignal(signals, "/__test/worker-visibility?role=visibility&value=hidden");
 
       await cdp.send("Browser.setWindowBounds", { windowId, bounds: { windowState: bounds.windowState } });
       await page.bringToFront();
-      await page.waitForFunction(() => document.visibilityState === "visible", undefined, { timeout: 5_000 });
+      await waitForSignal(signals, "/__test/visibility?role=visibility&value=visible");
+      await waitForSignal(signals, "/__test/worker-visibility?role=visibility&value=visible");
+      const paused = "/__test/worker-lifecycle?role=visibility&value=paused";
+      const active = "/__test/worker-lifecycle?role=visibility&value=active";
+      await waitForSignal(signals, paused);
+      await waitForSignal(signals, active);
+      assert.ok(signals.indexOf(paused) < signals.indexOf(active));
       await waitForWorkerState(page, ["active"], 5_000);
     } finally {
       await cdp.send("Browser.setWindowBounds", { windowId, bounds: { windowState: bounds.windowState } });
