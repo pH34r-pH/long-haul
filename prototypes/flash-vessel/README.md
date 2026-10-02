@@ -1,8 +1,8 @@
 # Flash Vessel browser capability prototype
 
-**Status: local prototype. This is not part of the Long Haul runtime or a hosted service.**
+**Status: capability-only prototype. It is not part of the Long Haul runtime and performs no work.**
 
-This prototype demonstrates the first page-owned Flash boundary from [Long Haul #155](https://github.com/pH34r-pH/long-haul/issues/155) and [#156](https://github.com/pH34r-pH/long-haul/issues/156): work starts only after an explicit **Join for this tab** action, cheap browser-exposed hints keep their unknown state, the instance ID exists only in worker memory, and the page can pause or stop the worker. It does not claim or execute work.
+This prototype demonstrates the first page-owned Flash boundary from [Long Haul #155](https://github.com/pH34r-pH/long-haul/issues/155) and [#156](https://github.com/pH34r-pH/long-haul/issues/156): hints are read only after an explicit **Join for this tab** action, cheap browser-exposed hints keep their unknown state, and the page can pause or stop the worker. The worker generates a per-session instance ID and sends it with the snapshot to the page; the page keeps that snapshot in memory after the worker stops. Neither the ID nor snapshot is persisted, and the page can discard both by closing the tab. It does not claim or execute work.
 
 ## Run locally
 
