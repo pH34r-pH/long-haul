@@ -154,7 +154,7 @@ test("stop and actual navigation terminate the page-owned worker", browserTestOp
   }
 });
 
-test("browser tab visibility pauses and resumes its worker", {
+test("minimizing the browser hides the page and pauses its worker", {
   ...browserTestOptions,
   timeout: 20_000,
   skip: !chromium
@@ -174,22 +174,21 @@ test("browser tab visibility pauses and resumes its worker", {
     await page.getByRole("button", { name: "Join for this tab" }).click();
     await waitForWorkerState(page, ["active"]);
 
-    await page.evaluate(() => {
-      const opener = document.createElement("button");
-      opener.textContent = "Open another tab";
-      opener.onclick = () => window.open(location.href, "_blank");
-      document.body.append(opener);
-    });
-    const popupReady = page.waitForEvent("popup");
-    await page.getByRole("button", { name: "Open another tab" }).click();
-    const secondTab = await popupReady;
-    await secondTab.waitForLoadState();
-    await page.waitForFunction(() => document.visibilityState === "hidden", undefined, { timeout: 5_000 });
-    await waitForWorkerState(page, ["paused"], 5_000);
+    const cdp = await context.newCDPSession(page);
+    const { windowId, bounds } = await cdp.send("Browser.getWindowForTarget");
+    try {
+      await cdp.send("Browser.setWindowBounds", { windowId, bounds: { windowState: "minimized" } });
+      await page.waitForFunction(() => document.visibilityState === "hidden", undefined, { timeout: 5_000 });
+      await waitForWorkerState(page, ["paused"], 5_000);
 
-    await page.bringToFront();
-    await page.waitForFunction(() => document.visibilityState === "visible", undefined, { timeout: 5_000 });
-    await waitForWorkerState(page, ["active"], 5_000);
+      await cdp.send("Browser.setWindowBounds", { windowId, bounds: { windowState: bounds.windowState } });
+      await page.bringToFront();
+      await page.waitForFunction(() => document.visibilityState === "visible", undefined, { timeout: 5_000 });
+      await waitForWorkerState(page, ["active"], 5_000);
+    } finally {
+      await cdp.send("Browser.setWindowBounds", { windowId, bounds: { windowState: bounds.windowState } });
+      await cdp.detach();
+    }
   } finally {
     await context?.close();
     await browser?.close();

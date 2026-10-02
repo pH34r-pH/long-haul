@@ -49,9 +49,9 @@ jobs:
           npm install --prefix "$deps" --no-save --no-package-lock --ignore-scripts playwright@1.63.0
           playwright="$deps/node_modules/.bin/playwright"
           "$playwright" install --with-deps chromium
-          if ! command -v xvfb-run >/dev/null 2>&1; then
+          if ! command -v xvfb-run >/dev/null 2>&1 || ! command -v openbox >/dev/null 2>&1; then
             sudo apt-get update
-            sudo apt-get install -y xvfb
+            sudo apt-get install -y xvfb openbox
           fi
           module_path="$deps/node_modules/playwright"
           chromium_path="$(PLAYWRIGHT_MODULE_PATH="$module_path" node -e 'process.stdout.write(require(process.env.PLAYWRIGHT_MODULE_PATH).chromium.executablePath())')"
@@ -67,9 +67,15 @@ jobs:
           HEADED_BROWSER_TEST: "1"
         run: |
           xvfb-run --auto-servernum --server-args='-screen 0 1280x1024x24' \
-            node --test \
-              prototypes/flash-vessel/tests/unit.test.mjs \
-              prototypes/flash-vessel/tests/browser.test.mjs
+            bash -euo pipefail -c '
+              openbox --sm-disable >/dev/null 2>&1 &
+              window_manager=$!
+              trap "kill $window_manager 2>/dev/null || true" EXIT
+              sleep 1
+              node --test \
+                prototypes/flash-vessel/tests/unit.test.mjs \
+                prototypes/flash-vessel/tests/browser.test.mjs
+            '
 
   deploy:
     name: Publish UI-only artifact
