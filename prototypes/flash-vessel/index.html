@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Flash Vessel capability prototype</title>
+    <style>
+      :root { font: 16px/1.5 system-ui, sans-serif; color-scheme: light dark; }
+      body { max-width: 52rem; margin: 3rem auto; padding: 0 1rem; }
+      h1 { line-height: 1.15; }
+      .notice { border: 1px solid #8888; border-radius: 0.5rem; padding: 1rem; }
+      .controls { display: flex; gap: 0.75rem; margin: 1.25rem 0; }
+      button { font: inherit; padding: 0.55rem 0.9rem; }
+      button:disabled { opacity: 0.6; }
+      #status { min-height: 1.5em; }
+      pre { overflow: auto; padding: 1rem; border-radius: 0.5rem; background: #8882; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Flash Vessel capability prototype</h1>
+      <p class="notice">This local prototype only reads exposed browser hints after you join. It does not benchmark, load a model, claim work, access sensors, or contact a task service.</p>
+      <div class="controls">
+        <button id="join" type="button">Join for this tab</button>
+        <button id="stop" type="button" disabled>Stop this tab's worker</button>
+      </div>
+      <p id="status" data-state="idle" role="status" aria-live="polite">Not joined. No worker is active.</p>
+      <h2>Capability snapshot</h2>
+      <pre id="snapshot">No snapshot yet.</pre>
+    </main>
+    <script type="module" src="./main.mjs"></script>
+  </body>
+</html>
