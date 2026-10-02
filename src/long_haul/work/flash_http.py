@@ -92,10 +92,22 @@ class FlashHTTPAdapter:
             return _response(start_response, "413 Payload Too Large", {"error": "body_too_large"})
         except (json.JSONDecodeError, UnicodeDecodeError, ValueError, ValidationError) as exc:
             if isinstance(exc, LeaseError):
-                return _response(start_response, "409 Conflict", {"error": "lease_conflict", "detail": str(exc)})
+                return _response(start_response, "409 Conflict", {
+                    "error": "lease_conflict", "message": "claim is stale, expired, or inactive",
+                })
             if isinstance(exc, VerificationError):
-                return _response(start_response, "422 Unprocessable Entity", {"error": "invalid_result", "detail": str(exc)})
-            return _response(start_response, "400 Bad Request", {"error": "invalid_request", "detail": str(exc)})
+                return _response(start_response, "422 Unprocessable Entity", {
+                    "error": "invalid_result", "message": "result was rejected by verification",
+                })
+            return _response(start_response, "400 Bad Request", {
+                "error": "invalid_request", "message": "request is malformed or invalid",
+            })
+        except Exception:  # noqa: BLE001 - injected verifier/storage failures are private.
+            # Verifier and future storage exceptions may contain private
+            # diagnostics. Keep details internal and return a fixed response.
+            return _response(start_response, "500 Internal Server Error", {
+                "error": "internal_error", "message": "request could not be completed",
+            })
 
     def _claim(self, body: bytes, start_response: StartResponse):
         _ClaimRequest.model_validate(self._decode(body))

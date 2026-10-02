@@ -138,6 +138,38 @@ def test_http_lost_completion_response_retry_and_accepted_result_is_immutable():
     assert request(app, "/v1/jobs/claim", {}) == (200, {"status": "no_work"})
 
 
+def test_private_verifier_diagnostics_are_not_reflected_by_http():
+    diagnostic = "private storage path /secret/partition and token=hidden"
+
+    def failing_verify(contract, result):
+        raise RuntimeError(diagnostic)
+
+    app, _, _ = build(verifier=failing_verify)
+    delivery = claim(app)
+    status, body = lease_request(app, "complete", delivery, result={"count": 5})
+    assert status == 500
+    assert body == {
+        "error": "internal_error", "message": "request could not be completed",
+    }
+    assert diagnostic not in json.dumps(body)
+
+
+def test_public_validation_and_stale_lease_errors_use_fixed_messages():
+    app, _, clock = build()
+    delivery = claim(app)
+    clock.advance(10)
+    status, stale_body = lease_request(app, "renew", delivery)
+    assert status == 409
+    assert stale_body == {
+        "error": "lease_conflict", "message": "claim is stale, expired, or inactive",
+    }
+    status, invalid_body = request(app, "/v1/jobs/claim", {"unexpected_private": "value"})
+    assert status == 400
+    assert invalid_body == {
+        "error": "invalid_request", "message": "request is malformed or invalid",
+    }
+
+
 @pytest.mark.parametrize("expiry_kind", ["lease", "wall"])
 def test_expiry_during_http_verification_does_not_commit_or_exceed_budgets(expiry_kind):
     clock = FakeClock()
