@@ -14,7 +14,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "ruff>=0.6"]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.6",
+  "azure-storage-blob==12.31.0",
+  "azure-storage-queue==12.18.0",
+]
 
 [tool.setuptools]
 license-files = ["LICENSE", "NOTICE"]

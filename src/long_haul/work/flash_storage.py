@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import secrets
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from dataclasses import dataclass
-from itertools import islice
 from typing import Any, Protocol
 
 from pydantic import BaseModel, ConfigDict
@@ -21,6 +21,7 @@ from .flash_delivery import Delivery, LeaseError, VerificationError
 
 STATE_VERSION = 1
 _SETTLED_REFERENCE = object()
+_LOGGER = logging.getLogger(__name__)
 
 
 def _new_claim_token() -> str:
@@ -32,15 +33,14 @@ class FlashStorageOptions:
     lease_seconds: int
     token_factory: Callable[[], str] = _new_claim_token
     recovery_scan_limit: int = 256
-    token_lookup_limit: int = 256
     accepted_trigger_drain_limit: int = 8
     max_local_claims: int = 128
 
     def __post_init__(self) -> None:
         if self.lease_seconds <= 0:
             raise ValueError("lease_seconds must be positive")
-        if min(self.recovery_scan_limit, self.token_lookup_limit,
-               self.accepted_trigger_drain_limit, self.max_local_claims) < 1:
+        if min(self.recovery_scan_limit, self.accepted_trigger_drain_limit,
+               self.max_local_claims) < 1:
             raise ValueError("storage scan and claim limits must be positive")
 
 
@@ -57,7 +57,7 @@ class _BlobDownload(Protocol):
 
 class _Container(Protocol):
     def get_blob_client(self, name: str) -> _Blob: ...
-    def list_blobs(self) -> Iterable[Any]: ...
+    def list_blobs(self, **kwargs: Any) -> Any: ...
 
 
 class _Queue(Protocol):
@@ -89,6 +89,22 @@ class _JobState(BaseModel):
         if self.schema_version != STATE_VERSION:
             raise ValueError("unsupported durable state version")
         return self
+
+
+class _ClaimIndex(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    schema_version: int = STATE_VERSION
+    job_id: str
+    generation: int
+    attempt_id: str
+    claim_hash: str
+    expires_at: float
+
+
+class _NotificationCursor(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    schema_version: int = STATE_VERSION
+    continuation_token: str | None = None
 
 
 @dataclass
@@ -131,6 +147,10 @@ class DurableFlashDelivery:
         if not job_id or any(ch not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_" for ch in job_id):
             raise ValueError("job_id must be an opaque path-safe identifier")
         return f"flash-jobs/v1/{job_id}.json"
+
+    @staticmethod
+    def _claim_index_name(claim_hash: str) -> str:
+        return f"flash-claim-index/v1/{claim_hash}.json"
 
     def enqueue(self, job_id: str, contract: WorkContract) -> None:
         state = _JobState(job_id=job_id, contract=contract.model_dump(mode="json"), started_at=self.clock())
@@ -274,9 +294,24 @@ class DurableFlashDelivery:
         # ETag changes fence slow verifiers before the acceptance commit point.
         state, etag = self._read(context.job_id)
         self._require_claim(context, state)
+        claim_hash = self._token_hash(token)
+        self._write_claim_index(_ClaimIndex(
+            job_id=context.job_id,
+            generation=context.generation,
+            attempt_id=context.attempt_id,
+            claim_hash=claim_hash,
+            expires_at=state.started_at + contract.budget.wall_seconds,
+        ))
+        # Index creation is a separate Blob operation and may block long enough
+        # for the claim lease or work deadline to expire. Re-read both state and
+        # clock after that I/O; only this fresh snapshot may be used for the
+        # acceptance CAS. A crash after the index write leaves a harmless index
+        # entry because retry lookup validates it against accepted job state.
+        state, etag = self._read(context.job_id)
+        self._require_claim(context, state)
         state.accepted_generation = context.generation
         state.accepted_attempt_id = context.attempt_id
-        state.accepted_claim_hash = self._token_hash(token)
+        state.accepted_claim_hash = claim_hash
         state.accepted_result_json = result_json
         state.notification_pending = True
         state.notification_sent = False
@@ -290,9 +325,21 @@ class DurableFlashDelivery:
         return None if state.accepted_result_json is None else json.loads(state.accepted_result_json)
 
     def recover_notifications(self) -> None:
-        """Replay accepted-but-unnotified work; notifier deduplicates by attempt ID."""
-        blobs = self.container.list_blobs(name_starts_with="flash-jobs/v1/")
-        for item in islice(blobs, self.options.recovery_scan_limit):
+        """Process one durable continuation page; repeated calls cycle fairly."""
+        cursor, cursor_etag = self._read_notification_cursor()
+        listings = self.container.list_blobs(
+            name_starts_with="flash-jobs/v1/",
+            results_per_page=self.options.recovery_scan_limit,
+            maxresults=self.options.recovery_scan_limit,
+        )
+        pages = listings.by_page(continuation_token=cursor.continuation_token)
+        try:
+            page = next(pages)
+        except StopIteration:
+            cursor.continuation_token = None
+            self._write_notification_cursor(cursor, cursor_etag)
+            return
+        for item in page:
             name = item.name if hasattr(item, "name") else item["name"]
             if not name.endswith(".json"):
                 continue
@@ -304,18 +351,67 @@ class DurableFlashDelivery:
             result = state.accepted_result_json
             if attempt is None or result is None:
                 continue
-            self.notifier(job_id, attempt, json.loads(result))
-            # CAS means concurrent recovery workers may both notify; stable key
-            # lets the downstream outbox suppress duplicates.
-            state.notification_pending = False
-            state.notification_sent = True
             try:
-                self._write(state, etag)
-            except LeaseError:
-                continue
-            except Exception as exc:
-                if self._status(exc) not in (409, 412):
+                self.notifier(job_id, attempt, json.loads(result))
+            except Exception:  # noqa: BLE001 - notifier implementations are injected
+                # Leave this record pending and keep the durable cursor moving;
+                # an unhealthy destination must not pin every later job behind
+                # one repeatedly failing notification.
+                _LOGGER.warning("notification delivery failed for job %s; leaving it pending", job_id)
+            else:
+                # CAS means concurrent recovery workers may both notify; stable key
+                # lets the downstream outbox suppress duplicates.
+                state.notification_pending = False
+                state.notification_sent = True
+                try:
+                    self._write(state, etag)
+                except LeaseError:
+                    continue
+                except Exception as exc:
+                    if self._status(exc) not in (409, 412):
+                        raise
+        cursor.continuation_token = pages.continuation_token
+        self._write_notification_cursor(cursor, cursor_etag)
+
+    def _read_notification_cursor(self) -> tuple[_NotificationCursor, str]:
+        name = "flash-meta/v1/notification-cursor.json"
+        blob = self.container.get_blob_client(name)
+        try:
+            download: _BlobDownload = blob.download_blob()
+        except Exception as exc:
+            if self._status(exc) != 404:
+                raise
+            try:
+                blob.upload_blob(self._encode(_NotificationCursor()), overwrite=False)
+            except Exception as create_error:
+                if self._status(create_error) not in (409, 412):
                     raise
+            download = blob.download_blob()
+        raw = download.readall()
+        cursor = _NotificationCursor.model_validate_json(raw)
+        if cursor.schema_version != STATE_VERSION:
+            raise ValueError("unsupported notification cursor version")
+        return cursor, download.properties.etag
+
+    def _write_notification_cursor(self, cursor: _NotificationCursor, etag: str) -> None:
+        blob = self.container.get_blob_client("flash-meta/v1/notification-cursor.json")
+        try:
+            self._conditional_upload(blob, self._encode(cursor), etag)
+        except LeaseError:
+            # Another recovery worker advanced the durable cursor.
+            return
+
+    def _write_claim_index(self, index: _ClaimIndex) -> None:
+        blob = self.container.get_blob_client(self._claim_index_name(index.claim_hash))
+        try:
+            blob.upload_blob(self._encode(index), overwrite=False)
+        except Exception as exc:
+            if self._status(exc) not in (409, 412):
+                raise
+            download: _BlobDownload = blob.download_blob()
+            existing = _ClaimIndex.model_validate_json(download.readall())
+            if existing != index:
+                raise LeaseError("claim token index conflicts with accepted generation") from exc
 
     def _settle(self, context: _ClaimContext) -> None:
         try:
@@ -359,13 +455,16 @@ class DurableFlashDelivery:
 
     def _write(self, state: _JobState, etag: str) -> None:
         blob = self.container.get_blob_client(self._blob_name(state.job_id))
+        self._conditional_upload(blob, self._encode(state), etag)
+
+    def _conditional_upload(self, blob: _Blob, payload: bytes, etag: str) -> None:
         try:
             from azure.core import MatchConditions  # type: ignore[import-not-found]
             condition: Any = MatchConditions.IfNotModified
         except ImportError:
             condition = "IfNotModified"
         try:
-            blob.upload_blob(self._encode(state), overwrite=True, etag=etag,
+            blob.upload_blob(payload, overwrite=True, etag=etag,
                              match_condition=condition)
         except Exception as exc:
             if self._status(exc) == 412:
@@ -399,15 +498,22 @@ class DurableFlashDelivery:
 
     def _find_accepted_claim(self, token: str) -> _JobState | None:
         token_hash = self._token_hash(token)
-        blobs = self.container.list_blobs(name_starts_with="flash-jobs/v1/")
-        for item in islice(blobs, self.options.token_lookup_limit):
-            name = item.name if hasattr(item, "name") else item["name"]
-            if name.endswith(".json"):
-                job_id = name.rsplit("/", 1)[-1][:-5]
-                state, _ = self._read(job_id)
-                if state.accepted_claim_hash == token_hash:
-                    return state
-        return None
+        blob = self.container.get_blob_client(self._claim_index_name(token_hash))
+        try:
+            download: _BlobDownload = blob.download_blob()
+        except Exception as exc:
+            if self._status(exc) == 404:
+                return None
+            raise
+        index = _ClaimIndex.model_validate_json(download.readall())
+        if index.claim_hash != token_hash or index.schema_version != STATE_VERSION:
+            return None
+        state, _ = self._read(index.job_id)
+        if (state.accepted_claim_hash != token_hash
+                or state.accepted_generation != index.generation
+                or state.accepted_attempt_id != index.attempt_id):
+            return None
+        return state
 
     def _prune_claims(self) -> None:
         now = self.clock()
