@@ -39,6 +39,7 @@ from .flash_delivery import (
     LeaseError,
     VerificationError,
 )
+from .flash_http import FlashHTTPAdapter
 from .progress import (
     AttemptStep,
     ProgressIntervention,
@@ -68,6 +69,7 @@ __all__ = [
     "FailurePredicate",
     "FlashDeliveryFixture",
     "FlashExecutionExtensionV1",
+    "FlashHTTPAdapter",
     "LeaseError",
     "PredicateEvidence",
     "PredicateKind",
