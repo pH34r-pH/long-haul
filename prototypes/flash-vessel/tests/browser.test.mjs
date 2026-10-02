@@ -102,14 +102,10 @@ async function waitForSignal(signals, signal, expectedCount = 1) {
 }
 
 async function waitForWindowId(title) {
-  const expires = Date.now() + 3_000;
-  while (Date.now() < expires) {
-    const { stdout } = await execFileAsync("wmctrl", ["-l"]);
-    const row = stdout.split("\n").find((line) => line.includes(title));
-    if (row) return row.trim().split(/\s+/, 1)[0];
-    await new Promise((resolveWait) => setTimeout(resolveWait, 10));
-  }
-  assert.fail(`Timed out waiting for browser window titled ${title}`);
+  const { stdout } = await execFileAsync("xdotool", ["search", "--sync", "--onlyvisible", "--name", title]);
+  const windowId = stdout.trim().split(/\s+/, 1)[0];
+  assert.match(windowId, /^(?:0x)?[0-9a-f]+$/i);
+  return windowId;
 }
 
 async function waitForState(page, states, timeout = 30_000) {
@@ -211,7 +207,7 @@ test("native page visibility pauses and resumes its worker when available", {
     let windowId;
     try {
       windowId = await waitForWindowId("flash-visibility-test");
-      await execFileAsync("wmctrl", ["-i", "-r", windowId, "-b", "add,hidden"]);
+      await execFileAsync("xdotool", ["windowminimize", "--sync", windowId]);
     } catch (error) {
       t.skip(`Real visibility unverified: the test window manager could not hide the browser (${error.message}).`);
       return;
@@ -225,19 +221,19 @@ test("native page visibility pauses and resumes its worker when available", {
       return;
     }
     if (actualVisibility !== "hidden") {
-      await execFileAsync("wmctrl", ["-i", "-a", windowId]);
-      t.skip(`Real visibility unverified: window manager hide left document.visibilityState=${actualVisibility}.`);
+      await execFileAsync("xdotool", ["windowactivate", "--sync", windowId]);
+      t.skip(`Real visibility unverified: actual window minimization left document.visibilityState=${actualVisibility}.`);
       return;
     }
     await waitForSignal(signals, "/__test/visibility?role=visibility&value=hidden");
     await waitForSignal(signals, "/__test/worker-visibility?role=visibility&value=hidden");
+    const paused = "/__test/worker-lifecycle?role=visibility&value=paused";
+    await waitForSignal(signals, paused);
 
-    await execFileAsync("wmctrl", ["-i", "-a", windowId]);
+    await execFileAsync("xdotool", ["windowactivate", "--sync", windowId]);
     await waitForSignal(signals, "/__test/visibility?role=visibility&value=visible");
     await waitForSignal(signals, "/__test/worker-visibility?role=visibility&value=visible");
-    const paused = "/__test/worker-lifecycle?role=visibility&value=paused";
     const active = "/__test/worker-lifecycle?role=visibility&value=active";
-    await waitForSignal(signals, paused);
     await waitForSignal(signals, active);
     assert.ok(signals.indexOf(paused) < signals.indexOf(active));
     await waitForWorkerState(page, ["active"], 5_000);
