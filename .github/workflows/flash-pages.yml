@@ -1,0 +1,121 @@
+name: Flash Vessel Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - prototypes/flash-vessel/**
+      - .github/workflows/flash-pages.yml
+  pull_request:
+    paths:
+      - prototypes/flash-vessel/**
+      - .github/workflows/flash-pages.yml
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the tested main revision after Pages setup is approved
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flash-pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Flash unit and browser tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Install pinned Playwright and Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          deps="$RUNNER_TEMP/flash-vessel-browser-deps"
+          npm install --prefix "$deps" --no-save --no-package-lock --ignore-scripts playwright@1.63.0
+          playwright="$deps/node_modules/.bin/playwright"
+          "$playwright" install --with-deps chromium
+          if ! command -v xvfb-run >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y xvfb
+          fi
+          module_path="$deps/node_modules/playwright"
+          chromium_path="$(PLAYWRIGHT_MODULE_PATH="$module_path" node -e 'process.stdout.write(require(process.env.PLAYWRIGHT_MODULE_PATH).chromium.executablePath())')"
+          test -x "$chromium_path"
+          printf 'PLAYWRIGHT_MODULE_PATH=%s\n' "$module_path" >> "$GITHUB_ENV"
+          printf 'CHROMIUM_PATH=%s\n' "$chromium_path" >> "$GITHUB_ENV"
+
+      - name: Run required unit, browser, and lifecycle coverage
+        shell: bash
+        env:
+          REQUIRE_BROWSER_TEST: "1"
+          REQUIRE_VISIBILITY_TEST: "1"
+          HEADED_BROWSER_TEST: "1"
+        run: |
+          xvfb-run --auto-servernum --server-args='-screen 0 1280x1024x24' \
+            node --test \
+              prototypes/flash-vessel/tests/unit.test.mjs \
+              prototypes/flash-vessel/tests/browser.test.mjs
+
+  deploy:
+    name: Publish UI-only artifact
+    needs: test
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      vars.FLASH_PAGES_DEPLOY_ENABLED == 'true' &&
+      (github.event_name == 'push' ||
+       (github.event_name == 'workflow_dispatch' && inputs.publish == true))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+
+      - name: Stage only browser UI files
+        shell: bash
+        run: |
+          set -euo pipefail
+          site="$RUNNER_TEMP/flash-pages-site"
+          mkdir -p "$site"
+          cp \
+            prototypes/flash-vessel/capability-snapshot.mjs \
+            prototypes/flash-vessel/index.html \
+            prototypes/flash-vessel/main.mjs \
+            prototypes/flash-vessel/worker.mjs \
+            "$site/"
+          expected=$'capability-snapshot.mjs\nindex.html\nmain.mjs\nworker.mjs'
+          actual="$(find "$site" -maxdepth 1 -type f -printf '%f\n' | sort)"
+          test "$actual" = "$expected"
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: ${{ runner.temp }}/flash-pages-site
+
+      - name: Deploy GitHub Pages artifact
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
