@@ -19,10 +19,7 @@ const mimeTypes = {
   ".mjs": "text/javascript; charset=utf-8",
 };
 
-test("browser requires Join, pauses on hidden, stops, and creates a new ephemeral ID", {
-  skip: !chromium && "Playwright is not installed; browser smoke test unavailable",
-  timeout: 20_000,
-}, async () => {
+async function startServer() {
   const server = createServer(async (request, response) => {
     try {
       const pathname = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
@@ -39,6 +36,47 @@ test("browser requires Join, pauses on hidden, stops, and creates a new ephemera
     }
   });
   await new Promise((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
+  const address = server.address();
+  return { server, url: `http://127.0.0.1:${address.port}/` };
+}
+
+async function waitForWorkerState(page, states) {
+  await page.waitForFunction((expected) => {
+    const state = document.querySelector("#status")?.dataset.state;
+    return expected.includes(state);
+  }, states);
+  assert.notEqual(await page.locator("#status").getAttribute("data-state"), "error");
+}
+
+async function assertWorkerLoaded(page, expected) {
+  assert.equal(await page.evaluate(() => performance.getEntriesByType("resource")
+    .some((entry) => entry.name.endsWith("/worker.mjs"))), expected);
+}
+
+async function assertNoStoredState(page) {
+  assert.equal(await page.evaluate(() => localStorage.length + sessionStorage.length), 0);
+}
+
+async function setPageVisibility(page, state) {
+  await page.evaluate((visibility) => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: visibility });
+    document.dispatchEvent(new Event("visibilitychange"));
+  }, state);
+  await waitForWorkerState(page, [state === "hidden" ? "paused" : "active"]);
+}
+
+async function readSnapshot(page) {
+  await waitForWorkerState(page, ["active", "paused"]);
+  const snapshot = JSON.parse(await page.locator("#snapshot").textContent());
+  assert.equal(snapshot.schemaVersion, 1);
+  return snapshot;
+}
+
+test("browser requires Join, pauses on hidden, stops, and creates a new ephemeral ID", {
+  skip: !chromium && "Playwright is not installed; browser smoke test unavailable",
+  timeout: 20_000,
+}, async () => {
+  const { server, url } = await startServer();
 
   let browser;
   try {
@@ -48,54 +86,31 @@ test("browser requires Join, pauses on hidden, stops, and creates a new ephemera
       args: ["--no-sandbox", "--disable-dev-shm-usage"],
     });
     const page = await browser.newPage();
-    const address = server.address();
-    await page.goto(`http://127.0.0.1:${address.port}/`);
+    await page.goto(url);
 
     assert.equal(await page.locator("#status").getAttribute("data-state"), "idle");
     assert.equal(await page.locator("#snapshot").textContent(), "No snapshot yet.");
-    assert.equal(await page.evaluate(() => localStorage.length + sessionStorage.length), 0);
-    assert.equal(await page.evaluate(() => performance.getEntriesByType("resource")
-      .some((entry) => entry.name.endsWith("/worker.mjs"))), false);
+    await assertNoStoredState(page);
+    await assertWorkerLoaded(page, false);
 
     await page.getByRole("button", { name: "Join for this tab" }).click();
-    await page.waitForFunction(() => {
-      const state = document.querySelector("#status")?.dataset.state;
-      return state === "active" || state === "paused" || state === "error";
-    });
-    assert.notEqual(await page.locator("#status").getAttribute("data-state"), "error");
-    assert.equal(await page.evaluate(() => performance.getEntriesByType("resource")
-      .some((entry) => entry.name.endsWith("/worker.mjs"))), true);
-
-    const firstSnapshot = JSON.parse(await page.locator("#snapshot").textContent());
-    assert.equal(firstSnapshot.schemaVersion, 1);
+    await waitForWorkerState(page, ["active", "paused"]);
+    await assertWorkerLoaded(page, true);
+    const firstSnapshot = await readSnapshot(page);
     assert.match(firstSnapshot.flashInstanceId, /^[0-9a-f-]{36}$/i);
-    assert.equal(await page.evaluate(() => localStorage.length + sessionStorage.length), 0);
+    await assertNoStoredState(page);
 
-    await page.evaluate(() => {
-      Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
-      document.dispatchEvent(new Event("visibilitychange"));
-    });
-    await page.waitForFunction(() => document.querySelector("#status")?.dataset.state === "paused");
-
-    await page.evaluate(() => {
-      Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
-      document.dispatchEvent(new Event("visibilitychange"));
-    });
-    await page.waitForFunction(() => document.querySelector("#status")?.dataset.state === "active");
+    await setPageVisibility(page, "hidden");
+    await setPageVisibility(page, "visible");
 
     await page.getByRole("button", { name: "Stop this tab's worker" }).click();
-    await page.waitForFunction(() => document.querySelector("#status")?.dataset.state === "stopped");
+    await waitForWorkerState(page, ["stopped"]);
 
     await page.getByRole("button", { name: "Join for this tab" }).click();
-    await page.waitForFunction(() => {
-      const state = document.querySelector("#status")?.dataset.state;
-      return state === "active" || state === "paused" || state === "error";
-    });
-    assert.notEqual(await page.locator("#status").getAttribute("data-state"), "error");
-    const secondSnapshot = JSON.parse(await page.locator("#snapshot").textContent());
+    const secondSnapshot = await readSnapshot(page);
     assert.notEqual(secondSnapshot.flashInstanceId, firstSnapshot.flashInstanceId);
     await page.evaluate(() => window.dispatchEvent(new Event("pagehide")));
-    await page.waitForFunction(() => document.querySelector("#status")?.dataset.state === "stopped");
+    await waitForWorkerState(page, ["stopped"]);
   } finally {
     await browser?.close();
     await new Promise((resolveClose, rejectClose) => server.close((error) => error ? rejectClose(error) : resolveClose()));
