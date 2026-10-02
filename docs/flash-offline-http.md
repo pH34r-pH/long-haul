@@ -27,7 +27,34 @@ rewrite the accepted result. This property is scoped to the live in-memory
 process and is not a durable idempotency guarantee.
 
 Owner operations that view work are separate from worker compute donation. No
-browser admission, access grants, sensors, model execution, or production
-queueing is provided here. A durable backend remains a separate qualification
-gate: Azure Queue Storage plus a conditionally written result store must be
-designed and validated on its own before any migration or production claim.
+browser admission, access grants, sensors, model execution, live Azure
+provisioning, or production endpoint wiring is provided here.
+
+## Offline Azure storage adapter
+
+`long_haul.work.DurableFlashDelivery` accepts injected Azure Queue Storage and
+Blob Container SDK clients, plus an injected clock, verifier, and notifier. It
+is tested offline with fakes and does not connect to Azure by itself. Queue
+messages contain only a version and `job_id`; contract, deadline, attempt and
+claim-generation counters, immutable accepted result, and notification state
+live in one versioned per-job blob. State changes use ETag conditional writes.
+Attempt or wall-budget exhaustion writes a terminal reason before the queue
+reference is deleted, so duplicate triggers do not revive exhausted work.
+
+Claim tokens are generated with a cryptographically secure random factory by
+default. The service process keeps token-to-message and rotating pop-receipt
+state in memory; only a hash of the claim token is stored in the job record.
+Queue receipts are never returned by the adapter's worker claim result. A
+process restart drops outstanding receipt mappings, so Queue visibility expiry
+redelivers the reference and a new claim generation fences the prior worker.
+
+Acceptance is committed to Blob state before the trigger message is deleted.
+If a process stops between those services, redelivery observes the accepted
+record and removes the trigger without executing the work again. Accepted
+records whose output notification is pending are scanned and replayed before
+each claim or by calling the recovery method. Queue and Blob do not share a
+transaction: execution and notification delivery are at least once. An output
+notifier must dedupe on the stable accepted attempt ID. Conditional state
+updates choose one accepted generation/result. This adapter alone is not a
+production gateway, qualification, rate limiter, or cross-service atomicity
+guarantee.

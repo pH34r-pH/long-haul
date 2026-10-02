@@ -34,11 +34,13 @@ class _CompleteRequest(_LeaseRequest):
     result: Any
 
 
-def _response(start_response: StartResponse, status: str, payload: dict[str, Any] | None = None):
+def _response(start_response: StartResponse, status: str, payload: dict[str, Any] | None = None,
+              extra_headers: list[tuple[str, str]] | None = None):
     data = b"" if payload is None else json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
     headers = [("Content-Length", str(len(data)))]
     if payload is not None:
         headers.append(("Content-Type", "application/json; charset=utf-8"))
+    headers.extend(extra_headers or [])
     start_response(status, headers)
     return [data]
 
@@ -75,7 +77,8 @@ class FlashHTTPAdapter:
         method = environ.get("REQUEST_METHOD", "")
         path = environ.get("PATH_INFO", "")
         if method != "POST":
-            return _response(start_response, "405 Method Not Allowed", {"error": "method_not_allowed"})
+            return _response(start_response, "405 Method Not Allowed",
+                             {"error": "method_not_allowed"}, [("Allow", "POST")])
 
         try:
             content_type = environ.get("CONTENT_TYPE", "").split(";", 1)[0].strip().lower()
@@ -147,10 +150,10 @@ class FlashHTTPAdapter:
         return parts[3]
 
     def _read_body(self, environ: WSGIEnvironment) -> bytes:
-        try:
-            length = int(environ.get("CONTENT_LENGTH") or "0")
-        except ValueError as exc:
-            raise ValueError("invalid Content-Length") from exc
+        raw_length = environ.get("CONTENT_LENGTH")
+        if raw_length is None or not raw_length.isascii() or not raw_length.isdecimal():
+            raise ValueError("invalid Content-Length")
+        length = int(raw_length)
         if length < 0:
             raise ValueError("invalid Content-Length")
         if length > self.max_body_bytes:

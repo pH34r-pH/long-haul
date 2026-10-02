@@ -40,6 +40,7 @@ from .flash_delivery import (
     VerificationError,
 )
 from .flash_http import FlashHTTPAdapter
+from .flash_storage import DurableFlashDelivery
 from .progress import (
     AttemptStep,
     ProgressIntervention,
@@ -60,6 +61,7 @@ __all__ = [
     "CheckRecord",
     "CheckpointFact",
     "Delivery",
+    "DurableFlashDelivery",
     "EvaluationAuthority",
     "EvaluationRunner",
     "EvaluatorIdentity",

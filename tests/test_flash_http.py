@@ -55,14 +55,19 @@ def build(clock=None, *, contract=None, verifier=None, lease_seconds=10,
     ), fixture, clock
 
 
-def request(app, path, value=None, *, raw=None, method="POST", content_type="application/json"):
+def request(app, path, value=None, *, raw=None, method="POST", content_type="application/json", content_length=None,
+            include_headers=False):
     body = raw if raw is not None else json.dumps(value, allow_nan=False).encode()
     status_headers = {}
     environ = {
         "REQUEST_METHOD": method, "PATH_INFO": path,
-        "CONTENT_TYPE": content_type, "CONTENT_LENGTH": str(len(body)),
+        "CONTENT_TYPE": content_type,
         "wsgi.input": io.BytesIO(body),
     }
+    if content_length is not None:
+        environ["CONTENT_LENGTH"] = content_length
+    else:
+        environ["CONTENT_LENGTH"] = str(len(body))
 
     def start_response(status, headers):
         status_headers["status"] = status
@@ -70,7 +75,8 @@ def request(app, path, value=None, *, raw=None, method="POST", content_type="app
 
     response = b"".join(app(environ, start_response))
     parsed = json.loads(response) if response else None
-    return int(status_headers["status"].split()[0]), parsed
+    result = (int(status_headers["status"].split()[0]), parsed)
+    return (*result, status_headers["headers"]) if include_headers else result
 
 
 def claim(app):
@@ -92,9 +98,11 @@ def test_claim_no_work_invalid_admission_and_http_request_validation():
     assert request(app, "/v1/jobs/claim", {"controller_override": True})[0] == 400
     assert request(app, "/v1/jobs/claim", raw=b"{")[0] == 400
     assert request(app, "/v1/jobs/claim", {})[0] == 200
-    assert request(app, "/v1/jobs/claim", {}) == (200, {"status": "no_work"})
+    assert request(app, "/v1/jobs/claim", {})[0:2] == (200, {"status": "no_work"})
     assert request(app, "/v1/jobs/claim", {}, content_type="text/plain")[0] == 400
-    assert request(app, "/v1/jobs/claim", {}, method="GET")[0] == 405
+    status, body, headers = request(app, "/v1/jobs/claim", {}, method="GET", include_headers=True)
+    assert status == 405 and headers["Allow"] == "POST"
+    assert body == {"error": "method_not_allowed"}
     assert request(app, "/v1/jobs/other/renew", {})[0] == 404
 
 
@@ -108,6 +116,17 @@ def test_malformed_and_oversized_payloads_are_rejected_at_http_boundary():
     assert request(app, f"/v1/jobs/{delivery['job_id']}/complete", {
         "lease_id": delivery["lease_id"], "result": {"count": 5}, "accepted": True,
     })[0] == 400
+
+
+def test_malformed_truncated_and_invalid_utf8_content_lengths_are_fixed_errors():
+    app, _, _ = build()
+    for length in ("+2", "1.5", "-1", "x"):
+        status, body = request(app, "/v1/jobs/claim", raw=b"{}", content_length=length)
+        assert (status, body) == (400, {
+            "error": "invalid_request", "message": "request is malformed or invalid",
+        })
+    assert request(app, "/v1/jobs/claim", raw=b"{}", content_length="3")[0] == 400
+    assert request(app, "/v1/jobs/claim", raw=b"\xff")[0] == 400
 
 
 def test_http_renew_abandon_redelivery_stale_fencing_and_invalid_result():
