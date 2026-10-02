@@ -80,16 +80,16 @@ async function waitForSignal(signals, signal, expectedCount = 1) {
   assert.fail(`Timed out waiting for browser lifecycle signal ${signal}`);
 }
 
-async function waitForState(page, states) {
+async function waitForState(page, states, timeout = 30_000) {
   await page.waitForFunction((expected) => {
     const state = document.querySelector("#status")?.dataset.state;
     return expected.includes(state);
-  }, states);
+  }, states, { timeout });
   return page.locator("#status").getAttribute("data-state");
 }
 
-async function waitForWorkerState(page, states) {
-  assert.notEqual(await waitForState(page, states), "error");
+async function waitForWorkerState(page, states, timeout) {
+  assert.notEqual(await waitForState(page, states, timeout), "error");
 }
 
 async function assertWorkerLoaded(page, expected) {
@@ -156,6 +156,7 @@ test("stop and actual navigation terminate the page-owned worker", browserTestOp
 
 test("browser tab visibility pauses and resumes its worker", {
   ...browserTestOptions,
+  timeout: 20_000,
   skip: !chromium
     ? "Playwright is not installed; browser visibility test unavailable"
     : !process.env.DISPLAY && process.env.REQUIRE_VISIBILITY_TEST !== "1"
@@ -173,15 +174,22 @@ test("browser tab visibility pauses and resumes its worker", {
     await page.getByRole("button", { name: "Join for this tab" }).click();
     await waitForWorkerState(page, ["active"]);
 
-    const secondTab = await context.newPage();
-    await secondTab.goto(url);
-    await secondTab.bringToFront();
-    await page.waitForFunction(() => document.visibilityState === "hidden");
-    await waitForWorkerState(page, ["paused"]);
+    await page.evaluate(() => {
+      const opener = document.createElement("button");
+      opener.textContent = "Open another tab";
+      opener.onclick = () => window.open(location.href, "_blank");
+      document.body.append(opener);
+    });
+    const popupReady = page.waitForEvent("popup");
+    await page.getByRole("button", { name: "Open another tab" }).click();
+    const secondTab = await popupReady;
+    await secondTab.waitForLoadState();
+    await page.waitForFunction(() => document.visibilityState === "hidden", undefined, { timeout: 5_000 });
+    await waitForWorkerState(page, ["paused"], 5_000);
 
     await page.bringToFront();
-    await page.waitForFunction(() => document.visibilityState === "visible");
-    await waitForWorkerState(page, ["active"]);
+    await page.waitForFunction(() => document.visibilityState === "visible", undefined, { timeout: 5_000 });
+    await waitForWorkerState(page, ["active"], 5_000);
   } finally {
     await context?.close();
     await browser?.close();
