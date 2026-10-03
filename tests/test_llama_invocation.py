@@ -63,10 +63,11 @@ def test_explicit_controls_are_forwarded_without_defaults(execution_request, tmp
         assert cmd[cmd.index(flag) + 1] == value
         assert cmd.count(flag) == 1
     for flag in ['--no-conversation', '--no-display-prompt', '--no-escape',
-                 '--no-context-shift', '--offline']:
+                 '--no-context-shift', '--offline', '--perf']:
         assert flag in cmd
     assert execution_request.prompt not in cmd
     assert '-p' not in cmd
+    assert '-f' not in cmd
     assert '--no-warmup' in cmd
 
 
@@ -177,7 +178,7 @@ def test_native_subprocess_receives_exact_file_controls_and_closed_stdin(executi
     monkeypatch.setenv('LLAMA_ARG_THREADS', '999')
     path = binary(
         'import os, json\nfrom pathlib import Path\n'
-        "p = Path(sys.argv[sys.argv.index('-f') + 1])\n"
+        "p = Path(sys.argv[sys.argv.index('-bf') + 1])\n"
         "print(json.dumps({'argv':sys.argv[1:], 'prompt_hex':p.read_bytes().hex(),\n"
         " 'stdin':sys.stdin.read(), 'ambient':[k for k in os.environ if k.upper().startswith('LLAMA_ARG_')]}))"
     )
@@ -188,12 +189,12 @@ def test_native_subprocess_receives_exact_file_controls_and_closed_stdin(executi
     assert data['stdin'] == ''
     assert data['ambient'] == []
     assert execution_request.prompt not in data['argv']
-    assert not Path(data['argv'][data['argv'].index('-f') + 1]).exists()
+    assert not Path(data['argv'][data['argv'].index('-bf') + 1]).exists()
     assert result.output.endswith('\n')  # Prepared output is not stripped.
 
 
 def test_output_equal_to_prompt_is_not_deleted(execution_request, binary):
-    path = binary("from pathlib import Path\nsys.stdout.buffer.write(Path(sys.argv[sys.argv.index('-f')+1]).read_bytes())")
+    path = binary("from pathlib import Path\nsys.stdout.buffer.write(Path(sys.argv[sys.argv.index('-bf')+1]).read_bytes())")
     # Avoid text-mode newline normalization obscuring the prefix regression.
     execution_request.prompt = '  repeated content\\n\n'
     result = m.LlamaCppAdapter(path).execute(execution_request)
@@ -215,7 +216,7 @@ def test_failed_process_still_removes_prompt_file(execution_request, binary):
     seen = []
     original = subprocess.run
     def record(argv, **kwargs):
-        seen.append(Path(argv[argv.index('-f') + 1]))
+        seen.append(Path(argv[argv.index('-bf') + 1]))
         return original(argv, **kwargs)
     path = binary("print('fixture failure', file=sys.stderr); sys.exit(4)")
     with patch.object(m.subprocess, 'run', side_effect=record):
@@ -230,7 +231,7 @@ def test_timeout_still_removes_prompt_file(execution_request, binary):
     seen = []
     original = subprocess.run
     def record(argv, **kwargs):
-        seen.append(Path(argv[argv.index('-f') + 1]))
+        seen.append(Path(argv[argv.index('-bf') + 1]))
         return original(argv, **kwargs)
     path = binary('import time; time.sleep(10)')
     with patch.object(m.subprocess, 'run', side_effect=record):

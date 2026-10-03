@@ -19,7 +19,7 @@ _INTEGER_FLAGS = {
 }
 _PREPARED_FLAGS = (
     "--no-conversation", "--no-display-prompt", "--no-escape",
-    "--no-context-shift", "--offline",
+    "--no-context-shift", "--offline", "--perf",
 )
 
 
@@ -66,7 +66,7 @@ def prompt_arguments(prompt: str, options: Mapping[str, object],
         raise ValueError("prepared completion requires a closed prompt file")
     if output_tokens >= options["context_size"]:
         raise ValueError("prepared completion output cap leaves no prompt context")
-    return ["-f", str(path)]
+    return ["-bf", str(path)]
 
 
 def invocation_error(options: Mapping[str, object]) -> str | None:

@@ -11,8 +11,10 @@ keep their previous invocation behavior.
 A profile with `prepared_completion: true` requires an explicit seed, context size,
 and thread count. The caller supplies an already rendered prompt. The adapter:
 
-- writes exact UTF-8 prompt bytes to a temporary file, closed before launch;
+- writes exact UTF-8 prompt bytes to a temporary file, closed before launch,
+  and uses upstream binary-file input (`-bf`) rather than text-file input;
 - disables conversation, prompt display, escape processing and context shifting;
+- requests explicit native performance counters rather than assuming defaults;
 - closes standard input, requests offline operation, and passes GPU layer zero
   explicitly for the CPU case rather than inheriting upstream auto-offload;
 - removes ambient `LLAMA_ARG_*` settings from the child environment;
@@ -34,6 +36,10 @@ be assumed compatible. Older pins may provide the completion interface under the
 CLI name. Supply the exact qualified executable; the adapter never swaps binaries
 or retries with weaker flags after failure.
 
+Upstream text-file (`-f`) handling strips one trailing newline. That changes a
+prepared prompt and can change its token count. The byte-preserving `-bf` path
+is compared against a direct `-p` reference using a harmless public prompt.
+
 Primary source: [pinned completion documentation](https://github.com/ggml-org/llama.cpp/blob/7fe450e19305b828c199d602c23a8337aaa1f03b/tools/completion/README.md).
 The profile changes its existing identity because these controls live in `options`.
 Old feasibility/performance records cannot silently certify the modified profile.
@@ -47,7 +53,8 @@ These tests do not run a model.
 `tests/test_llama_native_completion.py` is a separate opt-in CPU smoke using the
 pinned source and 135M GGUF listed in `tests/fixtures/native-completion.json`. The
 existing public CI builds the completion target and verifies the model hash before
-comparing adapter output to an independently constructed upstream invocation and
+comparing adapter output and reported input count to an independently constructed
+upstream argv-prompt invocation and
 repeating the same seeded request in a fresh process. Without explicitly supplied
 paths the two tests skip; a skip is not native qualification.
 

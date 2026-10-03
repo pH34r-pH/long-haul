@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -41,16 +42,15 @@ def native_request():
     )
 
 
-def test_real_completion_matches_explicit_upstream_invocation(native_request, tmp_path):
+def test_real_completion_matches_explicit_upstream_invocation(native_request):
     adapter, req = native_request
-    rendered = tmp_path / 'reference-prompt.txt'
-    rendered.write_bytes(req.prompt.encode('utf-8'))
-    # Independently construct the reference argv, rather than calling _command.
+    # Use direct -p as an independent reference for the adapter's -bf input.
+    # The generic public greeting is safe in argv; real private prompts are not.
     command = [str(adapter.binary), '-m', req.profile.options['model_path'],
-               '-f', str(rendered), '-n', '16', '--temp', '0.7', '--seed', '42',
+               '-p', req.prompt, '-n', '16', '--temp', '0.7', '--seed', '42',
                '--ctx-size', '512', '--threads', '1', '--threads-batch', '1',
                '-ngl', '0', '--no-warmup', '--no-conversation', '--no-display-prompt',
-               '--no-escape', '--no-context-shift', '--offline']
+               '--no-escape', '--no-context-shift', '--offline', '--perf']
     env = {k: v for k, v in os.environ.items() if not k.upper().startswith('LLAMA_ARG_')}
     direct = subprocess.run(command, stdin=subprocess.DEVNULL, capture_output=True,
                             text=True, encoding='utf-8', timeout=60, check=True, env=env)
@@ -59,6 +59,9 @@ def test_real_completion_matches_explicit_upstream_invocation(native_request, tm
     assert result.output and result.output.strip()
     assert req.prompt not in result.output
     assert result.output == direct.stdout
+    count = re.search(r'prompt eval time[^\n]*?/\s*(\d+)\s+tokens?', direct.stderr)
+    assert count is not None, direct.stderr
+    assert result.timings.prompt_tokens == int(count.group(1))
     print(json.dumps({'scope': PIN['scope'], 'comparison': 'native-reference-parity',
                       'source': PIN['upstream_commit'], 'model_sha256': PIN['model_sha256'],
                       'result': result.model_dump(mode='json')}, sort_keys=True))
