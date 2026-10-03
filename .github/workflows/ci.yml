@@ -20,6 +20,74 @@ jobs:
       - name: Test Python 3.12 package target
         run: python -m pytest -q
 
+  native-completion:
+    name: Pinned CPU native completion smoke
+    needs: test
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Read exact public smoke inputs
+        id: inputs
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          pin = json.loads(Path('tests/fixtures/native-completion.json').read_text())
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('upstream=' + pin['upstream_commit'] + '\n')
+              output.write('model_url=https://huggingface.co/' + pin['model_repository'] + '/resolve/' + pin['model_revision'] + '/' + pin['model_filename'] + '\n')
+              output.write('model_sha256=' + pin['model_sha256'] + '\n')
+          PY
+      - uses: actions/checkout@v4
+        with:
+          repository: ggml-org/llama.cpp
+          ref: ${{ steps.inputs.outputs.upstream }}
+          path: native-upstream
+          persist-credentials: false
+      - name: Build the existing upstream completion target for CPU
+        run: |
+          cmake -S native-upstream -B "$RUNNER_TEMP/native-build" \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+            -DGGML_NATIVE=OFF -DGGML_CUDA=OFF -DGGML_VULKAN=OFF \
+            -DLLAMA_CURL=OFF -DLLAMA_BUILD_TESTS=OFF
+          cmake --build "$RUNNER_TEMP/native-build" --target llama-completion --parallel 2
+      - name: Fetch and verify one immutable tiny public model
+        env:
+          MODEL_URL: ${{ steps.inputs.outputs.model_url }}
+          MODEL_SHA256: ${{ steps.inputs.outputs.model_sha256 }}
+        run: |
+          curl --fail --location --proto '=https' --tlsv1.2 --retry 2 --max-time 180 \
+            "$MODEL_URL" -o "$RUNNER_TEMP/native-model.gguf"
+          printf '%s  %s\n' "$MODEL_SHA256" "$RUNNER_TEMP/native-model.gguf" | sha256sum --check --strict
+      - name: Exercise native parity and isolated seeded restart
+        run: |
+          set -o pipefail
+          python -m pip install -e '.[dev]'
+          mkdir -p "$RUNNER_TEMP/native-evidence"
+          cp tests/fixtures/native-completion.json "$RUNNER_TEMP/native-evidence/inputs.json"
+          git -C native-upstream rev-parse HEAD > "$RUNNER_TEMP/native-evidence/source.txt"
+          "$RUNNER_TEMP/native-build/bin/llama-completion" --version > "$RUNNER_TEMP/native-evidence/version.txt" 2>&1
+          sha256sum "$RUNNER_TEMP/native-build/bin/llama-completion" > "$RUNNER_TEMP/native-evidence/binary.sha256"
+          python -m pip freeze > "$RUNNER_TEMP/native-evidence/python-packages.txt"
+          export LONG_HAUL_NATIVE_COMPLETION="$RUNNER_TEMP/native-build/bin/llama-completion"
+          export LONG_HAUL_NATIVE_GGUF="$RUNNER_TEMP/native-model.gguf"
+          python -m pytest -q -s tests/test_llama_native_completion.py \
+            --junitxml="$RUNNER_TEMP/native-evidence/junit.xml" 2>&1 | tee "$RUNNER_TEMP/native-evidence/smoke.log"
+      - name: Retain scoped native smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-completion-smoke-${{ github.sha }}
+          path: ${{ runner.temp }}/native-evidence/
+          if-no-files-found: warn
+          retention-days: 14
+
   package:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: test
