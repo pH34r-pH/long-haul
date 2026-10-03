@@ -1,0 +1,13 @@
+{
+  "scope": "public CPU adapter smoke; not a scientific benchmark or vessel qualification",
+  "upstream_repository": "ggml-org/llama.cpp",
+  "upstream_commit": "7fe450e19305b828c199d602c23a8337aaa1f03b",
+  "target": "llama-completion",
+  "model_repository": "bartowski/SmolLM2-135M-Instruct-GGUF",
+  "model_revision": "f0a2b81d63eb57be0e90e82e327e03a7fc66a7dc",
+  "model_filename": "SmolLM2-135M-Instruct-Q4_K_M.gguf",
+  "model_sha256": "2e8040ceae7815abe0dcb3540b9995eaa1fa0d2ca9e797d0a635ae4433c68c2d",
+  "license": "Apache-2.0",
+  "model_source": "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/blob/f0a2b81d63eb57be0e90e82e327e03a7fc66a7dc/SmolLM2-135M-Instruct-Q4_K_M.gguf",
+  "prepared_prompt": "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\nSay hello in a short sentence.<|im_end|>\n<|im_start|>assistant\n"
+}

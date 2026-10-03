@@ -23,6 +23,14 @@ from ..runtime import (
     ValidationDepth,
     ValidationState,
 )
+from .llama_cpp_invocation import (
+    execution_environment,
+    invocation_arguments,
+    invocation_error,
+    prepared_completion,
+    prompt_arguments,
+    prompt_file,
+)
 
 # Only the identity subprocess is covered by these limits. Model inference has
 # its own request timeout. These are probe budgets, not dependency version pins.
@@ -261,8 +269,11 @@ class LlamaCppAdapter:
 
     def validate(self, profile: InferenceProfile) -> ProfileValidation:
         runtime = self.identity()
+        option_error = invocation_error(profile.options)
         if profile.runtime_id != self.runtime_id:
             state, rationale = ValidationState.UNSUPPORTED, "profile names a different runtime"
+        elif option_error is not None:
+            state, rationale = ValidationState.UNSUPPORTED, option_error
         elif runtime.capabilities.get("identity_probe") != "ready":
             state = ValidationState.UNKNOWN
             rationale = "llama.cpp identity probe: " + str(
@@ -305,23 +316,18 @@ class LlamaCppAdapter:
             provenance="probe",
         )
 
-    def _command(self, request: ExecutionRequest) -> list[str]:
+    def _command(self, request: ExecutionRequest, *, prompt_path: Path | None = None) -> list[str]:
         options = request.profile.options
-        command = [
-            str(self.binary),
-            "-m",
-            str(options["model_path"]),
-            "-p",
-            request.prompt,
-            "-n",
-            str(request.max_tokens),
-            "--temp",
-            str(request.temperature),
-        ]
+        controls = invocation_arguments(options)
+        prepared = prepared_completion(options)
+        command = [str(self.binary), "-m", str(options["model_path"])]
+        command.extend(prompt_arguments(request.prompt, options, prompt_path, request.max_tokens))
+        command.extend(["-n", str(request.max_tokens), "--temp", str(request.temperature)])
+        command.extend(controls)
         if options.get("no_warmup", True):
             command.append("--no-warmup")
         gpu_layers = _gpu_layers(request.profile)
-        if gpu_layers > 0:
+        if gpu_layers > 0 or prepared:
             command.extend(["-ngl", str(gpu_layers)])
         split_mode = options.get("split_mode")
         if split_mode:
@@ -335,6 +341,19 @@ class LlamaCppAdapter:
         if main_gpu is not None and not isinstance(main_gpu, bool):
             command.extend(["--main-gpu", str(main_gpu)])
         return command
+
+    def _run_completion(self, request: ExecutionRequest) -> subprocess.CompletedProcess[str]:
+        with prompt_file(request.prompt, request.profile.options) as prompt_path:
+            return subprocess.run(
+                self._command(request, prompt_path=prompt_path),
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=request.timeout_seconds,
+                check=False,
+                env=execution_environment(request.profile.options),
+            )
 
     def execute(self, request: ExecutionRequest) -> ExecutionResult:
         validation = self.validate(request.profile)
@@ -350,19 +369,8 @@ class LlamaCppAdapter:
                 error_detail=validation.rationale,
             )
         started = time.monotonic()
-        env = os.environ.copy()
-        visible_devices = request.profile.options.get("cuda_visible_devices")
-        if visible_devices is not None:
-            env["CUDA_VISIBLE_DEVICES"] = str(visible_devices)
         try:
-            run = subprocess.run(
-                self._command(request),
-                capture_output=True,
-                text=True,
-                timeout=request.timeout_seconds,
-                check=False,
-                env=env,
-            )
+            run = self._run_completion(request)
         except subprocess.TimeoutExpired:
             return ExecutionResult(
                 request_id=request.request_id,
@@ -370,6 +378,13 @@ class LlamaCppAdapter:
                 success=False,
                 error_class=FailureClass.TIMEOUT,
                 error_detail="llama.cpp timed out",
+                timings=Timing(total_seconds=time.monotonic() - started),
+            )
+        except ValueError as exc:
+            return ExecutionResult(
+                request_id=request.request_id, runtime=runtime, success=False,
+                error_class=FailureClass.RUNTIME,
+                error_detail=f"invalid completion invocation: {type(exc).__name__}",
                 timings=Timing(total_seconds=time.monotonic() - started),
             )
         except OSError as exc:
@@ -402,7 +417,8 @@ class LlamaCppAdapter:
                     "capabilities": capabilities,
                 }
             )
-        output = run.stdout.removeprefix(request.prompt).strip()
+        output = (run.stdout if prepared_completion(request.profile.options)
+                  else run.stdout.removeprefix(request.prompt).strip())
         return ExecutionResult(
             request_id=request.request_id,
             runtime=runtime,
