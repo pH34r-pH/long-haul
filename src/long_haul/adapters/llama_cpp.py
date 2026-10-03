@@ -12,13 +12,6 @@ import subprocess
 import time
 from pathlib import Path
 
-from .llama_cpp_invocation import (
-    execution_environment,
-    invocation_arguments,
-    invocation_error,
-    prepared_completion,
-    prompt_file,
-)
 from ..models import InferenceProfile
 from ..runtime import (
     ExecutionRequest,
@@ -29,6 +22,14 @@ from ..runtime import (
     Timing,
     ValidationDepth,
     ValidationState,
+)
+from .llama_cpp_invocation import (
+    execution_environment,
+    invocation_arguments,
+    invocation_error,
+    prepared_completion,
+    prompt_arguments,
+    prompt_file,
 )
 
 # Only the identity subprocess is covered by these limits. Model inference has
@@ -319,21 +320,9 @@ class LlamaCppAdapter:
         options = request.profile.options
         controls = invocation_arguments(options)
         prepared = prepared_completion(options)
-        if prepared and prompt_path is None:
-            raise ValueError("prepared completion requires a closed prompt file")
-        if prepared and request.max_tokens >= options["context_size"]:
-            raise ValueError("prepared completion output cap leaves no prompt context")
-        command = [
-            str(self.binary),
-            "-m",
-            str(options["model_path"]),
-            "-f" if prepared else "-p",
-            str(prompt_path) if prepared else request.prompt,
-            "-n",
-            str(request.max_tokens),
-            "--temp",
-            str(request.temperature),
-        ]
+        command = [str(self.binary), "-m", str(options["model_path"])]
+        command.extend(prompt_arguments(request.prompt, options, prompt_path, request.max_tokens))
+        command.extend(["-n", str(request.max_tokens), "--temp", str(request.temperature)])
         command.extend(controls)
         if options.get("no_warmup", True):
             command.append("--no-warmup")
@@ -353,6 +342,19 @@ class LlamaCppAdapter:
             command.extend(["--main-gpu", str(main_gpu)])
         return command
 
+    def _run_completion(self, request: ExecutionRequest) -> subprocess.CompletedProcess[str]:
+        with prompt_file(request.prompt, request.profile.options) as prompt_path:
+            return subprocess.run(
+                self._command(request, prompt_path=prompt_path),
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=request.timeout_seconds,
+                check=False,
+                env=execution_environment(request.profile.options),
+            )
+
     def execute(self, request: ExecutionRequest) -> ExecutionResult:
         validation = self.validate(request.profile)
         runtime = validation.runtime
@@ -367,19 +369,8 @@ class LlamaCppAdapter:
                 error_detail=validation.rationale,
             )
         started = time.monotonic()
-        env = execution_environment(request.profile.options)
         try:
-            with prompt_file(request.prompt, request.profile.options) as prompt_path:
-                run = subprocess.run(
-                    self._command(request, prompt_path=prompt_path),
-                    stdin=subprocess.DEVNULL,
-                    capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                    timeout=request.timeout_seconds,
-                    check=False,
-                    env=env,
-                )
+            run = self._run_completion(request)
         except subprocess.TimeoutExpired:
             return ExecutionResult(
                 request_id=request.request_id,

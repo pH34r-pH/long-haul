@@ -3,16 +3,18 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from long_haul.adapters import llama_cpp as m
 from long_haul.adapters.llama_cpp_invocation import (
-    execution_environment, invocation_arguments, prompt_file,
+    execution_environment,
+    invocation_arguments,
+    prompt_file,
 )
 from long_haul.models import InferenceProfile, ModelArtifact
 from long_haul.runtime import ExecutionRequest, FailureClass, ValidationState
@@ -140,10 +142,10 @@ def test_prompt_file_preserves_utf8_and_line_endings_and_is_removed(execution_re
 
 
 def test_prompt_file_cleanup_on_cancellation(execution_request):
-    with pytest.raises(KeyboardInterrupt):
-        with prompt_file(execution_request.prompt, execution_request.profile.options) as path:
-            retained_path = path
-            raise KeyboardInterrupt
+    with (pytest.raises(KeyboardInterrupt),
+          prompt_file(execution_request.prompt, execution_request.profile.options) as path):
+        retained_path = path
+        raise KeyboardInterrupt
     assert not retained_path.exists()
 
 
@@ -153,9 +155,9 @@ def test_legacy_prompt_creates_no_file():
 
 
 def test_nul_rejected_before_creating_prepared_file(execution_request):
-    with pytest.raises(ValueError, match='NUL'):
-        with prompt_file('private\x00text', execution_request.profile.options):
-            pytest.fail('must not yield a prompt file')
+    with (pytest.raises(ValueError, match='NUL'),
+          prompt_file('private\x00text', execution_request.profile.options)):
+        pytest.fail('must not yield a prompt file')
 
 
 def test_ambient_options_not_inherited_or_mutated(execution_request, monkeypatch):

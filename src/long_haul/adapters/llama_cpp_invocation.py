@@ -5,12 +5,11 @@ The selected executable must implement the upstream completion interface.
 """
 from __future__ import annotations
 
+import os
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
-import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
-
 
 _INTEGER_FLAGS = {
     "seed": ("--seed", 0, 2**32 - 2),  # UINT32_MAX is upstream's random-seed sentinel.
@@ -57,6 +56,17 @@ def invocation_arguments(options: Mapping[str, object]) -> list[str]:
         if name in options:
             arguments.extend(_integer_argument(name, options[name]))
     return arguments + flags
+
+
+def prompt_arguments(prompt: str, options: Mapping[str, object],
+                     path: Path | None, output_tokens: int) -> list[str]:
+    if not prepared_completion(options):
+        return ["-p", prompt]
+    if path is None:
+        raise ValueError("prepared completion requires a closed prompt file")
+    if output_tokens >= options["context_size"]:
+        raise ValueError("prepared completion output cap leaves no prompt context")
+    return ["-f", str(path)]
 
 
 def invocation_error(options: Mapping[str, object]) -> str | None:
