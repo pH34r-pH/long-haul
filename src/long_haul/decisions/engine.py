@@ -8,9 +8,45 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from ..events.store import Event
 from ..models import DecisionPosition, Position
-from .objections import materialize_objections
+from .objections import Objection, ObjectionProjection, materialize_objections
 
 Resolution = Literal["consensus", "consent", "scoped_authority", "experiment", "escalation", "recorded_disagreement"]
+
+
+def _positions_for(record: DecisionRecord) -> tuple[DecisionPosition, ...]:
+    return (*record.initial_positions, *record.final_positions)
+
+
+def _validate_position_participants(
+    positions: Sequence[DecisionPosition], participants: frozenset[str]
+) -> None:
+    names = [position.participant for position in positions]
+    if len(names) != len(set(names)):
+        raise ValueError("a participant may have only one position per phase")
+    if any(name not in participants for name in names):
+        raise ValueError("position participant is not part of the decision")
+
+
+def _unresolved_blocks(
+    positions: Sequence[DecisionPosition], resolved_ids: frozenset[str]
+) -> list[DecisionPosition]:
+    return [
+        position
+        for position in positions
+        if position.position is Position.BLOCK and position.objection_id not in resolved_ids
+    ]
+
+
+def _unresolved_typed_objections(
+    positions: Sequence[DecisionPosition], resolved_ids: frozenset[str]
+) -> list[DecisionPosition]:
+    return [
+        position
+        for position in positions
+        if position.position is Position.OBJECT
+        and position.category in ("factual", "safety", "resource")
+        and position.objection_id not in resolved_ids
+    ]
 
 
 class DecisionRecord(BaseModel):
@@ -52,25 +88,12 @@ class DecisionRecord(BaseModel):
         if self.resolution is None and self.resolved_objection_ids:
             raise ValueError("unresolved decision cannot carry resolved objection IDs")
         for positions in (self.initial_positions, self.final_positions):
-            participants = [position.participant for position in positions]
-            if len(participants) != len(set(participants)):
-                raise ValueError("a participant may have only one position per phase")
-            if any(participant not in self.participants for participant in participants):
-                raise ValueError("position participant is not part of the decision")
-        unresolved_blocks = [
-            position
-            for position in (*self.initial_positions, *self.final_positions)
-            if position.position is Position.BLOCK and position.objection_id not in self.resolved_objection_ids
-        ]
+            _validate_position_participants(positions, self.participants)
+        positions = _positions_for(self)
+        unresolved_blocks = _unresolved_blocks(positions, frozenset(self.resolved_objection_ids))
         if unresolved_blocks and self.resolution not in (None, "experiment", "escalation"):
             raise ValueError("an unresolved initial block cannot be bypassed")
-        objections = [
-            position
-            for position in (*self.initial_positions, *self.final_positions)
-            if position.position is Position.OBJECT
-            and position.category in ("factual", "safety", "resource")
-            and position.objection_id not in self.resolved_objection_ids
-        ]
+        objections = _unresolved_typed_objections(positions, frozenset(self.resolved_objection_ids))
         if any(position.category == "safety" for position in objections) and self.resolution not in (
             None, "experiment", "escalation"
         ):
@@ -138,33 +161,9 @@ class DecisionEngine:
     ) -> DecisionRecord:
         """Resolve using the active objection view rebuilt from canonical events."""
         projection = materialize_objections(events, record)
-        for position in (*record.initial_positions, *record.final_positions):
-            if position.objection_id is None:
-                continue
-            try:
-                objection = projection.get(position.objection_id)
-            except KeyError as exc:
-                raise ValueError("position references an objection absent from decision history") from exc
-            if objection.raised_by != position.participant:
-                raise ValueError("position objection must be raised by that participant")
-            if objection.category != position.category:
-                raise ValueError("position category differs from its linked objection")
-            if objection.authority_scope != position.authority_scope:
-                raise ValueError("position authority scope differs from its linked objection")
-            applicability = next(
-                (snapshot for snapshot in objection.applicability_history
-                 if snapshot.revision == position.applicability_revision),
-                None,
-            )
-            if applicability is None:
-                raise ValueError("position applicability revision is absent from objection history")
-            if applicability.scope != position.applicability_scope:
-                raise ValueError("position applicability scope differs from its linked objection history")
+        _validate_position_objection_links(record, projection)
         active = projection.blocking_for_decision()
-        if active and resolution not in ("experiment", "escalation", "recorded_disagreement", "scoped_authority"):
-            raise ValueError("active objection cannot be bypassed")
-        if any(objection.category == "safety" for objection in active) and resolution not in ("experiment", "escalation"):
-            raise ValueError("active objection with safety category cannot be bypassed")
+        _validate_active_objections(active, resolution)
         resolved = projection.terminally_disposed_ids()
         self._validate_resolution(record, resolution, authority_holder, resolved)
         return record.model_copy(
@@ -185,35 +184,80 @@ class DecisionEngine:
     ) -> None:
         if record.resolution is not None:
             raise ValueError("decision is already resolved")
-        if record.consequential and len(record.initial_positions) != len(record.participants) and not record.exception:
-            raise ValueError("consequential decision requires independent initial positions")
-        blocks = [
-            position
-            for position in (*record.initial_positions, *record.final_positions)
-            if position.position is Position.BLOCK and position.objection_id not in resolved_objection_ids
-        ]
-        if blocks and resolution not in ("escalation", "experiment"):
-            raise ValueError("unresolved block cannot be bypassed")
-        unresolved_typed_objections = [
-            position
-            for position in (*record.initial_positions, *record.final_positions)
-            if position.position is Position.OBJECT
-            and position.category in ("factual", "safety", "resource")
-            and position.objection_id not in resolved_objection_ids
-        ]
-        unresolved_safety_objections = [
-            position for position in unresolved_typed_objections if position.category == "safety"
-        ]
-        if unresolved_safety_objections and resolution not in ("experiment", "escalation"):
-            raise ValueError("unresolved safety objection cannot be bypassed")
-        if unresolved_typed_objections and resolution not in (
-            "experiment", "escalation", "recorded_disagreement", "scoped_authority"
-        ):
-            raise ValueError("unresolved typed objection requires an explicit resolution mode")
-        if resolution == "scoped_authority" and (
-            not authority_holder
-            or authority_holder not in record.participants
-            or not record.authority_scope
-            or record.authority_scope not in record.scopes_for(authority_holder)
-        ):
-            raise ValueError("scoped authority requires a participating holder with the declared scope")
+        _validate_independent_positions(record)
+        positions = _positions_for(record)
+        _validate_block_resolution(positions, resolution, resolved_objection_ids)
+        _validate_typed_resolution(positions, resolution, resolved_objection_ids)
+        _validate_authority_resolution(record, resolution, authority_holder)
+
+
+def _validate_position_objection_links(record: DecisionRecord, projection: ObjectionProjection) -> None:
+    for position in _positions_for(record):
+        if position.objection_id is None:
+            continue
+        try:
+            objection = projection.get(position.objection_id)
+        except KeyError as exc:
+            raise ValueError("position references an objection absent from decision history") from exc
+        if objection.raised_by != position.participant:
+            raise ValueError("position objection must be raised by that participant")
+        if objection.category != position.category:
+            raise ValueError("position category differs from its linked objection")
+        if objection.authority_scope != position.authority_scope:
+            raise ValueError("position authority scope differs from its linked objection")
+        applicability = next(
+            (item for item in objection.applicability_history if item.revision == position.applicability_revision),
+            None,
+        )
+        if applicability is None:
+            raise ValueError("position applicability revision is absent from objection history")
+        if applicability.scope != position.applicability_scope:
+            raise ValueError("position applicability scope differs from its linked objection history")
+
+
+def _validate_active_objections(active: Sequence[Objection], resolution: Resolution) -> None:
+    allowed = ("experiment", "escalation", "recorded_disagreement", "scoped_authority")
+    if active and resolution not in allowed:
+        raise ValueError("active objection cannot be bypassed")
+    if any(item.category == "safety" for item in active) and resolution not in ("experiment", "escalation"):
+        raise ValueError("active objection with safety category cannot be bypassed")
+
+
+def _validate_independent_positions(record: DecisionRecord) -> None:
+    incomplete = len(record.initial_positions) != len(record.participants)
+    if record.consequential and incomplete and not record.exception:
+        raise ValueError("consequential decision requires independent initial positions")
+
+
+def _validate_block_resolution(
+    positions: Sequence[DecisionPosition],
+    resolution: Resolution,
+    resolved_ids: frozenset[str],
+) -> None:
+    if _unresolved_blocks(positions, resolved_ids) and resolution not in ("escalation", "experiment"):
+        raise ValueError("unresolved block cannot be bypassed")
+
+
+def _validate_typed_resolution(
+    positions: Sequence[DecisionPosition],
+    resolution: Resolution,
+    resolved_ids: frozenset[str],
+) -> None:
+    objections = _unresolved_typed_objections(positions, resolved_ids)
+    safety = any(position.category == "safety" for position in objections)
+    if safety and resolution not in ("experiment", "escalation"):
+        raise ValueError("unresolved safety objection cannot be bypassed")
+    allowed = ("experiment", "escalation", "recorded_disagreement", "scoped_authority")
+    if objections and resolution not in allowed:
+        raise ValueError("unresolved typed objection requires an explicit resolution mode")
+
+
+def _validate_authority_resolution(
+    record: DecisionRecord,
+    resolution: Resolution,
+    authority_holder: str | None,
+) -> None:
+    valid_holder = authority_holder and authority_holder in record.participants
+    valid_scope = record.authority_scope and record.authority_scope in record.scopes_for(authority_holder or "")
+    if resolution == "scoped_authority" and not (valid_holder and valid_scope):
+        raise ValueError("scoped authority requires a participating holder with the declared scope")

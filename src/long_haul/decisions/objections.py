@@ -156,28 +156,93 @@ class ObjectionTransition(BaseModel):
     @model_validator(mode="after")
     def operation_fields(self) -> ObjectionTransition:
         if self.operation == "raised":
-            if self.expected_revision is not None or not all(
-                (self.category, self.claim, self.scope, self.authority_scope, self.resolution_predicate_id)
-            ):
-                raise ValueError("raising requires a category, claim, scope, authority scope, and resolution predicate")
-            if self.applicability_revision not in (None, 1):
-                raise ValueError("a new objection starts at applicability revision one")
+            _validate_raise_transition(self)
         else:
-            if self.expected_revision is None or self.expected_revision < 1:
-                raise ValueError("transition requires an expected objection revision")
-        if self.operation == "narrowed" and not all((self.scope, self.reason, self.evidence_refs)):
-            raise ValueError("narrowing requires a new scope, reason, and evidence reference")
-        if self.operation == "assessed" and not all((self.evidence_ref, self.predicate_id, self.assessment)):
-            raise ValueError("evidence assessment requires a reference, predicate, and outcome")
-        if self.operation in ("resolved", "dismissed") and not self.reason:
-            raise ValueError("explicit disposition requires a reason")
-        if self.operation == "superseded" and not all((self.successor_id, self.reason)):
-            raise ValueError("superseding requires an existing successor and reason")
-        if self.operation == "reopened" and not all(
-            (self.scope, self.resolution_predicate_id, self.applicability_revision, self.evidence_ref, self.reason)
-        ):
-            raise ValueError("reopening requires changed applicability, new evidence, and reason")
+            _validate_transition_revision(self)
+            _validate_transition_details(self)
         return self
+
+
+def _validate_raise_transition(transition: ObjectionTransition) -> None:
+    required = (
+        transition.category,
+        transition.claim,
+        transition.scope,
+        transition.authority_scope,
+        transition.resolution_predicate_id,
+    )
+    if transition.expected_revision is not None or not all(required):
+        raise ValueError("raising requires a category, claim, scope, authority scope, and resolution predicate")
+    if transition.applicability_revision not in (None, 1):
+        raise ValueError("a new objection starts at applicability revision one")
+
+
+def _validate_transition_revision(transition: ObjectionTransition) -> None:
+    if transition.expected_revision is None or transition.expected_revision < 1:
+        raise ValueError("transition requires an expected objection revision")
+
+
+def _validate_transition_details(transition: ObjectionTransition) -> None:
+    if transition.operation == "narrowed" and not all(
+        (transition.scope, transition.reason, transition.evidence_refs)
+    ):
+        raise ValueError("narrowing requires a new scope, reason, and evidence reference")
+    if transition.operation == "assessed" and not all(
+        (transition.evidence_ref, transition.predicate_id, transition.assessment)
+    ):
+        raise ValueError("evidence assessment requires a reference, predicate, and outcome")
+    if transition.operation in ("resolved", "dismissed") and not transition.reason:
+        raise ValueError("explicit disposition requires a reason")
+    if transition.operation == "superseded" and not all((transition.successor_id, transition.reason)):
+        raise ValueError("superseding requires an existing successor and reason")
+    if transition.operation == "reopened" and not all(
+        (transition.scope, transition.resolution_predicate_id, transition.applicability_revision,
+         transition.evidence_ref, transition.reason)
+    ):
+        raise ValueError("reopening requires changed applicability, new evidence, and reason")
+
+
+class RaiseObjectionCommand(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    objection_id: str
+    category: ObjectionCategory
+    claim: str
+    scope: str
+    authority_scope: str
+    resolution_predicate_id: str
+    evidence_refs: tuple[str, ...] = Field(default_factory=tuple)
+
+
+class ReopenObjectionCommand(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    objection_id: str
+    expected_revision: int = Field(ge=1)
+    scope: str
+    resolution_predicate_id: str
+    evidence_ref: str
+    reason: str
+
+
+class NarrowObjectionCommand(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    objection_id: str
+    expected_revision: int = Field(ge=1)
+    scope: str
+    reason: str
+    evidence_refs: tuple[str, ...]
+
+
+class AssessObjectionCommand(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    objection_id: str
+    expected_revision: int = Field(ge=1)
+    evidence_ref: str
+    predicate_id: str
+    outcome: AssessmentOutcome
 
 
 def materialize_objections(events: Sequence[Event], decision: DecisionRecord) -> ObjectionProjection:
@@ -247,29 +312,23 @@ class ObjectionLifecycle:
 
     def raise_objection(
         self,
+        command: RaiseObjectionCommand,
         *,
-        objection_id: str,
         actor: str,
         source: str,
-        category: ObjectionCategory,
-        claim: str,
-        scope: str,
-        authority_scope: str,
-        resolution_predicate_id: str,
-        evidence_refs: Iterable[str] = (),
     ) -> ObjectionProjection:
         return self._append(
             ObjectionTransition(
                 operation="raised",
                 decision_id=self.decision.id,
-                objection_id=objection_id,
-                category=category,
-                claim=claim,
-                scope=scope,
-                authority_scope=authority_scope,
-                resolution_predicate_id=resolution_predicate_id,
+                objection_id=command.objection_id,
+                category=command.category,
+                claim=command.claim,
+                scope=command.scope,
+                authority_scope=command.authority_scope,
+                resolution_predicate_id=command.resolution_predicate_id,
                 applicability_revision=1,
-                evidence_refs=tuple(evidence_refs),
+                evidence_refs=command.evidence_refs,
             ),
             actor,
             source,
@@ -277,25 +336,23 @@ class ObjectionLifecycle:
 
     def narrow(
         self,
-        objection_id: str,
+        command: NarrowObjectionCommand,
         *,
         actor: str,
         source: str,
-        expected_revision: int,
-        scope: str,
-        reason: str,
-        evidence_refs: Iterable[str],
     ) -> ObjectionProjection:
         return self._append(
             ObjectionTransition(
                 operation="narrowed",
                 decision_id=self.decision.id,
-                objection_id=objection_id,
-                expected_revision=expected_revision,
-                scope=scope,
-                applicability_revision=self._next_applicability_revision(objection_id, expected_revision),
-                reason=reason,
-                evidence_refs=tuple(evidence_refs),
+                objection_id=command.objection_id,
+                expected_revision=command.expected_revision,
+                scope=command.scope,
+                applicability_revision=self._next_applicability_revision(
+                    command.objection_id, command.expected_revision
+                ),
+                reason=command.reason,
+                evidence_refs=command.evidence_refs,
             ),
             actor,
             source,
@@ -303,24 +360,20 @@ class ObjectionLifecycle:
 
     def assess_evidence(
         self,
-        objection_id: str,
+        command: AssessObjectionCommand,
         *,
         actor: str,
         source: str,
-        expected_revision: int,
-        evidence_ref: str,
-        predicate_id: str,
-        outcome: AssessmentOutcome,
     ) -> ObjectionProjection:
         return self._append(
             ObjectionTransition(
                 operation="assessed",
                 decision_id=self.decision.id,
-                objection_id=objection_id,
-                expected_revision=expected_revision,
-                evidence_ref=evidence_ref,
-                predicate_id=predicate_id,
-                assessment=outcome,
+                objection_id=command.objection_id,
+                expected_revision=command.expected_revision,
+                evidence_ref=command.evidence_ref,
+                predicate_id=command.predicate_id,
+                assessment=command.outcome,
             ),
             actor,
             source,
@@ -397,27 +450,24 @@ class ObjectionLifecycle:
 
     def reopen(
         self,
-        objection_id: str,
+        command: ReopenObjectionCommand,
         *,
         actor: str,
         source: str,
-        expected_revision: int,
-        scope: str,
-        resolution_predicate_id: str,
-        evidence_ref: str,
-        reason: str,
     ) -> ObjectionProjection:
         return self._append(
             ObjectionTransition(
                 operation="reopened",
                 decision_id=self.decision.id,
-                objection_id=objection_id,
-                expected_revision=expected_revision,
-                scope=scope,
-                resolution_predicate_id=resolution_predicate_id,
-                applicability_revision=self._next_applicability_revision(objection_id, expected_revision),
-                evidence_ref=evidence_ref,
-                reason=reason,
+                objection_id=command.objection_id,
+                expected_revision=command.expected_revision,
+                scope=command.scope,
+                resolution_predicate_id=command.resolution_predicate_id,
+                applicability_revision=self._next_applicability_revision(
+                    command.objection_id, command.expected_revision
+                ),
+                evidence_ref=command.evidence_ref,
+                reason=command.reason,
             ),
             actor,
             source,
@@ -451,36 +501,7 @@ def _apply_transition(
     decision: DecisionRecord,
 ) -> None:
     if transition.operation == "raised":
-        if transition.objection_id in objections:
-            raise ValueError("objection identity already exists")
-        assert transition.category and transition.claim and transition.scope and transition.authority_scope
-        assert transition.resolution_predicate_id
-        if not any(
-            holder in decision.participants and transition.authority_scope in scopes
-            for holder, scopes in decision.authority_scopes
-        ):
-            raise ValueError("objection authority scope has no participating resolver")
-        objections[transition.objection_id] = Objection(
-            id=transition.objection_id,
-            decision_id=decision.id,
-            raised_by=actor,
-            category=transition.category,
-            claim=transition.claim,
-            scope=transition.scope,
-            authority_scope=transition.authority_scope,
-            resolution_predicate_id=transition.resolution_predicate_id,
-            applicability_revision=1,
-            applicability_history=(
-                ApplicabilitySnapshot(
-                    revision=1,
-                    scope=transition.scope,
-                    resolution_predicate_id=transition.resolution_predicate_id,
-                    evidence_refs=transition.evidence_refs,
-                ),
-            ),
-            revision=1,
-            evidence_refs=transition.evidence_refs,
-        )
+        _apply_raise(objections, transition, actor, decision)
         return
 
     objection = objections.get(transition.objection_id)
@@ -489,126 +510,209 @@ def _apply_transition(
     if transition.expected_revision != objection.revision:
         raise ValueError("stale or out-of-order objection transition")
     if transition.operation == "narrowed":
-        if not objection.is_active:
-            raise ValueError("terminal objection must be reopened before narrowing")
-        if actor != objection.raised_by and not _has_authority(decision, actor, objection.authority_scope):
-            raise ValueError("only the raiser or scoped authority may narrow an objection")
-        assert transition.scope and transition.reason and transition.applicability_revision
-        if transition.applicability_revision != objection.applicability_revision + 1:
-            raise ValueError("narrowing needs the next applicability revision")
-        evidence_refs = _append_unique(objection.evidence_refs, transition.evidence_refs)
-        applicability_history = (
-            *objection.applicability_history,
-            ApplicabilitySnapshot(
-                revision=transition.applicability_revision,
-                scope=transition.scope,
-                resolution_predicate_id=objection.resolution_predicate_id,
-                evidence_refs=evidence_refs,
-            ),
-        )
-        objections[objection.id] = objection.model_copy(
-            update={
-                "scope": transition.scope,
-                "applicability_revision": transition.applicability_revision,
-                "applicability_history": applicability_history,
-                "revision": objection.revision + 1,
-                "status": "narrowed",
-                "evidence_refs": evidence_refs,
-                "reason": transition.reason,
-            }
-        )
+        _apply_narrow(objections, objection, transition, actor, decision)
         return
 
     if transition.operation == "assessed":
-        if not objection.is_active:
-            raise ValueError("terminal objection must be reopened before evidence assessment")
-        assert transition.evidence_ref and transition.predicate_id and transition.assessment
-        assessment = EvidenceAssessment(
-            evidence_ref=transition.evidence_ref,
-            predicate_id=transition.predicate_id,
-            outcome=transition.assessment,
-            actor=actor,
-            source=source,
-        )
-        resolves = (
-            transition.predicate_id == objection.resolution_predicate_id
-            and transition.assessment == "satisfied"
-            and _has_authority(decision, actor, objection.authority_scope)
-        )
-        objections[objection.id] = objection.model_copy(
-            update={
-                "revision": objection.revision + 1,
-                "status": "resolved" if resolves else objection.status,
-                "evidence_refs": _append_unique(objection.evidence_refs, (transition.evidence_ref,)),
-                "assessments": (*objection.assessments, assessment),
-                "reason": "declared resolution predicate satisfied" if resolves else objection.reason,
-            }
-        )
+        _apply_assessment(objections, objection, transition, actor, source, decision)
         return
 
     if not _has_authority(decision, actor, objection.authority_scope):
         raise ValueError("objection disposition requires declared scoped authority")
     if transition.operation in ("resolved", "dismissed"):
-        if not objection.is_active:
-            raise ValueError("terminal objection cannot receive another terminal disposition")
-        assert transition.reason
-        objections[objection.id] = objection.model_copy(
-            update={
-                "revision": objection.revision + 1,
-                "status": "resolved" if transition.operation == "resolved" else "dismissed",
-                "evidence_refs": _append_unique(objection.evidence_refs, transition.evidence_refs),
-                "reason": transition.reason,
-            }
-        )
+        _apply_disposition(objections, objection, transition)
         return
 
     if transition.operation == "superseded":
-        successor = objections.get(transition.successor_id or "")
-        if transition.successor_id == objection.id:
-            raise ValueError("an objection cannot supersede itself")
-        if not objection.is_active or not successor or not successor.is_active:
-            raise ValueError("superseding requires an active successor and active prior objection")
-        if (successor.category, successor.authority_scope) != (objection.category, objection.authority_scope):
-            raise ValueError("successor must preserve objection category and resolver authority scope")
-        assert transition.reason
-        objections[objection.id] = objection.model_copy(
-            update={"revision": objection.revision + 1, "status": "superseded", "reason": transition.reason, "superseded_by": successor.id}
-        )
+        _apply_supersession(objections, objection, transition)
         return
 
     if transition.operation == "reopened":
-        if objection.status not in ("dismissed", "resolved"):
-            raise ValueError("only a dismissed or resolved objection can be reopened")
-        assert transition.scope and transition.resolution_predicate_id
-        assert transition.applicability_revision and transition.evidence_ref and transition.reason
-        if transition.applicability_revision != objection.applicability_revision + 1:
-            raise ValueError("reopening needs the next applicability revision")
-        evidence_refs = _append_unique(objection.evidence_refs, (transition.evidence_ref,))
-        applicability_history = (
-            *objection.applicability_history,
-            ApplicabilitySnapshot(
-                revision=transition.applicability_revision,
-                scope=transition.scope,
-                resolution_predicate_id=transition.resolution_predicate_id,
-                evidence_refs=evidence_refs,
-            ),
-        )
-        objections[objection.id] = objection.model_copy(
-            update={
-                "revision": objection.revision + 1,
-                "applicability_revision": transition.applicability_revision,
-                "applicability_history": applicability_history,
-                "scope": transition.scope,
-                "resolution_predicate_id": transition.resolution_predicate_id,
-                "status": "active",
-                "evidence_refs": evidence_refs,
-                "reason": transition.reason,
-                "superseded_by": None,
-            }
-        )
+        _apply_reopen(objections, objection, transition)
         return
 
     raise ValueError("unsupported objection operation")
+
+
+def _apply_raise(
+    objections: dict[str, Objection],
+    transition: ObjectionTransition,
+    actor: str,
+    decision: DecisionRecord,
+) -> None:
+    if transition.objection_id in objections:
+        raise ValueError("objection identity already exists")
+    assert transition.category and transition.claim and transition.scope and transition.authority_scope
+    assert transition.resolution_predicate_id
+    resolver_exists = any(
+        holder in decision.participants and transition.authority_scope in scopes
+        for holder, scopes in decision.authority_scopes
+    )
+    if not resolver_exists:
+        raise ValueError("objection authority scope has no participating resolver")
+    applicability = ApplicabilitySnapshot(
+        revision=1,
+        scope=transition.scope,
+        resolution_predicate_id=transition.resolution_predicate_id,
+        evidence_refs=transition.evidence_refs,
+    )
+    objections[transition.objection_id] = Objection(
+        id=transition.objection_id,
+        decision_id=decision.id,
+        raised_by=actor,
+        category=transition.category,
+        claim=transition.claim,
+        scope=transition.scope,
+        authority_scope=transition.authority_scope,
+        resolution_predicate_id=transition.resolution_predicate_id,
+        applicability_revision=1,
+        applicability_history=(applicability,),
+        revision=1,
+        evidence_refs=transition.evidence_refs,
+    )
+
+
+def _apply_narrow(
+    objections: dict[str, Objection],
+    objection: Objection,
+    transition: ObjectionTransition,
+    actor: str,
+    decision: DecisionRecord,
+) -> None:
+    if not objection.is_active:
+        raise ValueError("terminal objection must be reopened before narrowing")
+    if actor != objection.raised_by and not _has_authority(decision, actor, objection.authority_scope):
+        raise ValueError("only the raiser or scoped authority may narrow an objection")
+    assert transition.scope and transition.reason and transition.applicability_revision
+    if transition.applicability_revision != objection.applicability_revision + 1:
+        raise ValueError("narrowing needs the next applicability revision")
+    evidence_refs = _append_unique(objection.evidence_refs, transition.evidence_refs)
+    snapshot = ApplicabilitySnapshot(
+        revision=transition.applicability_revision,
+        scope=transition.scope,
+        resolution_predicate_id=objection.resolution_predicate_id,
+        evidence_refs=evidence_refs,
+    )
+    objections[objection.id] = objection.model_copy(
+        update={
+            "scope": transition.scope,
+            "applicability_revision": transition.applicability_revision,
+            "applicability_history": (*objection.applicability_history, snapshot),
+            "revision": objection.revision + 1,
+            "status": "narrowed",
+            "evidence_refs": evidence_refs,
+            "reason": transition.reason,
+        }
+    )
+
+
+def _apply_assessment(
+    objections: dict[str, Objection],
+    objection: Objection,
+    transition: ObjectionTransition,
+    actor: str,
+    source: str,
+    decision: DecisionRecord,
+) -> None:
+    if not objection.is_active:
+        raise ValueError("terminal objection must be reopened before evidence assessment")
+    assert transition.evidence_ref and transition.predicate_id and transition.assessment
+    assessment = EvidenceAssessment(
+        evidence_ref=transition.evidence_ref,
+        predicate_id=transition.predicate_id,
+        outcome=transition.assessment,
+        actor=actor,
+        source=source,
+    )
+    resolves = (
+        transition.predicate_id == objection.resolution_predicate_id
+        and transition.assessment == "satisfied"
+        and _has_authority(decision, actor, objection.authority_scope)
+    )
+    objections[objection.id] = objection.model_copy(
+        update={
+            "revision": objection.revision + 1,
+            "status": "resolved" if resolves else objection.status,
+            "evidence_refs": _append_unique(objection.evidence_refs, (transition.evidence_ref,)),
+            "assessments": (*objection.assessments, assessment),
+            "reason": "declared resolution predicate satisfied" if resolves else objection.reason,
+        }
+    )
+
+
+def _apply_disposition(
+    objections: dict[str, Objection],
+    objection: Objection,
+    transition: ObjectionTransition,
+) -> None:
+    if not objection.is_active:
+        raise ValueError("terminal objection cannot receive another terminal disposition")
+    assert transition.reason
+    status = "resolved" if transition.operation == "resolved" else "dismissed"
+    objections[objection.id] = objection.model_copy(
+        update={
+            "revision": objection.revision + 1,
+            "status": status,
+            "evidence_refs": _append_unique(objection.evidence_refs, transition.evidence_refs),
+            "reason": transition.reason,
+        }
+    )
+
+
+def _apply_supersession(
+    objections: dict[str, Objection],
+    objection: Objection,
+    transition: ObjectionTransition,
+) -> None:
+    successor = objections.get(transition.successor_id or "")
+    if transition.successor_id == objection.id:
+        raise ValueError("an objection cannot supersede itself")
+    if not objection.is_active or not successor or not successor.is_active:
+        raise ValueError("superseding requires an active successor and active prior objection")
+    if (successor.category, successor.authority_scope) != (objection.category, objection.authority_scope):
+        raise ValueError("successor must preserve objection category and resolver authority scope")
+    assert transition.reason
+    objections[objection.id] = objection.model_copy(
+        update={
+            "revision": objection.revision + 1,
+            "status": "superseded",
+            "reason": transition.reason,
+            "superseded_by": successor.id,
+        }
+    )
+
+
+def _apply_reopen(
+    objections: dict[str, Objection],
+    objection: Objection,
+    transition: ObjectionTransition,
+) -> None:
+    if objection.status not in ("dismissed", "resolved"):
+        raise ValueError("only a dismissed or resolved objection can be reopened")
+    assert transition.scope and transition.resolution_predicate_id
+    assert transition.applicability_revision and transition.evidence_ref and transition.reason
+    if transition.applicability_revision != objection.applicability_revision + 1:
+        raise ValueError("reopening needs the next applicability revision")
+    evidence_refs = _append_unique(objection.evidence_refs, (transition.evidence_ref,))
+    snapshot = ApplicabilitySnapshot(
+        revision=transition.applicability_revision,
+        scope=transition.scope,
+        resolution_predicate_id=transition.resolution_predicate_id,
+        evidence_refs=evidence_refs,
+    )
+    objections[objection.id] = objection.model_copy(
+        update={
+            "revision": objection.revision + 1,
+            "applicability_revision": transition.applicability_revision,
+            "applicability_history": (*objection.applicability_history, snapshot),
+            "scope": transition.scope,
+            "resolution_predicate_id": transition.resolution_predicate_id,
+            "status": "active",
+            "evidence_refs": evidence_refs,
+            "reason": transition.reason,
+            "superseded_by": None,
+        }
+    )
 
 
 def _has_authority(decision: DecisionRecord, actor: str, scope: str) -> bool:

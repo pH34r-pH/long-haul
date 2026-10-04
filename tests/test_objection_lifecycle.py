@@ -2,10 +2,15 @@ import pytest
 from pydantic import ValidationError
 
 from long_haul.decisions import (
+    AssessObjectionCommand,
     DecisionEngine,
     DecisionLifecycle,
+    DecisionLifecycleEvent,
     DecisionRecord,
+    NarrowObjectionCommand,
     ObjectionLifecycle,
+    RaiseObjectionCommand,
+    ReopenObjectionCommand,
     materialize_decision,
     materialize_objections,
 )
@@ -35,18 +40,67 @@ def decision(with_initial_position: bool = True) -> DecisionRecord:
     )
 
 
+@pytest.mark.parametrize(
+    ("operation", "extra_field"),
+    (
+        ("created", "action"),
+        ("created", "authority_holder"),
+        ("initial_captured", "action"),
+        ("initial_captured", "authority_holder"),
+    ),
+)
+def test_lifecycle_event_rejects_present_empty_extra_payload(operation, extra_field):
+    fields = {"record": decision(with_initial_position=False)} if operation == "created" else {
+        "position": DecisionPosition(participant="ENG", position=Position.SUPPORT)
+    }
+
+    with pytest.raises(ValidationError):
+        DecisionLifecycleEvent(
+            operation=operation,
+            decision_id="decision-1",
+            **fields,
+            **{extra_field: ""},
+        )
+
+
 def raise_objection(ledger: ObjectionLifecycle, objection_id: str = "obj-1"):
     return ledger.raise_objection(
-        objection_id=objection_id,
+        RaiseObjectionCommand(
+            objection_id=objection_id,
+            category="factual",
+            claim="profile has not been validated for this artifact",
+            scope="runtime-profile compatibility",
+            authority_scope="runtime",
+            resolution_predicate_id="runtime-profile-compatible",
+            evidence_refs=("profile-validation:old",),
+        ),
         actor="ENG",
         source="initial-position:ENG",
-        category="factual",
-        claim="profile has not been validated for this artifact",
-        scope="runtime-profile compatibility",
-        authority_scope="runtime",
-        resolution_predicate_id="runtime-profile-compatible",
-        evidence_refs=("profile-validation:old",),
     )
+
+
+def add_objection(ledger: ObjectionLifecycle, **fields):
+    actor = fields.pop("actor")
+    source = fields.pop("source")
+    return ledger.raise_objection(RaiseObjectionCommand(**fields), actor=actor, source=source)
+
+
+def reopen_objection(ledger: ObjectionLifecycle, **fields):
+    actor = fields.pop("actor")
+    source = fields.pop("source")
+    return ledger.reopen(ReopenObjectionCommand(**fields), actor=actor, source=source)
+
+
+def assess_objection(ledger: ObjectionLifecycle, **fields):
+    actor = fields.pop("actor")
+    source = fields.pop("source")
+    return ledger.assess_evidence(AssessObjectionCommand(**fields), actor=actor, source=source)
+
+
+def narrow_objection(ledger: ObjectionLifecycle, **fields):
+    actor = fields.pop("actor")
+    source = fields.pop("source")
+    return ledger.narrow(NarrowObjectionCommand(**fields), actor=actor, source=source)
 
 
 def test_replay_keeps_irrelevant_evidence_active_and_resolves_declared_predicate(tmp_path):
@@ -71,8 +125,9 @@ def test_replay_keeps_irrelevant_evidence_active_and_resolves_declared_predicate
     with pytest.raises(ValueError, match="active objection"):
         DecisionEngine().resolve_with_events(record, "consent", "dispatch", store.events())
 
-    unrelated = ledger.assess_evidence(
-        "obj-1",
+    unrelated = assess_objection(
+        ledger,
+        objection_id="obj-1",
         actor="ENG",
         source="observation:unrelated",
         expected_revision=1,
@@ -82,8 +137,9 @@ def test_replay_keeps_irrelevant_evidence_active_and_resolves_declared_predicate
     )
     assert unrelated.get("obj-1").status == "active"
 
-    unknown = ledger.assess_evidence(
-        "obj-1",
+    unknown = assess_objection(
+        ledger,
+        objection_id="obj-1",
         actor="NAV",
         source="profile-validation:incomplete",
         expected_revision=2,
@@ -93,8 +149,9 @@ def test_replay_keeps_irrelevant_evidence_active_and_resolves_declared_predicate
     )
     assert unknown.get("obj-1").status == "active"
 
-    resolved = ledger.assess_evidence(
-        "obj-1",
+    resolved = assess_objection(
+        ledger,
+        objection_id="obj-1",
         actor="NAV",
         source="profile-validation:current",
         expected_revision=3,
@@ -141,7 +198,8 @@ def test_position_link_binds_category_authority_and_applicability_scope(tmp_path
             "evidence_refs": ("profile-validation:old",),
         }
         fields.update(objection_override)
-        ledger.raise_objection(
+        add_objection(
+            ledger,
             objection_id="obj-1",
             actor="ENG",
             source="initial-position:ENG",
@@ -188,7 +246,8 @@ def test_resource_block_survives_successor_chain_and_reopening(tmp_path):
         ("new", "selected profile capacity is unknown", "selected profile"),
         ("latest", "current placement capacity is unknown", "current placement"),
     ):
-        ledger.raise_objection(
+        add_objection(
+            ledger,
             objection_id=objection_id,
             actor="ENG",
             source=f"initial-objection:{objection_id}",
@@ -219,8 +278,8 @@ def test_resource_block_survives_successor_chain_and_reopening(tmp_path):
     assert settled.resolved_objection_ids == ("latest", "new", "old")
     assert DecisionRecord.model_validate(settled.model_dump()) == settled
 
-    ledger.reopen(
-        "latest", actor="NAV", source="placement-change:new-evidence", expected_revision=2,
+    reopen_objection(
+        ledger, objection_id="latest", actor="NAV", source="placement-change:new-evidence", expected_revision=2,
         scope="new placement after resource topology changed",
         resolution_predicate_id="latest-capacity-after-topology-change",
         evidence_ref="topology-change:1",
@@ -244,7 +303,8 @@ def test_objection_scope_requires_a_participating_resolver(tmp_path):
     )
     ledger = ObjectionLifecycle(EventStore(tmp_path / "events.jsonl"), record)
     with pytest.raises(ValueError, match="participating resolver"):
-        ledger.raise_objection(
+        add_objection(
+            ledger,
             objection_id="unresolvable",
             actor="ENG",
             source="initial-objection:ENG",
@@ -282,8 +342,9 @@ def test_authorized_dismissal_is_retained_and_reopen_requires_new_applicability(
     )
     assert dismissed.get("obj-1").status == "dismissed"
 
-    reopened = ledger.reopen(
-        "obj-1",
+    reopened = reopen_objection(
+        ledger,
+        objection_id="obj-1",
         actor="NAV",
         source="profile-change:new-runtime",
         expected_revision=2,
@@ -297,8 +358,9 @@ def test_authorized_dismissal_is_retained_and_reopen_requires_new_applicability(
     assert objection.applicability_revision == 2
     assert objection.revision == 3
     assert objection.evidence_refs[-1] == "runtime-change:1"
-    stale_assessment = ledger.assess_evidence(
-        "obj-1",
+    stale_assessment = assess_objection(
+        ledger,
+        objection_id="obj-1",
         actor="NAV",
         source="profile-validation:old-predicate-after-reopen",
         expected_revision=3,
@@ -310,8 +372,9 @@ def test_authorized_dismissal_is_retained_and_reopen_requires_new_applicability(
     with pytest.raises(ValueError, match="active objection"):
         DecisionEngine().resolve_with_events(record, "consent", "dispatch", store.events())
 
-    fresh_assessment = ledger.assess_evidence(
-        "obj-1",
+    fresh_assessment = assess_objection(
+        ledger,
+        objection_id="obj-1",
         actor="NAV",
         source="profile-validation:new-predicate",
         expected_revision=4,
@@ -329,8 +392,9 @@ def test_narrowing_preserves_initial_applicability_and_does_not_discharge(tmp_pa
     store = EventStore(tmp_path / "events.jsonl")
     ledger = ObjectionLifecycle(store, record)
     raise_objection(ledger)
-    narrowed = ledger.narrow(
-        "obj-1",
+    narrowed = narrow_objection(
+        ledger,
+        objection_id="obj-1",
         actor="NAV",
         source="profile-review:selected-profile",
         expected_revision=1,
@@ -357,8 +421,9 @@ def test_stale_transition_and_duplicate_or_out_of_order_events_fail_closed(tmp_p
     ledger = ObjectionLifecycle(store, record)
     raise_objection(ledger)
     with pytest.raises(ValueError, match="stale or out-of-order"):
-        ledger.assess_evidence(
-            "obj-1",
+        assess_objection(
+            ledger,
+            objection_id="obj-1",
             actor="ENG",
             source="observation:stale",
             expected_revision=2,
@@ -389,17 +454,18 @@ def test_stale_transition_and_duplicate_or_out_of_order_events_fail_closed(tmp_p
         materialize_objections([transition_before_raise, event], record)
 
 
-def test_superseding_keeps_new_objection_active_and_position_history_is_immutable(tmp_path):
+def test_superseding_keeps_successor_active_and_duplicate_delivery_idempotent(tmp_path):
     record = decision()
     store = EventStore(tmp_path / "events.jsonl")
     ledger = ObjectionLifecycle(store, record)
     raise_objection(ledger, "old")
-    ledger.raise_objection(
-            objection_id="new",
-            actor="ENG",
-            source="review:new-claim",
-            category="factual",
-            claim="new profile has missing validation",
+    add_objection(
+        ledger,
+        objection_id="new",
+        actor="ENG",
+        source="review:new-claim",
+        category="factual",
+        claim="new profile has missing validation",
         scope="new profile only",
         authority_scope="runtime",
         resolution_predicate_id="new-profile-valid",
@@ -422,6 +488,31 @@ def test_superseding_keeps_new_objection_active_and_position_history_is_immutabl
     assert duplicate_delivery.metrics.serialized_event_bytes > state.metrics.serialized_event_bytes
     assert duplicate_delivery.metrics.view_bytes == state.metrics.view_bytes
 
+
+def test_supersession_rejects_self_reference_and_category_downgrade(tmp_path):
+    record = decision()
+    store = EventStore(tmp_path / "events.jsonl")
+    ledger = ObjectionLifecycle(store, record)
+    raise_objection(ledger, "old")
+    add_objection(
+        ledger,
+        objection_id="new",
+        actor="ENG",
+        source="review:new-claim",
+        category="factual",
+        claim="new profile has missing validation",
+        scope="new profile only",
+        authority_scope="runtime",
+        resolution_predicate_id="new-profile-valid",
+    )
+    ledger.supersede(
+        "old",
+        actor="NAV",
+        source="decision:supersede",
+        expected_revision=1,
+        successor_id="new",
+        reason="the new objection has the narrower, current claim",
+    )
     self_supersede = Event(
         event_type="objection_lifecycle",
         actor="NAV",
@@ -438,7 +529,8 @@ def test_superseding_keeps_new_objection_active_and_position_history_is_immutabl
     with pytest.raises(ValueError, match="cannot supersede itself"):
         materialize_objections([*store.events(), self_supersede], record)
 
-    ledger.raise_objection(
+    add_objection(
+        ledger,
         objection_id="preference-successor",
         actor="ENG",
         source="review:preference-successor",
@@ -458,6 +550,8 @@ def test_superseding_keeps_new_objection_active_and_position_history_is_immutabl
             reason="must not weaken a factual objection",
         )
 
+
+def test_positions_are_immutable_and_initial_final_positions_stay_separate():
     engine = DecisionEngine()
     original = DecisionRecord(id="d", proposal="p", participants={"NAV"}, consequential=False)
     with pytest.raises(ValueError):
@@ -548,7 +642,8 @@ def test_preference_objection_is_visible_but_does_not_veto(tmp_path):
     )
     store = EventStore(tmp_path / "events.jsonl")
     ledger = ObjectionLifecycle(store, record)
-    ledger.raise_objection(
+    add_objection(
+        ledger,
         objection_id="preference-1",
         actor="ENG",
         source="initial-position:ENG",
@@ -611,8 +706,9 @@ def test_initial_positions_and_resolution_rebuild_from_the_shared_event_store(tm
     assert before.final_positions[0].position is Position.SUPPORT
     with pytest.raises(ValueError, match="active objection"):
         lifecycle.resolve("consent", "dispatch", actor="NAV", source="resolution:early")
-    ledger.assess_evidence(
-        "obj-1",
+    assess_objection(
+        ledger,
+        objection_id="obj-1",
         actor="NAV",
         source="profile-validation:current",
         expected_revision=1,

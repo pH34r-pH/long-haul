@@ -26,36 +26,46 @@ class DecisionLifecycleEvent(BaseModel):
     @model_validator(mode="after")
     def valid_operation_payload(self) -> DecisionLifecycleEvent:
         if self.operation == "created":
-            if (
-                self.record is None
-                or self.record.id != self.decision_id
-                or self.record.initial_positions
-                or self.record.final_positions
-                or self.record.resolution is not None
-                or self.position is not None
-                or self.resolution is not None
-                or self.action is not None
-                or self.authority_holder is not None
-            ):
-                raise ValueError("decision creation needs a matching unresolved empty record")
+            _validate_creation_payload(self)
         elif self.operation in ("initial_captured", "final_captured"):
-            if (
-                self.position is None
-                or self.record is not None
-                or self.resolution is not None
-                or self.action is not None
-                or self.authority_holder is not None
-            ):
-                raise ValueError("position event needs only its typed position")
-        elif (
-            self.resolution is None
-            or not self.action
-            or not self.action.strip()
-            or self.record is not None
-            or self.position is not None
-        ):
-            raise ValueError("resolution event needs a resolution and nonempty action")
+            _validate_position_payload(self)
+        else:
+            _validate_resolution_payload(self)
         return self
+
+
+def _validate_creation_payload(event: DecisionLifecycleEvent) -> None:
+    record = event.record
+    invalid_record = (
+        record is None
+        or record.id != event.decision_id
+        or record.initial_positions
+        or record.final_positions
+        or record.resolution is not None
+    )
+    extra_payload = any(
+        value is not None
+        for value in (event.position, event.resolution, event.action, event.authority_holder)
+    )
+    if invalid_record or extra_payload:
+        raise ValueError("decision creation needs a matching unresolved empty record")
+
+
+def _validate_position_payload(event: DecisionLifecycleEvent) -> None:
+    position_missing = event.position is None
+    extra_payload = any(
+        value is not None
+        for value in (event.record, event.resolution, event.action, event.authority_holder)
+    )
+    if position_missing or extra_payload:
+        raise ValueError("position event needs only its typed position")
+
+
+def _validate_resolution_payload(event: DecisionLifecycleEvent) -> None:
+    invalid_action = not event.action or not event.action.strip()
+    extra_payload = event.record is not None or event.position is not None
+    if event.resolution is None or invalid_action or extra_payload:
+        raise ValueError("resolution event needs a resolution and nonempty action")
 
 
 def materialize_decision(events: Sequence[Event], decision_id: str) -> DecisionRecord:
@@ -64,51 +74,93 @@ def materialize_decision(events: Sequence[Event], decision_id: str) -> DecisionR
     record: DecisionRecord | None = None
     engine = DecisionEngine()
     for index, event in enumerate(events):
-        serialized = event.model_dump_json()
-        previous = seen.get(event.id)
-        if previous is not None:
-            if previous != serialized:
-                raise ValueError("conflicting duplicate event identity")
+        if not _accept_event(seen, event):
             continue
-        seen[event.id] = serialized
         if event.event_type != "decision_lifecycle":
             continue
         transition = DecisionLifecycleEvent.model_validate(event.payload)
         if transition.decision_id != decision_id:
             continue
-        if event.actor not in (record.participants if record else _participants(transition)):
-            raise ValueError("decision event actor must be a participant")
-        if not event.source:
-            raise ValueError("decision event needs provenance source")
-        if transition.operation == "created":
-            if record is not None or transition.record is None:
-                raise ValueError("decision history contains a repeated or malformed creation")
-            record = transition.record
-            continue
-        if record is None:
-            raise ValueError("decision transition precedes its creation event")
-        if record.resolution is not None:
-            raise ValueError("decision event follows its terminal resolution")
-        if transition.operation in ("initial_captured", "final_captured"):
-            if transition.position is None or transition.position.participant != event.actor:
-                raise ValueError("position event actor must match its participant")
-            if transition.operation == "initial_captured":
-                record = engine.capture_initial(record, transition.position)
-            else:
-                record = engine.capture_final(record, transition.position)
-            continue
-        if transition.operation == "resolved":
-            assert transition.resolution is not None and transition.action is not None
-            record = engine.resolve_with_events(
-                record,
-                transition.resolution,
-                transition.action,
-                events[:index],
-                transition.authority_holder,
-            )
+        record = _advance_decision(
+            record, event, transition, events[:index], engine
+        )
     if record is None:
         raise KeyError(f"decision {decision_id!r} is not present in event history")
     return record
+
+
+def _accept_event(seen: dict[str, str], event: Event) -> bool:
+    serialized = event.model_dump_json()
+    previous = seen.get(event.id)
+    if previous is not None:
+        if previous != serialized:
+            raise ValueError("conflicting duplicate event identity")
+        return False
+    seen[event.id] = serialized
+    return True
+
+
+def _advance_decision(
+    record: DecisionRecord | None,
+    event: Event,
+    transition: DecisionLifecycleEvent,
+    history: Sequence[Event],
+    engine: DecisionEngine,
+) -> DecisionRecord:
+    _validate_event_envelope(record, event, transition)
+    if transition.operation == "created":
+        if record is not None or transition.record is None:
+            raise ValueError("decision history contains a repeated or malformed creation")
+        return transition.record
+    if record is None:
+        raise ValueError("decision transition precedes its creation event")
+    if record.resolution is not None:
+        raise ValueError("decision event follows its terminal resolution")
+    if transition.operation in ("initial_captured", "final_captured"):
+        return _capture_position(record, event, transition, engine)
+    return _resolve_decision(record, transition, history, engine)
+
+
+def _validate_event_envelope(
+    record: DecisionRecord | None,
+    event: Event,
+    transition: DecisionLifecycleEvent,
+) -> None:
+    participants = record.participants if record else _participants(transition)
+    if event.actor not in participants:
+        raise ValueError("decision event actor must be a participant")
+    if not event.source:
+        raise ValueError("decision event needs provenance source")
+
+
+def _capture_position(
+    record: DecisionRecord,
+    event: Event,
+    transition: DecisionLifecycleEvent,
+    engine: DecisionEngine,
+) -> DecisionRecord:
+    position = transition.position
+    if position is None or position.participant != event.actor:
+        raise ValueError("position event actor must match its participant")
+    if transition.operation == "initial_captured":
+        return engine.capture_initial(record, position)
+    return engine.capture_final(record, position)
+
+
+def _resolve_decision(
+    record: DecisionRecord,
+    transition: DecisionLifecycleEvent,
+    history: Sequence[Event],
+    engine: DecisionEngine,
+) -> DecisionRecord:
+    assert transition.resolution is not None and transition.action is not None
+    return engine.resolve_with_events(
+        record,
+        transition.resolution,
+        transition.action,
+        history,
+        transition.authority_holder,
+    )
 
 
 def _participants(transition: DecisionLifecycleEvent) -> frozenset[str]:
