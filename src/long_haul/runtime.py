@@ -85,9 +85,14 @@ class ExecutionRequest(BaseModel):
     profile: InferenceProfile
     prompt: str
     max_tokens: int = Field(default=32, ge=1, le=4096)
-    temperature: float = Field(default=0, ge=0)
-    timeout_seconds: float = Field(default=120, gt=0)
+    temperature: float = Field(default=0, ge=0, allow_inf_nan=False)
+    timeout_seconds: float = Field(default=120, gt=0, allow_inf_nan=False)
     allow_unknown_runtime: bool = False
+    # Explicit seeds identify attempts; they do not promise cross-backend equality.
+    seed: int | None = Field(default=None, strict=True, ge=0, le=2147483647)
+    context_tokens: int | None = Field(default=None, strict=True, ge=1, le=2147483647)
+    # Rendered means the caller owns the template and verified token accounting.
+    prompt_mode: Literal["runtime-default", "rendered"] = "runtime-default"
 
 
 class Timing(BaseModel):
