@@ -112,11 +112,19 @@ def _validate_completion(reply: dict, request: ExecutionRequest, inputs: list[in
         raise ValueError("incomplete or context-truncated native response")
     if reply.get('stop_type') not in {'eos', 'limit'} or not isinstance(reply.get('content'), str):
         raise ValueError("invalid native completion disposition")
+    _completion_counts(reply, request, inputs)
+    _effective_settings(reply, request)
+
+
+def _completion_counts(reply: dict, request: ExecutionRequest, inputs: list[int]) -> None:
     predicted = _integer(reply.get('tokens_predicted'))
     if _integer(reply.get('tokens_evaluated')) != len(inputs):
         raise ValueError("native prompt accounting differs from submitted token IDs")
     if predicted > request.max_tokens or len(_tokens(reply.get('tokens'))) > predicted:
         raise ValueError("native output token accounting exceeds its allowance")
+
+
+def _effective_settings(reply: dict, request: ExecutionRequest) -> None:
     settings = reply.get('generation_settings', {})
     if not isinstance(settings, dict):
         raise ValueError("native generation settings missing")
@@ -129,6 +137,23 @@ def _validate_completion(reply: dict, request: ExecutionRequest, inputs: list[in
         temperature, request.temperature, rel_tol=1e-6, abs_tol=1e-7
     ):
         raise ValueError("native server changed requested temperature")
+
+
+def _owner_binding(port: int, binding: ProfileValidation) -> None:
+    if (binding.runtime.runtime_id != 'llama.cpp' or not binding.runtime.build_id
+            or binding.options.get('transport') != 'llama-server'
+            or binding.options.get('server_port') != port):
+        raise ValueError("server-specific owner binding required")
+    if binding.state is ValidationState.SUPPORTED and (
+        binding.depth not in {ValidationDepth.EXECUTION, ValidationDepth.BENCHMARK}
+        or binding.provenance != 'measured'
+    ):
+        raise ValueError("supported server binding requires measured execution evidence")
+
+
+def _admitted(validation: ProfileValidation, request: ExecutionRequest) -> bool:
+    return validation.state is ValidationState.SUPPORTED or (
+        validation.state is ValidationState.UNKNOWN and request.allow_unknown_runtime)
 
 
 class LlamaServerAdapter:
@@ -149,15 +174,7 @@ class LlamaServerAdapter:
             raise ValueError("explicit loopback port required")
         if type(max_json_bytes) is not int or max_json_bytes <= 0:
             raise ValueError("positive JSON byte limit required")
-        if (binding.runtime.runtime_id != self.runtime_id or not binding.runtime.build_id
-                or binding.options.get('transport') != 'llama-server'
-                or binding.options.get('server_port') != port):
-            raise ValueError("server-specific owner binding required")
-        if binding.state is ValidationState.SUPPORTED and (
-            binding.depth not in {ValidationDepth.EXECUTION, ValidationDepth.BENCHMARK}
-            or binding.provenance != 'measured'
-        ):
-            raise ValueError("supported server binding requires measured execution evidence")
+        _owner_binding(port, binding)
         self.port, self.binding = port, binding.model_copy(deep=True)
         self.observe, self.max_json_bytes = observe, max_json_bytes
 
@@ -209,9 +226,7 @@ class LlamaServerAdapter:
         runtime = self.identity()
         failure = None
         validation = self.validate(request.profile)
-        admitted = validation.state is ValidationState.SUPPORTED or (
-            validation.state is ValidationState.UNKNOWN and request.allow_unknown_runtime)
-        if not admitted:
+        if not _admitted(validation, request):
             return ExecutionResult(request_id=request.request_id, runtime=runtime, success=False,
                                    error_class=FailureClass.RUNTIME, error_detail=validation.rationale)
         try:
