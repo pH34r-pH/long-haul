@@ -6,17 +6,23 @@ health check into qualification. CLI behavior and historical records are unchang
 """
 from __future__ import annotations
 
-from copy import deepcopy
 import http.client
 import json
 import math
 import time
 from collections.abc import Callable
+from copy import deepcopy
 
 from ..models import InferenceProfile, canonical_json
 from ..runtime import (
-    ExecutionRequest, ExecutionResult, FailureClass, ProfileValidation,
-    RuntimeIdentity, Timing, ValidationDepth, ValidationState,
+    ExecutionRequest,
+    ExecutionResult,
+    FailureClass,
+    ProfileValidation,
+    RuntimeIdentity,
+    Timing,
+    ValidationDepth,
+    ValidationState,
 )
 
 
@@ -35,7 +41,7 @@ def _integer(value: object) -> int:
 
 def _tokens(value: object) -> list[int]:
     if not isinstance(value, list):
-        raise ValueError("invalid native token vector")
+        raise TypeError("invalid native token vector")
     return [_integer(token) for token in value]
 
 
@@ -93,12 +99,12 @@ def _prepared_context(request: ExecutionRequest) -> int:
 
 def _completion_payload(request: ExecutionRequest, token_ids: list[int]) -> dict:
     # Send IDs, not a string: upstream then adds neither a BOS nor a chat template.
-    data = dict(prompt=token_ids, n_predict=request.max_tokens,
-                temperature=request.temperature, seed=request.seed or 0,
-                stream=False, return_tokens=True, cache_prompt=False,
-                n_cache_reuse=0, n_cmpl=1, id_slot=0, stop=[], ignore_eos=False,
-                samplers=['top_k', 'top_p', 'min_p', 'temperature'],
-                top_k=40, top_p=0.95, min_p=0.05)
+    data = {'prompt': token_ids, 'n_predict': request.max_tokens,
+            'temperature': request.temperature, 'seed': request.seed or 0,
+            'stream': False, 'return_tokens': True, 'cache_prompt': False,
+            'n_cache_reuse': 0, 'n_cmpl': 1, 'id_slot': 0, 'stop': [], 'ignore_eos': False,
+            'samplers': ['top_k', 'top_p', 'min_p', 'temperature'],
+            'top_k': 40, 'top_p': 0.95, 'min_p': 0.05}
     schema = request.profile.options.get('json_schema')
     if schema is not None:
         if not isinstance(schema, dict):
@@ -127,7 +133,7 @@ def _completion_counts(reply: dict, request: ExecutionRequest, inputs: list[int]
 def _effective_settings(reply: dict, request: ExecutionRequest) -> None:
     settings = reply.get('generation_settings', {})
     if not isinstance(settings, dict):
-        raise ValueError("native generation settings missing")
+        raise TypeError("native generation settings missing")
     expected = {'n_predict': request.max_tokens, 'seed': request.seed or 0}
     if any(type(settings.get(key)) is not int or settings[key] != value
            for key, value in expected.items()):
@@ -211,8 +217,8 @@ class LlamaServerAdapter:
             connection.close()
 
     def tokenize(self, text: str, *, deadline: float) -> list[int]:
-        reply = self._post('/tokenize', dict(content=text, add_special=False,
-                                             parse_special=True, with_pieces=False), deadline)
+        reply = self._post('/tokenize', {'content': text, 'add_special': False,
+                                             'parse_special': True, 'with_pieces': False}, deadline)
         return _tokens(reply.get('tokens'))
 
     def apply_template(self, messages: list[dict], *, deadline: float) -> str:
