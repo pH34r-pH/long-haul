@@ -20,6 +20,104 @@ jobs:
       - name: Test Python 3.12 package target
         run: python -m pytest -q
 
+  native-completion:
+    name: Pinned CPU completion and tokenizer parity
+    needs: test
+    if: >-
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    concurrency:
+      group: native-completion-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Read exact public smoke inputs
+        id: inputs
+        run: |
+          mkdir -p "$RUNNER_TEMP/native-evidence" "$RUNNER_TEMP/reference-tokenizer"
+          cp tests/fixtures/native-completion.json "$RUNNER_TEMP/native-evidence/inputs.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          pin = json.loads(Path('tests/fixtures/native-completion.json').read_text())
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('upstream=' + pin['upstream_commit'] + '\n')
+              output.write('model_url=https://huggingface.co/' + pin['model_repository'] + '/resolve/' + pin['model_revision'] + '/' + pin['model_filename'] + '\n')
+              output.write('model_sha256=' + pin['model_sha256'] + '\n')
+              output.write('tokenizer_base=https://huggingface.co/' + pin['tokenizer_repository'] + '/resolve/' + pin['tokenizer_revision'] + '\n')
+          PY
+      - uses: actions/checkout@v4
+        with:
+          repository: ggml-org/llama.cpp
+          ref: ${{ steps.inputs.outputs.upstream }}
+          path: native-upstream
+          persist-credentials: false
+      - name: Build existing upstream CPU completion and tokenizer targets
+        run: |
+          set -o pipefail
+          git -C native-upstream rev-parse HEAD > "$RUNNER_TEMP/native-evidence/source.txt"
+          cmake -S native-upstream -B "$RUNNER_TEMP/native-build" \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+            -DGGML_NATIVE=OFF -DGGML_CUDA=OFF -DGGML_VULKAN=OFF \
+            -DLLAMA_CURL=OFF -DLLAMA_BUILD_TESTS=OFF \
+            2>&1 | tee "$RUNNER_TEMP/native-evidence/configure.log"
+          cmake --build "$RUNNER_TEMP/native-build" \
+            --target llama-completion llama-tokenize --parallel 2 \
+            2>&1 | tee "$RUNNER_TEMP/native-evidence/build.log"
+      - name: Fetch and verify immutable public model and tokenizer metadata
+        env:
+          MODEL_URL: ${{ steps.inputs.outputs.model_url }}
+          MODEL_SHA256: ${{ steps.inputs.outputs.model_sha256 }}
+          TOKENIZER_BASE: ${{ steps.inputs.outputs.tokenizer_base }}
+        run: |
+          curl --fail --location --proto '=https' --tlsv1.2 --retry 2 --max-time 180 \
+            "$MODEL_URL" -o "$RUNNER_TEMP/native-model.gguf"
+          printf '%s  %s\n' "$MODEL_SHA256" "$RUNNER_TEMP/native-model.gguf" | sha256sum --check --strict
+          for name in tokenizer.json tokenizer_config.json; do
+            curl --fail --location --proto '=https' --tlsv1.2 --retry 2 --max-time 60 \
+              "$TOKENIZER_BASE/$name" -o "$RUNNER_TEMP/reference-tokenizer/$name"
+          done
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          pin = json.loads(Path('tests/fixtures/native-completion.json').read_text())
+          root = Path(os.environ['RUNNER_TEMP']) / 'reference-tokenizer'
+          for name, expected in pin['tokenizer_files'].items():
+              assert hashlib.sha256((root / name).read_bytes()).hexdigest() == expected, name
+          PY
+      - name: Exercise real completion and reference tokenizer parity
+        run: |
+          set -o pipefail
+          python -m pip install -e '.[dev]' 'tokenizers==0.22.0' 'Jinja2==3.1.6'
+          "$RUNNER_TEMP/native-build/bin/llama-completion" --version > "$RUNNER_TEMP/native-evidence/version.txt" 2>&1
+          sha256sum "$RUNNER_TEMP/native-build/bin/llama-completion" "$RUNNER_TEMP/native-build/bin/llama-tokenize" > "$RUNNER_TEMP/native-evidence/binaries.sha256"
+          python -m pip freeze > "$RUNNER_TEMP/native-evidence/python-packages.txt"
+          export LONG_HAUL_NATIVE_COMPLETION="$RUNNER_TEMP/native-build/bin/llama-completion"
+          export LONG_HAUL_NATIVE_TOKENIZE="$RUNNER_TEMP/native-build/bin/llama-tokenize"
+          export LONG_HAUL_NATIVE_GGUF="$RUNNER_TEMP/native-model.gguf"
+          export LONG_HAUL_REFERENCE_TOKENIZER="$RUNNER_TEMP/reference-tokenizer"
+          export LONG_HAUL_NATIVE_EVIDENCE="$RUNNER_TEMP/native-evidence"
+          export LONG_HAUL_REQUIRE_NATIVE_SMOKE=1
+          ulimit -v 3145728
+          timeout --signal=TERM --kill-after=10s 300s \
+            python -m pytest -q -s tests/test_llama_native_completion.py \
+            --junitxml="$RUNNER_TEMP/native-evidence/junit.xml" \
+            2>&1 | tee "$RUNNER_TEMP/native-evidence/smoke.log"
+      - name: Retain scoped native evidence including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-completion-smoke-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-evidence/
+          if-no-files-found: error
+          retention-days: 14
+
   package:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: test
