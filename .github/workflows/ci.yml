@@ -58,7 +58,7 @@ jobs:
           ref: ${{ steps.inputs.outputs.upstream }}
           path: native-upstream
           persist-credentials: false
-      - name: Build existing upstream CPU completion and tokenizer targets
+      - name: Build existing upstream CPU completion, tokenizer and server targets
         run: |
           set -o pipefail
           git -C native-upstream rev-parse HEAD > "$RUNNER_TEMP/native-evidence/source.txt"
@@ -68,7 +68,7 @@ jobs:
             -DLLAMA_CURL=OFF -DLLAMA_BUILD_TESTS=OFF \
             2>&1 | tee "$RUNNER_TEMP/native-evidence/configure.log"
           cmake --build "$RUNNER_TEMP/native-build" \
-            --target llama-completion llama-tokenize --parallel 2 \
+            --target llama-completion llama-tokenize llama-server --parallel 2 \
             2>&1 | tee "$RUNNER_TEMP/native-evidence/build.log"
       - name: Fetch and verify immutable public model and tokenizer metadata
         env:
@@ -91,22 +91,23 @@ jobs:
           for name, expected in pin['tokenizer_files'].items():
               assert hashlib.sha256((root / name).read_bytes()).hexdigest() == expected, name
           PY
-      - name: Exercise real completion and reference tokenizer parity
+      - name: Exercise real completion, JSON server and reference tokenizer parity
         run: |
           set -o pipefail
           python -m pip install -e '.[dev]' 'tokenizers==0.22.0' 'Jinja2==3.1.6'
           "$RUNNER_TEMP/native-build/bin/llama-completion" --version > "$RUNNER_TEMP/native-evidence/version.txt" 2>&1
-          sha256sum "$RUNNER_TEMP/native-build/bin/llama-completion" "$RUNNER_TEMP/native-build/bin/llama-tokenize" > "$RUNNER_TEMP/native-evidence/binaries.sha256"
+          sha256sum "$RUNNER_TEMP/native-build/bin/llama-completion" "$RUNNER_TEMP/native-build/bin/llama-tokenize" "$RUNNER_TEMP/native-build/bin/llama-server" > "$RUNNER_TEMP/native-evidence/binaries.sha256"
           python -m pip freeze > "$RUNNER_TEMP/native-evidence/python-packages.txt"
           export LONG_HAUL_NATIVE_COMPLETION="$RUNNER_TEMP/native-build/bin/llama-completion"
           export LONG_HAUL_NATIVE_TOKENIZE="$RUNNER_TEMP/native-build/bin/llama-tokenize"
+          export LONG_HAUL_NATIVE_SERVER="$RUNNER_TEMP/native-build/bin/llama-server"
           export LONG_HAUL_NATIVE_GGUF="$RUNNER_TEMP/native-model.gguf"
           export LONG_HAUL_REFERENCE_TOKENIZER="$RUNNER_TEMP/reference-tokenizer"
           export LONG_HAUL_NATIVE_EVIDENCE="$RUNNER_TEMP/native-evidence"
           export LONG_HAUL_REQUIRE_NATIVE_SMOKE=1
           ulimit -v 3145728
           timeout --signal=TERM --kill-after=10s 300s \
-            python -m pytest -q -s tests/test_llama_native_completion.py \
+            python -m pytest -q -s tests/test_llama_native_completion.py tests/test_llama_native_server.py \
             --junitxml="$RUNNER_TEMP/native-evidence/junit.xml" \
             2>&1 | tee "$RUNNER_TEMP/native-evidence/smoke.log"
       - name: Retain scoped native evidence including failures
