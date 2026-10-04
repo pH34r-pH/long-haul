@@ -5,7 +5,6 @@ import http.client
 import json
 import os
 from pathlib import Path
-import signal
 import socket
 import subprocess
 import time
@@ -61,8 +60,9 @@ def owned_server(native_assets, tmp_path_factory):
     env = {key: val for key, val in os.environ.items() if not key.upper().startswith('LLAMA_ARG_')}
     started = time.monotonic()
     with (root / 'server.log').open('wb') as log:
+        # Inherit the outer timeout process group; hard job expiry must stop both.
         process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=log, stderr=log,
-                                   env=env, start_new_session=True)
+                                   env=env)
         try:
             wait_for_server(process, port)
             runtime = LlamaCppAdapter(binary).identity()
@@ -74,12 +74,12 @@ def owned_server(native_assets, tmp_path_factory):
             yield port, model, runtime
         finally:
             try:
-                os.killpg(process.pid, signal.SIGTERM)
+                process.terminate()
                 process.wait(timeout=5)
             except ProcessLookupError:
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                os.killpg(process.pid, signal.SIGKILL)
+                process.kill()
                 process.wait(timeout=5)
             record('server-cleanup', {'returncode': process.returncode,
                                       'process_reaped': process.poll() is not None})
