@@ -178,7 +178,27 @@ def test_real_fixture_process_observes_exact_argv_closed_stdin_and_unicode(tmp_p
     assert argv[argv.index('-p') + 1] == req.prompt
     assert argv[argv.index('--seed') + 1] == '9'
     assert result.runtime.capabilities['identity_probe'] == 'ready'
+    assert result.timings.prompt_tokens is None
     assert result.timings.generated_tokens is None
+
+
+@pytest.mark.skipif(os.name != 'posix', reason='fixture shebang requires POSIX')
+def test_native_prompt_and_generated_token_counts_are_parsed(tmp_path):
+    binary = executable(
+        tmp_path,
+        "print('bounded answer')\n"
+        "print('llama_perf_context_print: prompt eval time = 12.34 ms / 13 tokens (0.95 ms per token, 1053.48 tokens per second)', file=sys.stderr)\n"
+        "print('llama_perf_context_print: eval time = 84.00 ms / 7 runs (12.00 ms per token, 83.33 tokens per second)', file=sys.stderr)\n",
+    )
+
+    result = m.LlamaCppAdapter(binary).execute(request(tmp_path))
+
+    assert result.success
+    assert result.output == 'bounded answer\n'
+    assert result.timings.prompt_tokens == 13
+    assert result.timings.generated_tokens == 7
+    assert result.timings.prefill_tps == pytest.approx(1053.48)
+    assert result.timings.decode_tps == pytest.approx(83.33)
 
 
 @pytest.mark.skipif(os.name != 'posix', reason='fixture shebang requires POSIX')
