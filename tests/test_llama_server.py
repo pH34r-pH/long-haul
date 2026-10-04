@@ -1,17 +1,21 @@
 """Loopback HTTP fixtures; no model execution or host qualification."""
-from contextlib import contextmanager
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import threading
 import time
+from contextlib import contextmanager
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
 from long_haul.adapters.llama_server import LlamaServerAdapter
 from long_haul.models import InferenceProfile, ModelArtifact
 from long_haul.runtime import (
-    ExecutionRequest, FailureClass, ProfileValidation, RuntimeIdentity,
-    ValidationDepth, ValidationState,
+    ExecutionRequest,
+    FailureClass,
+    ProfileValidation,
+    RuntimeIdentity,
+    ValidationDepth,
+    ValidationState,
 )
 
 
@@ -29,11 +33,11 @@ def server_fixture(transform=lambda path, reply: reply):
             elif self.path == '/apply-template':
                 reply = {'prompt': 'rendered café\n'}
             else:
-                reply = dict(content='  café [end of text]\n', tokens=[5, 6],
-                             tokens_predicted=3, tokens_evaluated=len(body['prompt']),
-                             stop=True, truncated=False, stop_type='eos',
-                             generation_settings={key: body[key] for key in
-                                                  ('n_predict', 'seed', 'temperature')})
+                reply = {'content': '  café [end of text]\n', 'tokens': [5, 6],
+                         'tokens_predicted': 3, 'tokens_evaluated': len(body['prompt']),
+                         'stop': True, 'truncated': False, 'stop_type': 'eos',
+                         'generation_settings': {key: body[key] for key in
+                                                 ('n_predict', 'seed', 'temperature')}}
             reply = transform(self.path, reply)
             data = reply if isinstance(reply, bytes) else json.dumps(reply).encode()
             self.send_response(200)
@@ -197,9 +201,9 @@ def test_schema_is_an_explicit_profile_choice():
 
 def test_float32_sampling_rounding_is_allowed_but_wrong_temperature_is_not():
     for temperature, success in [(0.699999988079071, True), (0.8, False)]:
-        def transform(path, reply):
+        def transform(path, reply, observed=temperature):
             if path == '/completion':
-                reply['generation_settings']['temperature'] = temperature
+                reply['generation_settings']['temperature'] = observed
             return reply
         with server_fixture(transform) as (port, _):
             adapter, req = setup(port)
