@@ -35,6 +35,7 @@ def test_no_host_network_ports_capabilities_or_socket_mount_in_command():
     args = m.container_arguments('sha256:' + 'a' * 64, Path('/input/model'), Path('/input/tokenizer'))
     assert '--network=none' in args and '--read-only' in args
     assert '--cap-drop=ALL' in args and '--security-opt=no-new-privileges' in args
+    assert '--log-opt=max-file=1' in args and '--log-opt=compress=false' in args
     assert '--memory=1073741824' in args and '--memory-swap=1073741824' in args
     assert not any('docker.sock' in item for item in args)
     assert sum(item == '--mount' for item in args) == 2
