@@ -191,6 +191,7 @@ def _gpu_layers(profile: InferenceProfile) -> int:
         return 0
 
 
+
 def _positive_option(options: dict, name: str) -> int | None:
     """Reject coercion and sentinel defaults for explicitly selected resource caps."""
     value = options.get(name)
@@ -259,6 +260,42 @@ def _inference_environment(request: ExecutionRequest) -> dict[str, str]:
     if visible_devices is not None:
         env["CUDA_VISIBLE_DEVICES"] = str(visible_devices)
     return env
+
+
+def _completion_result(request: ExecutionRequest, runtime: RuntimeIdentity,
+                       run: subprocess.CompletedProcess[str], elapsed: float) -> ExecutionResult:
+    """Interpret a completed process without changing invocation or timing scope."""
+    timings = _parse_timings(run.stderr, elapsed)
+    if run.returncode:
+        return ExecutionResult(
+            request_id=request.request_id,
+            runtime=runtime,
+            success=False,
+            error_class=FailureClass.EXECUTION,
+            error_detail=run.stderr[-1000:],
+            raw_exit_code=run.returncode,
+            timings=timings,
+        )
+    if _accelerated(request.profile):
+        capabilities = dict(runtime.capabilities)
+        capabilities["accelerated_execution"] = "measured"
+        runtime = runtime.model_copy(
+            update={
+                "backends": sorted(set(runtime.backends) | {"cuda"}),
+                "capabilities": capabilities,
+            }
+        )
+    # In rendered mode stdout is completion-only. A generated prefix equal
+    # to the input is real output, not an echo to heuristically remove.
+    output = (run.stdout if request.prompt_mode == "rendered"
+              else run.stdout.removeprefix(request.prompt).strip())
+    return ExecutionResult(
+        request_id=request.request_id,
+        runtime=runtime,
+        success=True,
+        output=output,
+        timings=timings,
+    )
 
 
 class LlamaCppAdapter:
@@ -467,35 +504,4 @@ class LlamaCppAdapter:
                 error_detail=f"llama.cpp process could not start: {exc}",
                 timings=Timing(total_seconds=time.monotonic() - started),
             )
-        elapsed = time.monotonic() - started
-        timings = _parse_timings(run.stderr, elapsed)
-        if run.returncode:
-            return ExecutionResult(
-                request_id=request.request_id,
-                runtime=runtime,
-                success=False,
-                error_class=FailureClass.EXECUTION,
-                error_detail=run.stderr[-1000:],
-                raw_exit_code=run.returncode,
-                timings=timings,
-            )
-        if _accelerated(request.profile):
-            capabilities = dict(runtime.capabilities)
-            capabilities["accelerated_execution"] = "measured"
-            runtime = runtime.model_copy(
-                update={
-                    "backends": sorted(set(runtime.backends) | {"cuda"}),
-                    "capabilities": capabilities,
-                }
-            )
-        # In rendered mode stdout is completion-only. A generated prefix equal
-        # to the input is real output, not an echo to heuristically remove.
-        output = (run.stdout if request.prompt_mode == "rendered"
-                  else run.stdout.removeprefix(request.prompt).strip())
-        return ExecutionResult(
-            request_id=request.request_id,
-            runtime=runtime,
-            success=True,
-            output=output,
-            timings=timings,
-        )
+        return _completion_result(request, runtime, run, time.monotonic() - started)
