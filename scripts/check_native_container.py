@@ -47,6 +47,7 @@ def container_arguments(image: str, model: Path, tokenizer: Path) -> list[str]:
             '--tmpfs=/tmp:rw,noexec,nosuid,nodev,size=134217728,mode=1777',
             '--tmpfs=/evidence:rw,noexec,nosuid,nodev,size=16777216,mode=1777',
             '--log-driver=local', '--log-opt=max-size=8m', '--log-opt=max-file=1',
+            '--log-opt=compress=false',
             '--mount', f'type=bind,source={model},target=/inputs/model.gguf,readonly',
             '--mount', f'type=bind,source={tokenizer},target=/inputs/tokenizer,readonly']
 
