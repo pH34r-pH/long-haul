@@ -110,6 +110,46 @@ jobs:
             python -m pytest -q -s tests/test_llama_native_completion.py tests/test_llama_native_server.py \
             --junitxml="$RUNNER_TEMP/native-evidence/junit.xml" \
             2>&1 | tee "$RUNNER_TEMP/native-evidence/smoke.log"
+      - name: Build a disposable exact-ID qualification image
+        run: |
+          set -euo pipefail
+          stage="$RUNNER_TEMP/native-container-input"
+          mkdir -p "$stage/bin" "$stage/tests/fixtures" "$stage/wheels"
+          cp "$RUNNER_TEMP/native-build/bin/llama-completion" "$RUNNER_TEMP/native-build/bin/llama-tokenize" "$RUNNER_TEMP/native-build/bin/llama-server" "$stage/bin/"
+          cp tests/test_llama_native_completion.py tests/test_llama_native_server.py tests/test_llama_container_boundary.py "$stage/tests/"
+          cp tests/fixtures/native-completion.json "$stage/tests/fixtures/"
+          cp scripts/capture_native_container.py "$stage/capture.py"
+          python -m pip wheel --wheel-dir "$stage/wheels" . 'pytest==8.3.5' 'tokenizers==0.22.0' 'Jinja2==3.1.6'
+          (cd "$stage" && find . -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/native-evidence/container-inputs.sha256"
+          docker pull ubuntu:24.04
+          docker image inspect ubuntu:24.04 > "$RUNNER_TEMP/native-evidence/container-base.json"
+          base="$(docker image inspect --format '{{index .RepoDigests 0}}' ubuntu:24.04)"
+          [[ "$base" =~ ^ubuntu@sha256:[0-9a-f]{64}$ ]]
+          docker build --build-arg "BASE_IMAGE=$base" \
+            --iidfile "$RUNNER_TEMP/native-image.id" \
+            -f tests/fixtures/native-container.Dockerfile "$stage"
+          docker version > "$RUNNER_TEMP/native-evidence/docker-version.txt"
+      - name: Qualify private loopback, resource bounds and cancellation
+        run: |
+          set -euo pipefail
+          python scripts/check_native_container.py \
+            --image "$(cat "$RUNNER_TEMP/native-image.id")" \
+            --model "$RUNNER_TEMP/native-model.gguf" \
+            --tokenizer "$RUNNER_TEMP/reference-tokenizer" \
+            --output "$RUNNER_TEMP/native-evidence/container"
+      - name: Reconcile any remaining owned qualification containers
+        if: always()
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/native-evidence/container"
+          if [[ -d "$root" ]]; then
+            while IFS= read -r -d '' receipt; do
+              id="$(cat "$receipt")"
+              [[ "$id" =~ ^[0-9a-f]{64}$ ]]
+              remaining="$(docker ps -aq --no-trunc --filter "id=$id")"
+              if [[ -n "$remaining" ]]; then docker rm --force "$id"; fi
+            done < <(find "$root" -name container.id -type f -print0)
+          fi
       - name: Retain scoped native evidence including failures
         if: always()
         uses: actions/upload-artifact@v4
