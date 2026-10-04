@@ -184,6 +184,8 @@ def test_real_fixture_process_observes_exact_argv_closed_stdin_and_unicode(tmp_p
 
 @pytest.mark.skipif(os.name != 'posix', reason='fixture shebang requires POSIX')
 def test_native_prompt_and_generated_token_counts_are_parsed(tmp_path):
+    # Parser mapping only: a fixture cannot establish that a pinned llama.cpp
+    # binary's `runs` count equals its emitted completion-token count.
     binary = executable(
         tmp_path,
         "print('bounded answer')\n"
