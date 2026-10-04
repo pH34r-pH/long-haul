@@ -191,6 +191,76 @@ def _gpu_layers(profile: InferenceProfile) -> int:
         return 0
 
 
+def _positive_option(options: dict, name: str) -> int | None:
+    """Reject coercion and sentinel defaults for explicitly selected resource caps."""
+    value = options.get(name)
+    if name not in options:
+        return None
+    if type(value) is not int or not 0 < value <= 2147483647:
+        raise ValueError(f"{name} must be an explicit positive integer")
+    return value
+
+
+def _context_arguments(request: ExecutionRequest) -> list[str]:
+    # Context allocation is bound to profile identity, not an unchecked per-call
+    # override of a previously qualified profile. No silent upward/downward fit.
+    context = _positive_option(request.profile.options, "context_size")
+    if request.context_tokens is not None and request.context_tokens != context:
+        raise ValueError("request context must match the profile context_size")
+    if request.prompt_mode == "rendered":
+        if request.context_tokens is None:
+            raise ValueError("rendered prompts require an explicit matching context")
+        if request.max_tokens >= context:
+            raise ValueError("context must leave room for input and requested output")
+    return [] if context is None else ["--ctx-size", str(context)]
+
+
+def _completion_arguments(request: ExecutionRequest) -> list[str]:
+    options = request.profile.options
+    command = _context_arguments(request)
+    threads = _positive_option(options, "threads")
+    batch_threads = _positive_option(options, "threads_batch")
+    if request.seed is not None:
+        command.extend(["--seed", str(request.seed)])
+    if threads is not None:
+        command.extend(["--threads", str(threads)])
+    if batch_threads is not None:
+        command.extend(["--threads-batch", str(batch_threads)])
+    elif request.prompt_mode == "rendered" and threads is not None:
+        command.extend(["--threads-batch", str(threads)])
+    if request.prompt_mode == "rendered":
+        command.extend(_rendered_arguments(request, threads))
+    return command
+
+
+def _rendered_arguments(request: ExecutionRequest, threads: int | None) -> list[str]:
+    if threads is None:
+        raise ValueError("rendered prompts require explicit profile threads")
+    if request.temperature > 0 and request.seed is None:
+        raise ValueError("stochastic rendered requests require an explicit seed")
+    layers = request.profile.options.get("gpu_layers", 0)
+    if type(layers) is not int or layers < 0:
+        raise ValueError("rendered profile gpu_layers must be a nonnegative integer")
+    if request.profile.strategy == "resident" and layers:
+        raise ValueError("CPU resident profile cannot request GPU layers")
+    # Prepared prompts must not be wrapped, unescaped, echoed, or silently
+    # context-shifted. Qualify this exact completion executable before model use.
+    return ["--no-conversation", "--no-display-prompt", "--no-escape",
+            "--no-context-shift", "--fit", "off"]
+
+
+def _inference_environment(request: ExecutionRequest) -> dict[str, str]:
+    env = os.environ.copy()
+    if request.prompt_mode == "rendered":
+        # Ambient llama argument overrides are not experiment configuration.
+        env = {key: value for key, value in env.items()
+               if not key.upper().startswith("LLAMA_ARG_")}
+    visible_devices = request.profile.options.get("cuda_visible_devices")
+    if visible_devices is not None:
+        env["CUDA_VISIBLE_DEVICES"] = str(visible_devices)
+    return env
+
+
 class LlamaCppAdapter:
     runtime_id = "llama.cpp"
 
@@ -318,10 +388,11 @@ class LlamaCppAdapter:
             "--temp",
             str(request.temperature),
         ]
+        command.extend(_completion_arguments(request))
         if options.get("no_warmup", True):
             command.append("--no-warmup")
         gpu_layers = _gpu_layers(request.profile)
-        if gpu_layers > 0:
+        if gpu_layers > 0 or request.prompt_mode == "rendered":
             command.extend(["-ngl", str(gpu_layers)])
         split_mode = options.get("split_mode")
         if split_mode:
@@ -350,15 +421,23 @@ class LlamaCppAdapter:
                 error_detail=validation.rationale,
             )
         started = time.monotonic()
-        env = os.environ.copy()
-        visible_devices = request.profile.options.get("cuda_visible_devices")
-        if visible_devices is not None:
-            env["CUDA_VISIBLE_DEVICES"] = str(visible_devices)
+        try:
+            command = self._command(request)
+        except ValueError as exc:
+            return ExecutionResult(
+                request_id=request.request_id, runtime=runtime, success=False,
+                error_class=FailureClass.RUNTIME, error_detail=str(exc),
+                timings=Timing(total_seconds=time.monotonic() - started),
+            )
+        env = _inference_environment(request)
         try:
             run = subprocess.run(
-                self._command(request),
+                command,
+                stdin=subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="strict",
                 timeout=request.timeout_seconds,
                 check=False,
                 env=env,
@@ -370,6 +449,13 @@ class LlamaCppAdapter:
                 success=False,
                 error_class=FailureClass.TIMEOUT,
                 error_detail="llama.cpp timed out",
+                timings=Timing(total_seconds=time.monotonic() - started),
+            )
+        except (UnicodeError, ValueError):
+            return ExecutionResult(
+                request_id=request.request_id, runtime=runtime, success=False,
+                error_class=FailureClass.EXECUTION,
+                error_detail="llama.cpp input/output encoding is invalid",
                 timings=Timing(total_seconds=time.monotonic() - started),
             )
         except OSError as exc:
@@ -402,7 +488,10 @@ class LlamaCppAdapter:
                     "capabilities": capabilities,
                 }
             )
-        output = run.stdout.removeprefix(request.prompt).strip()
+        # In rendered mode stdout is completion-only. A generated prefix equal
+        # to the input is real output, not an echo to heuristically remove.
+        output = (run.stdout if request.prompt_mode == "rendered"
+                  else run.stdout.removeprefix(request.prompt).strip())
         return ExecutionResult(
             request_id=request.request_id,
             runtime=runtime,
