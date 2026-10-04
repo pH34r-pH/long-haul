@@ -148,7 +148,7 @@ def test_legacy_defaults_remain_legacy(tmp_path):
     req.profile.options.pop('threads')
     argv = m.LlamaCppAdapter(tmp_path / 'binary')._command(req)
     assert req.prompt_mode == 'runtime-default'
-    assert not set(['--ctx-size', '--seed', '--threads', '--fit', '--no-conversation']) & set(argv)
+    assert not {'--ctx-size', '--seed', '--threads', '--fit', '--no-conversation'} & set(argv)
 
 
 def test_rendered_environment_discards_only_llama_argument_overrides(tmp_path, monkeypatch):
