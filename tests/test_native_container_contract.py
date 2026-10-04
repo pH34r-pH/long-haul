@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 import base64
-from copy import deepcopy
 import hashlib
 import importlib.util
 import json
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
