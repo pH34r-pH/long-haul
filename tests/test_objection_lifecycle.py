@@ -103,6 +103,25 @@ def narrow_objection(ledger: ObjectionLifecycle, **fields):
     return ledger.narrow(NarrowObjectionCommand(**fields), actor=actor, source=source)
 
 
+def supersession_case(tmp_path):
+    record = decision()
+    store = EventStore(tmp_path / "events.jsonl")
+    ledger = ObjectionLifecycle(store, record)
+    raise_objection(ledger, "old")
+    add_objection(
+        ledger,
+        objection_id="new",
+        actor="ENG",
+        source="review:new-claim",
+        category="factual",
+        claim="new profile has missing validation",
+        scope="new profile only",
+        authority_scope="runtime",
+        resolution_predicate_id="new-profile-valid",
+    )
+    return record, store, ledger
+
+
 def test_replay_keeps_irrelevant_evidence_active_and_resolves_declared_predicate(tmp_path):
     record = decision()
     record = DecisionEngine().capture_final(
@@ -455,21 +474,7 @@ def test_stale_transition_and_duplicate_or_out_of_order_events_fail_closed(tmp_p
 
 
 def test_superseding_keeps_successor_active_and_duplicate_delivery_idempotent(tmp_path):
-    record = decision()
-    store = EventStore(tmp_path / "events.jsonl")
-    ledger = ObjectionLifecycle(store, record)
-    raise_objection(ledger, "old")
-    add_objection(
-        ledger,
-        objection_id="new",
-        actor="ENG",
-        source="review:new-claim",
-        category="factual",
-        claim="new profile has missing validation",
-        scope="new profile only",
-        authority_scope="runtime",
-        resolution_predicate_id="new-profile-valid",
-    )
+    record, store, ledger = supersession_case(tmp_path)
     state = ledger.supersede(
         "old",
         actor="NAV",
@@ -490,21 +495,7 @@ def test_superseding_keeps_successor_active_and_duplicate_delivery_idempotent(tm
 
 
 def test_supersession_rejects_self_reference_and_category_downgrade(tmp_path):
-    record = decision()
-    store = EventStore(tmp_path / "events.jsonl")
-    ledger = ObjectionLifecycle(store, record)
-    raise_objection(ledger, "old")
-    add_objection(
-        ledger,
-        objection_id="new",
-        actor="ENG",
-        source="review:new-claim",
-        category="factual",
-        claim="new profile has missing validation",
-        scope="new profile only",
-        authority_scope="runtime",
-        resolution_predicate_id="new-profile-valid",
-    )
+    record, store, ledger = supersession_case(tmp_path)
     ledger.supersede(
         "old",
         actor="NAV",
