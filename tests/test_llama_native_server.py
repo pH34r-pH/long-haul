@@ -4,18 +4,18 @@ from __future__ import annotations
 import http.client
 import json
 import os
-from pathlib import Path
 import socket
 import subprocess
 import time
+from pathlib import Path
 
 import pytest
+from test_llama_native_completion import PIN, file_digest, native_tokens, record
 
 from long_haul.adapters.llama_cpp import LlamaCppAdapter
 from long_haul.adapters.llama_server import LlamaServerAdapter
 from long_haul.models import InferenceProfile, ModelArtifact
 from long_haul.runtime import ExecutionRequest, ProfileValidation, ValidationState
-from test_llama_native_completion import PIN, file_digest, native_tokens, record
 
 pytest_plugins = ('test_llama_native_completion',)
 
@@ -87,8 +87,8 @@ def owned_server(native_assets, tmp_path_factory):
 
 def server_request(owned_server, *, schema=None):
     port, model, runtime = owned_server
-    options = dict(model_path=str(model), transport='llama-server', server_port=port,
-                   context_size=512, threads=1, threads_batch=1, gpu_layers=0)
+    options = {'model_path': str(model), 'transport': 'llama-server', 'server_port': port,
+               'context_size': 512, 'threads': 1, 'threads_batch': 1, 'gpu_layers': 0}
     if schema is not None:
         options['json_schema'] = schema
     profile = InferenceProfile(
