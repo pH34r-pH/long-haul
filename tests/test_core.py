@@ -43,11 +43,13 @@ def test_event_replay_preserves_identity_across_embodiment_replacement(tmp_path)
 
 def test_decision_protocol_blocks_erasure_and_preference_veto():
     engine=DecisionEngine(); record=DecisionRecord(id="d",proposal="x",participants={"NAV-01","ENG-01"})
-    engine.capture_initial(record,DecisionPosition(participant="NAV-01",position=Position.SUPPORT))
+    record=engine.capture_initial(record,DecisionPosition(participant="NAV-01",position=Position.SUPPORT))
     with pytest.raises(ValueError): engine.resolve(record,"consent","do x")
     with pytest.raises(ValueError): DecisionRecord(id="bad",proposal="x",participants={"a"},initial_positions=[DecisionPosition(participant="a",position=Position.BLOCK,category="preference",rationale="prefer it")])
-    engine.capture_initial(record,DecisionPosition(participant="ENG-01",position=Position.STAND_ASIDE,category="resource",rationale="feasible but constrained"))
-    assert engine.resolve(record,"recorded_disagreement","do x").initial_positions[1].position is Position.STAND_ASIDE
+    record=engine.capture_initial(record,DecisionPosition(participant="ENG-01",position=Position.STAND_ASIDE,category="resource",rationale="feasible but constrained"))
+    resolved=engine.resolve(record,"recorded_disagreement","do x")
+    assert resolved.initial_positions[1].position is Position.STAND_ASIDE
+    assert record.resolution is None
 
 def test_scheduler_respects_link_and_measured_evidence():
     resident=profile("resident",["ANC-G0"]); split=profile("split",["ANC-G0","KST-G0"],"pipeline_parallel")

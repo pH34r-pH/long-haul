@@ -7,7 +7,7 @@ import math
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 SCHEMA_VERSION = 1
 
@@ -135,9 +135,27 @@ class Claim(BaseModel):
     content: str; confidence: float | None = Field(default=None, ge=0, le=1); evidence: list[str] = Field(default_factory=list)
 
 class DecisionPosition(BaseModel):
+    model_config = ConfigDict(frozen=True)
     participant: str; position: Position
     category: Literal["factual", "safety", "resource", "value", "jurisdiction", "preference", "other"] | None = None
-    rationale: str | None = None; evidence: list[str] = Field(default_factory=list)
+    rationale: str | None = None; evidence: tuple[str, ...] = Field(default_factory=tuple)
+    objection_id: str | None = None
+    authority_scope: str | None = None
+    applicability_scope: str | None = None
+    applicability_revision: int | None = Field(default=None, ge=1)
+    @model_validator(mode="after")
+    def typed_block(self) -> DecisionPosition:
+        if self.position is Position.BLOCK and (not self.rationale or self.category in (None, "preference")):
+            raise ValueError("a block needs a non-preference category and rationale")
+        if self.objection_id is not None and (
+            self.position not in (Position.OBJECT, Position.BLOCK)
+            or self.category is None
+            or not self.authority_scope
+            or not self.applicability_scope
+            or self.applicability_revision is None
+        ):
+            raise ValueError("an objection link needs an object/block position, category, authority scope, applicability scope, and applicability revision")
+        return self
 
 class Decision(BaseModel):
     decision_id: str; proposal: str; positions: list[DecisionPosition] = Field(default_factory=list)
