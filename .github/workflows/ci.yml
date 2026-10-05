@@ -110,6 +110,35 @@ jobs:
             python -m pytest -q -s tests/test_llama_native_completion.py tests/test_llama_native_server.py \
             --junitxml="$RUNNER_TEMP/native-evidence/junit.xml" \
             2>&1 | tee "$RUNNER_TEMP/native-evidence/smoke.log"
+      - name: Stage the exact passing native assets for offline reuse
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/native-assets"
+          mkdir -p "$root/bin" "$root/tokenizer" "$root/licenses"
+          cp "$RUNNER_TEMP/native-build/bin/llama-completion" "$RUNNER_TEMP/native-build/bin/llama-tokenize" "$RUNNER_TEMP/native-build/bin/llama-server" "$root/bin/"
+          cp "$RUNNER_TEMP/native-model.gguf" "$root/model.gguf"
+          cp "$RUNNER_TEMP/reference-tokenizer/"*.json "$root/tokenizer/"
+          cp "$RUNNER_TEMP/native-evidence/inputs.json" "$root/inputs.json"
+          cp native-upstream/LICENSE "$root/licenses/llama.cpp-MIT.txt"
+          cp LICENSE "$root/licenses/Apache-2.0.txt"
+          printf '%s\n' 'llama.cpp: upstream authors, MIT; exact source revision in inputs.json.' 'SmolLM2: HuggingFaceTB, Apache-2.0; exact model/conversion and tokenizer references in inputs.json.' 'These are CPU smoke assets, not a qualified Fleet profile or a scientific result. The receiving environment must independently check ABI, resource limits and cleanup.' > "$root/NOTICE.txt"
+          printf '%s\n' "$GITHUB_SHA" > "$root/long-haul-source.txt"
+          printf '%s/%s/attempts/%s\n' "$GITHUB_REPOSITORY/actions/runs" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > "$root/workflow-run.txt"
+          uname -a > "$root/build-platform.txt"
+          ldd "$root/bin/llama-server" > "$root/server-dynamic-libraries.txt"
+          (
+            cd "$root"
+            find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+            sha256sum --check --strict SHA256SUMS
+          )
+      - name: Retain reusable native assets after successful qualification only
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-cpu-assets-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-assets/
+          if-no-files-found: error
+          retention-days: 3
       - name: Retain scoped native evidence including failures
         if: always()
         uses: actions/upload-artifact@v4
