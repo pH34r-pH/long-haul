@@ -29,7 +29,6 @@ The project should not add crew complexity merely because more agents are availa
 
 See [docs/experiments.md](https://github.com/pH34r-pH/long-haul/blob/main/docs/experiments.md).
 
-
 ## Evidence and publication path
 
 Long Haul experiments reuse the shared research stack rather than adding a local experiment/archive system:
