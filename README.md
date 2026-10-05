@@ -81,7 +81,6 @@ Report sensitive problems according to [SECURITY.md](SECURITY.md). Research use 
 
 Licensed under Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
-
 ## Research publication boundary
 
 Long Haul owns runtime/scheduler/reusable-system semantics; source-owned experiment science stays in the existing research/evidence pipeline. Experiment Compiler provides exact portable experiment identity and `experiments.tyharbin.com` provides the live inspect/verify/reproduce surface.
