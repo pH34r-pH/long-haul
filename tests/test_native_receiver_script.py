@@ -81,7 +81,7 @@ def run(sandbox, failure=''):
     work, temp, env = sandbox
     result = subprocess.run(['bash', str(SCRIPT)], cwd=work,
                             env={**env, 'FAIL_AT': failure},
-                            text=True, capture_output=True, timeout=15)
+                            text=True, capture_output=True, timeout=15, check=False)
     calls = [json.loads(line) for line in (temp/'commands.jsonl').read_text().splitlines()]
     return result, calls, temp/'native-receiver/evidence'
 
