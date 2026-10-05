@@ -80,3 +80,11 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 Report sensitive problems according to [SECURITY.md](SECURITY.md). Research use can cite [CITATION.cff](CITATION.cff).
 
 Licensed under Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+## Research publication boundary
+
+Long Haul owns runtime/scheduler/reusable-system semantics; source-owned experiment science stays in the existing research/evidence pipeline. Experiment Compiler provides exact portable experiment identity and `experiments.tyharbin.com` provides the live inspect/verify/reproduce surface.
+
+When a study is deliberately finalized for archival publication, the source owner may promote the **exact reviewed finalized bytes** to [pH34r-pH/compiled-experiments](https://github.com/pH34r-pH/compiled-experiments). That repository preserves immutable release lineage and hands a human-reviewed GitHub Release to Zenodo for DOI archival. Long Haul does not mint DOIs, rebuild archived packages, or treat archive/DOI presence as scientific or production qualification.
+
+Cross-repository integration is tracked in [compiled-experiments#1](https://github.com/pH34r-pH/compiled-experiments/issues/1).
