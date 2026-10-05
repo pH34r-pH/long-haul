@@ -6,7 +6,7 @@ set -euo pipefail
 root="$RUNNER_TEMP/native-receiver"
 assets="$RUNNER_TEMP/native-assets"
 evidence="$root/evidence"
-mkdir -p "$evidence" "$root/wheels" "$root/output"
+mkdir -p "$evidence" "$root/wheels" "$root/site" "$root/output"
 python - "$root" "$assets" <<'PY'
 import hashlib, json, os, sys
 from pathlib import Path
@@ -32,6 +32,11 @@ mapfile -t dependencies < <(python -c 'import json; print("\n".join(json.load(op
 python -m pip download --disable-pip-version-check --only-binary=:all: --dest "$root/wheels" "${dependencies[@]}"
 (cd "$root/wheels"; sha256sum ./*.whl > SHA256SUMS)
 cp "$root/wheels/SHA256SUMS" "$evidence/wheels.sha256"
+# Native extensions belong in immutable runtime inputs, not executable scratch.
+python -m pip install --disable-pip-version-check --no-index --no-deps --no-compile \
+  --target "$root/site" "$root/wheels/"*.whl > "$evidence/site-install.log"
+(cd "$root/site"; find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+cp "$root/site/SHA256SUMS" "$evidence/site.sha256"
 image="$(python -c 'import json; print(json.load(open("tests/fixtures/native-receiver.json"))["image"])')"
 [[ "$image" =~ @sha256:[0-9a-f]{64}$ ]]
 docker pull --platform linux/amd64 "$image"
@@ -55,15 +60,16 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
-sudo -n mount -t tmpfs -o size=64m,nosuid,nodev tmpfs "$root/output"
+sudo -n mount -t tmpfs -o size=64m,nosuid,nodev,noexec tmpfs "$root/output"
 mounted=1
 sudo -n chown "$(id -u):$(id -g)" "$root/output"
 cid="$(docker create --platform linux/amd64 --init --network none --read-only \
   --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges \
   --cpus 1 --memory 1g --memory-swap 1g --pids-limit 64 \
-  --tmpfs /tmp:rw,nosuid,nodev,size=512m \
+  --tmpfs /tmp:rw,nosuid,nodev,noexec,size=512m \
   --mount "type=bind,src=$assets,dst=/assets,readonly" \
   --mount "type=bind,src=$root/wheels,dst=/wheels,readonly" \
+  --mount "type=bind,src=$root/site,dst=/runtime-site,readonly" \
   --mount "type=bind,src=$PWD,dst=/source,readonly" \
   --mount "type=bind,src=$root/output,dst=/out" --workdir /source \
   -e HOME=/tmp/home -e PYTHONDONTWRITEBYTECODE=1 -e PIP_NO_INDEX=1 \
@@ -79,9 +85,9 @@ cid="$(docker create --platform linux/amd64 --init --network none --read-only \
   "$image" bash -c 'set -euo pipefail
     mkdir -p /tmp/home
     (cd /wheels; sha256sum --check --strict SHA256SUMS) > /out/wheel-verification.log
-    python -m pip install --disable-pip-version-check --no-index --no-deps --target /tmp/site /wheels/*.whl > /out/install.log
-    export PYTHONPATH=/source/src:/tmp/site
-    python -m pip freeze --path /tmp/site > /out/python-packages.txt
+    (cd /runtime-site; sha256sum --check --strict SHA256SUMS) > /out/site-verification.log
+    export PYTHONPATH=/source/src:/runtime-site
+    python -m pip freeze --path /runtime-site > /out/python-packages.txt
     ldd /assets/bin/llama-server > /out/dynamic-libraries.txt
     python -m pytest -q -s -p no:cacheprovider --basetemp=/tmp/pytest \
       tests/test_llama_native_container.py tests/test_llama_native_network.py \

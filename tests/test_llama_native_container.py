@@ -48,7 +48,8 @@ def test_container_is_unprivileged_and_cannot_gain_privileges():
     assert not any(key in os.environ for key in ('GITHUB_TOKEN', 'ACTIONS_RUNTIME_TOKEN', 'AZURE_CLIENT_SECRET'))
 
 
-@pytest.mark.parametrize('name', ['/etc/hostname', '/assets/inputs.json', '/source/pyproject.toml'])
+@pytest.mark.parametrize('name', ['/etc/hostname', '/assets/inputs.json', '/source/pyproject.toml',
+                                  '/runtime-site/pydantic/__init__.py'])
 def test_container_inputs_and_root_are_not_writable(name):
     # Opening for append writes no bytes even if unexpectedly permitted.
     try:
@@ -65,8 +66,10 @@ def test_container_inputs_and_root_are_not_writable(name):
 def test_container_scratch_and_output_have_bounded_filesystems(path, key):
     stats = os.statvfs(path)
     capacity = stats.f_blocks * stats.f_frsize
-    record('container-storage-' + key, {'path': path, 'capacity_bytes': capacity})
+    record('container-storage-' + key, {'path': path, 'capacity_bytes': capacity,
+                                          'mount_flags': stats.f_flag})
     assert 0 < capacity <= PIN['limits'][key] * 1024**2
+    assert stats.f_flag & os.ST_NOEXEC
     probe = Path(path) / 'receiver-write-check'
     try:
         probe.write_bytes(b'bounded writable directory')

@@ -24,6 +24,10 @@ if name == 'python':
         if os.environ.get('FAIL_AT') == 'download': sys.exit(8)
         wheels = pathlib.Path(args[args.index('--dest')+1])
         (wheels/'synthetic.whl').write_bytes(b'not a real wheel; never installed')
+    elif args[:3] == ['-m', 'pip', 'install']:
+        if os.environ.get('FAIL_AT') == 'install': sys.exit(8)
+        site = pathlib.Path(args[args.index('--target')+1])
+        (site/'synthetic.py').write_text('# fake staged dependency')
     else: os.execv(os.environ['REAL_PYTHON'], [os.environ['REAL_PYTHON'], '-S', *args])
 elif name == 'sudo':
     if args[1] not in ('mount','chown','umount'): sys.exit(99)
@@ -103,15 +107,19 @@ def test_shell_prepares_exact_assets_and_bounded_offline_container(sandbox):
     assert json.loads(PIN.read_text())['image'] in argv
     assert 'synthetic-must-not-enter-container' not in json.dumps(argv)
     assert 'GITHUB_TOKEN' not in json.dumps(argv)
-    assert '--no-index --no-deps' in argv[-1]
-    assert '/wheels/*.whl' in argv[-1]
+    install, = [call for call in calls if call[:4] == ['python', '-m', 'pip', 'install']]
+    assert {'--no-index', '--no-deps', '--no-compile'} <= set(install)
+    assert 'pip install' not in argv[-1]
+    assert 'PYTHONPATH=/source/src:/runtime-site' in argv[-1]
+    assert '/tmp/site' not in argv[-1]
+    assert (evidence/'site.sha256').exists()
     assert docker_calls(calls, 'rm') == [['docker', 'rm', '--force', 'a'*64]]
     assert (evidence/'fixture-observation.json').exists()
     assert (evidence/'wheels.sha256').exists()
     assert (evidence/'source.json').exists()
 
 
-@pytest.mark.parametrize('failure', ['download', 'pull'])
+@pytest.mark.parametrize('failure', ['download', 'install', 'pull'])
 def test_prelaunch_failure_never_creates_or_removes_container(sandbox, failure):
     result, calls, evidence = run(sandbox, failure)
     assert result.returncode != 0
@@ -159,12 +167,12 @@ def test_runtime_mounts_are_readonly_and_no_host_endpoint_is_exposed(sandbox):
     assert result.returncode == 0
     argv, = docker_calls(calls, 'create')
     mounts = [argv[i+1] for i, value in enumerate(argv) if value == '--mount']
-    for destination in ('/assets', '/wheels', '/source'):
+    for destination in ('/assets', '/wheels', '/source', '/runtime-site'):
         matching, = [value for value in mounts if f'dst={destination},' in value]
         assert matching.endswith(',readonly')
     assert '--privileged' not in argv and '--publish' not in argv
     assert not any('/var/run/docker.sock' in value for value in mounts)
-    assert '/tmp:rw,nosuid,nodev,size=512m' in argv
+    assert '/tmp:rw,nosuid,nodev,noexec,size=512m' in argv
 
 
 def test_limits_match_the_checked_in_qualification_profile():
