@@ -1,0 +1,21 @@
+{
+  "scope": "Stock-image receiving qualification for pinned public CPU assets; not a Fleet deployment or DBD competence result",
+  "image": "docker.io/library/python:3.12-trixie@sha256:cd7c412d000912f29075a1b8803e43cb2f38bb67f104019df526df5ceaf30569",
+  "source": "https://hub.docker.com/layers/library/python/3.12-trixie/images/sha256-d2d310fe0441d3808752937123c45ca4be3666ff4e069035dc4d909cc3ed163e",
+  "test_dependencies": [
+    "pydantic==2.13.5",
+    "PyYAML==6.0.3",
+    "pytest==8.3.5",
+    "tokenizers==0.22.0",
+    "Jinja2==3.1.6"
+  ],
+  "limits": {
+    "cores": 1,
+    "ramMiB": 1024,
+    "tmpdirMiB": 512,
+    "outdirMiB": 64,
+    "pids": 64,
+    "wallSeconds": 300
+  },
+  "native_input_pin": "tests/fixtures/native-completion.json"
+}

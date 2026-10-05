@@ -149,6 +149,16 @@ jobs:
           path: ${{ runner.temp }}/native-assets/
           if-no-files-found: error
           retention-days: 3
+      - name: Qualify the stock receiving image with staged CPU assets
+        run: bash scripts/qualify_native_receiver.sh
+      - name: Retain receiving-image observations including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-receiver-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-receiver/evidence/
+          if-no-files-found: warn
+          retention-days: 14
       - name: Retain scoped native evidence including failures
         if: always()
         uses: actions/upload-artifact@v4
