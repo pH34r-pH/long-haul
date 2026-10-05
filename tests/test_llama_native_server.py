@@ -13,7 +13,7 @@ import pytest
 from test_llama_native_completion import (
     PIN,
     file_digest,
-    native_assets as native_assets,
+    native_assets,
     native_tokens,
     record,
 )
@@ -22,6 +22,9 @@ from long_haul.adapters.llama_cpp import LlamaCppAdapter
 from long_haul.adapters.llama_server import LlamaServerAdapter
 from long_haul.models import InferenceProfile, ModelArtifact
 from long_haul.runtime import ExecutionRequest, ProfileValidation, ValidationState
+
+# Export the existing fixture so pytest discovers it in this module as well.
+__all__ = ['native_assets']
 
 
 def wait_for_server(process, port):
