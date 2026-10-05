@@ -6,8 +6,8 @@ selected network namespace, not filesystem isolation or a qualified Fleet lease.
 import errno
 import json
 import os
-from pathlib import Path
 import socket
+from pathlib import Path
 
 import pytest
 
