@@ -67,7 +67,6 @@ The current CI-equivalent source checks are in [`ci.yml`](../.github/workflows/c
 
 The guard is intentionally changed-file-only: living Markdown is checked for style and actual relative links; explicit historical/scientific roots are preserved. Artifact prevention applies to added, renamed, and copied paths, rejecting incidental cache/temp paths even below those roots; ordinary modifications to baseline artifacts are deliberately skipped. It does not inventory or duplicate the repository map. Tool versions are pinned in the workflow (`markdownlint-cli2` 0.18.1 and `lychee` 0.20.1).
 
-
 ### External research-publication surfaces
 
 These are integrations, not Long Haul implementation directories:
