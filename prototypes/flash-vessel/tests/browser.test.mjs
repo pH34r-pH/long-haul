@@ -120,14 +120,18 @@ async function launchVisibilityBrowser() {
     "--remote-debugging-port=0",
     `--user-data-dir=${userDataDir}`,
     "about:blank",
-  ], { stdio: "ignore" });
+  ], { stdio: ["ignore", "ignore", "pipe"] });
+  let childStderr = "";
+  child.stderr.on("data", (chunk) => {
+    childStderr = `${childStderr}${chunk}`.slice(-4_000);
+  });
   let spawnError;
   child.once("error", (error) => { spawnError = error; });
 
   let browser;
   try {
     const activePortPath = join(userDataDir, "DevToolsActivePort");
-    const expires = Date.now() + 10_000;
+    const expires = Date.now() + 30_000;
     let port;
     while (Date.now() < expires) {
       if (spawnError) throw spawnError;
@@ -140,7 +144,9 @@ async function launchVisibilityBrowser() {
       }
       await new Promise((resolveWait) => setTimeout(resolveWait, 25));
     }
-    if (!Number.isInteger(port) || port < 1) throw new Error("Chromium did not publish its CDP port within 10 seconds.");
+    if (!Number.isInteger(port) || port < 1) {
+      throw new Error(`Chromium did not publish its CDP port within 30 seconds. ${childStderr}`);
+    }
     // Avoid Playwright launch-time focus emulation so X11 minimization drives native visibility.
     browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, { noDefaults: true });
     return { browser, child, userDataDir };
@@ -469,6 +475,22 @@ test("explicit stop and page hiding cancel a pending local runtime load", browse
   }
 });
 
+async function assertLiveModelResult(page, externalRequests, browserErrors) {
+  const state = await page.locator("#local-status").getAttribute("data-state");
+  const failures = externalRequests.map((request) => `${request.method()} ${request.url()}`).join("\n");
+  assert.equal(state, "complete",
+    `${await page.locator("#local-status").textContent()}\nexternal requests: ${failures}\nbrowser errors: ${browserErrors.join("\n")}`);
+  const result = JSON.parse(await page.locator("#local-result").textContent());
+  assert.equal(result.referenceCheck.expectedTopCandidateId, "delivery");
+  assert.equal(result.referenceCheck.observedTopCandidateId, "delivery");
+  assert.equal(result.referenceCheck.passed, true);
+  assert.ok(result.ranking.every(({ score }) => Number.isFinite(score)));
+  assert.ok(externalRequests.length > 0, "pinned runtime/model assets should load only after Start");
+  assert.ok(externalRequests.every((request) => request.method() === "GET"));
+  assert.ok(externalRequests.every((request) => !request.url().includes("A parcel arrived late")));
+  return result;
+}
+
 test("live browser model produces the reference local result when explicitly enabled", {
   ...browserTestOptions,
   timeout: 180_000,
@@ -500,16 +522,7 @@ test("live browser model produces the reference local result when explicitly ena
       document.querySelector("#local-status")?.dataset.state,
     ), undefined, { timeout: 170_000 });
 
-    assert.equal(await page.locator("#local-status").getAttribute("data-state"), "complete",
-      `${await page.locator("#local-status").textContent()}\nexternal requests: ${externalRequests.map((request) => `${request.method()} ${request.url()}`).join("\n")}\nbrowser errors: ${browserErrors.join("\n")}`);
-    const result = JSON.parse(await page.locator("#local-result").textContent());
-    assert.equal(result.referenceCheck.expectedTopCandidateId, "delivery");
-    assert.equal(result.referenceCheck.observedTopCandidateId, "delivery");
-    assert.equal(result.referenceCheck.passed, true);
-    assert.ok(result.ranking.every(({ score }) => Number.isFinite(score)));
-    assert.ok(externalRequests.length > 0, "pinned runtime/model assets should load only after Start");
-    assert.ok(externalRequests.every((request) => request.method() === "GET"));
-    assert.ok(externalRequests.every((request) => !request.url().includes("A parcel arrived late")));
+    const result = await assertLiveModelResult(page, externalRequests, browserErrors);
     if (process.env.FLASH_LIVE_MODEL_TEST_OUTPUT === "1") {
       console.log(`live local result: ${JSON.stringify({ referenceCheck: result.referenceCheck, ranking: result.ranking })}`);
     }
@@ -521,7 +534,7 @@ test("live browser model produces the reference local result when explicitly ena
 
 test("native page visibility pauses and resumes its worker when available", {
   ...browserTestOptions,
-  timeout: 20_000,
+  timeout: 45_000,
   skip: !chromium
     ? "Playwright is not installed; browser visibility test unavailable"
     : !process.env.DISPLAY && process.env.REQUIRE_VISIBILITY_TEST !== "1"

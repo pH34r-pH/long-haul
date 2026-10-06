@@ -128,6 +128,39 @@ function unsupportedMessage(reason) {
   return reasons[reason] ?? "Unsupported: required browser capability is unknown or unavailable.";
 }
 
+const localMessageHandlers = new Map([
+  ["CAPABILITY", (_current, message) => {
+    snapshotOutput.textContent = JSON.stringify(message.snapshot, null, 2);
+  }],
+  ["UNSUPPORTED", (current, message) => {
+    finishLocalSession(current, "unsupported", unsupportedMessage(message.reason));
+  }],
+  ["STATUS", (_current, message) => setLocalState(message.state, message.message)],
+  ["PROGRESS", (_current, message) => {
+    const progress = Number.isFinite(message.progress) ? ` (${Math.round(message.progress)}%)` : "";
+    setLocalState("loading", `Loading pinned runtime/model${progress}…`);
+  }],
+  ["EMBEDDING_PROGRESS", (_current, message) => {
+    setLocalState("embedding", `Embedding text ${message.completed} of ${message.total} in this worker…`);
+  }],
+  ["RESULT", (_current, message) => {
+    displayLocalResult(message);
+    setLocalState("cleaning", "Result ready. Releasing the model before this session ends…");
+  }],
+  ["ERROR", (current, message) => failureCooldown(current, message.message ?? "Local inference failed.")],
+  ["DONE", (current) => {
+    localFailureCount = 0;
+    localRetryAt = 0;
+    finishLocalSession(current, "complete", "Complete. The model worker was released; start again explicitly for another check.");
+  }],
+  ["STOPPED", (current) => finishLocalSession(current, "cancelled", localStopMessage)],
+]);
+
+function handleLocalMessage(current, message) {
+  if (current !== localWorker || (localStopRequested && message?.type !== "STOPPED")) return;
+  localMessageHandlers.get(message?.type)?.(current, message);
+}
+
 localStartButton.addEventListener("click", () => {
   if (localWorker || Date.now() < localRetryAt) return;
   let request;
@@ -160,31 +193,7 @@ localStartButton.addEventListener("click", () => {
 
   const current = localWorker;
   current.addEventListener("message", (event) => {
-    const message = event.data;
-    if (current !== localWorker || (localStopRequested && message?.type !== "STOPPED")) return;
-    if (message?.type === "CAPABILITY") {
-      snapshotOutput.textContent = JSON.stringify(message.snapshot, null, 2);
-    } else if (message?.type === "UNSUPPORTED") {
-      finishLocalSession(current, "unsupported", unsupportedMessage(message.reason));
-    } else if (message?.type === "STATUS") {
-      setLocalState(message.state, message.message);
-    } else if (message?.type === "PROGRESS") {
-      const progress = Number.isFinite(message.progress) ? ` (${Math.round(message.progress)}%)` : "";
-      setLocalState("loading", `Loading pinned runtime/model${progress}…`);
-    } else if (message?.type === "EMBEDDING_PROGRESS") {
-      setLocalState("embedding", `Embedding text ${message.completed} of ${message.total} in this worker…`);
-    } else if (message?.type === "RESULT") {
-      displayLocalResult(message);
-      setLocalState("cleaning", "Result ready. Releasing the model before this session ends…");
-    } else if (message?.type === "ERROR") {
-      failureCooldown(current, message.message ?? "Local inference failed.");
-    } else if (message?.type === "DONE") {
-      localFailureCount = 0;
-      localRetryAt = 0;
-      finishLocalSession(current, "complete", "Complete. The model worker was released; start again explicitly for another check.");
-    } else if (message?.type === "STOPPED") {
-      finishLocalSession(current, "cancelled", localStopMessage);
-    }
+    handleLocalMessage(current, event.data);
   });
   current.addEventListener("error", (event) => {
     event.preventDefault();
