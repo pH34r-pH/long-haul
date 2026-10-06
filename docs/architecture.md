@@ -82,6 +82,50 @@ Long Haul classifies harness steps independently of model prose as information a
 
 The MVP uses append-only JSONL events plus materialized views. SQLite remains an optional future index; event provenance remains exportable and human-readable.
 
+### Decision and objection history
+
+`DecisionLifecycle` stores decision creation, each participant's initial and
+final position, and resolution as `decision_lifecycle` events in that same
+`EventStore`. A rebuilt `DecisionRecord` keeps initial and final positions in
+separate immutable tuples. Capture requires the event actor to match the
+participant, but the runtime does not prove that the harness withheld earlier
+positions from other contributors; prompt/session isolation remains a harness
+responsibility.
+
+`ObjectionLifecycle` appends `objection_lifecycle` events to the shared log and
+rebuilds the current view from them. Each objection records its category,
+stable ID, claim, evidence references, applicability scope and revision,
+resolver scope, declared check predicate, and disposition. Narrowing,
+assessment, explicit resolution or dismissal, supersession, and reopening are
+new revision-checked events. Duplicate delivery is idempotent; conflicting
+event identities and stale or out-of-order transitions fail closed.
+Positions linked to an objection bind its category, resolver scope, and the
+exact applicability scope revision that was in force when the position was
+captured. Supersession cannot change category or weaken the resolver scope.
+Supersession keeps linked BLOCKs live through the successor chain until its
+current successor is resolved or dismissed; reopening that successor restores
+the linked BLOCK. Objections cannot name a resolver scope held only by people
+outside the decision's participants.
+
+An evidence assessment records an actor's provenance-bearing outcome for a
+declared predicate; it does not verify semantic truth. A reference ID, valid
+citation, reassuring text, or successful parse is not proof by itself. The
+decision engine prevents an active safety objection from being dismissed by
+recorded disagreement. Other active objections require experiment, escalation,
+scoped authority, or an explicit recorded-disagreement resolution.
+Preference-category objections remain visible in the structured view but do
+not block ordinary resolution. A matched baseline can hide that view for
+presentation, while the deterministic resolution gate continues to inspect the
+same canonical event history. Hiding the view cannot release a safety block or
+another active objection.
+Resolved objection IDs on a final decision snapshot are derived during event
+replay; direct resolution ignores caller-supplied IDs.
+
+The objection projection records events scanned, serialized event bytes,
+materialized view bytes, active count, and replay time; the command wrapper
+measures update time. The event store is append-only and has no cleanup or
+deletion operation, so this instrumentation does not qualify cleanup behavior.
+
 ### Work checkpoints and session context
 
 The event log is authoritative history. A `WorkCheckpoint` is a deterministic compact materialization of contract-scoped facts, active constraints, subgoal state, unresolved failures, and the last externally verified artifact; it is disposable and rebuildable from events. A `TaskDigest` is a hard-bounded rendering of that checkpoint for a new harness/model session and explicitly reports omissions. A harness conversation is transient execution context, not durable memory. Resuming work creates a new session identity while retaining the work contract, crew identity, execution-plan linkage, and checkpoint provenance. Crew memory/continuity remains a separate institutional concern and must not be inferred from a model session transcript.
