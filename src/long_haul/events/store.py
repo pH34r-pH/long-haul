@@ -1,6 +1,7 @@
 """Small append-only JSONL event store; SQLite is intentionally not required for MVP."""
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -105,6 +106,121 @@ def _end_attempt(
         mission.status = MissionRunStatus.REPLAN_REQUIRED
 
 
+def _apply_embodiment_change(state: FleetState, event: Event) -> None:
+    member = state.crew[event.payload["crew_id"]]
+    member.embodiment = Embodiment.model_validate(event.payload["embodiment"])
+    member.generation = event.payload.get("generation", member.generation + 1)
+
+
+def _apply_competence_update(state: FleetState, event: Event) -> None:
+    state.crew[event.payload["crew_id"]].competence = event.payload["competence"]
+
+
+def _apply_rupture(state: FleetState, event: Event) -> None:
+    state.ruptures.append(event.payload)
+
+
+def _apply_repair(state: FleetState, event: Event) -> None:
+    rupture_id = event.payload.get("rupture_id")
+    state.ruptures = [rupture for rupture in state.ruptures if rupture.get("id") != rupture_id]
+
+
+def _apply_resource_admitted(state: FleetState, event: Event) -> None:
+    vessel = Vessel.model_validate(event.payload["vessel"])
+    state.vessels[vessel.id] = vessel
+    state.unavailable_vessels.pop(vessel.id, None)
+
+
+def _apply_resource_lease_renewed(state: FleetState, event: Event) -> None:
+    vessel = state.vessels.get(event.payload["vessel_id"])
+    if vessel is not None:
+        vessel.lease = ResourceLease.model_validate(event.payload["lease"])
+
+
+def _apply_resource_disappeared(state: FleetState, event: Event) -> None:
+    vessel_id = event.payload["vessel_id"]
+    state.unavailable_vessels[vessel_id] = event.payload["lease_id"]
+    reason = _interruption_reason(event.payload["reason"])
+    for attempt_id in event.payload.get("interrupted_attempt_ids", []):
+        _end_attempt(
+            state,
+            attempt_id,
+            event=event,
+            status=AttemptStatus.INCONCLUSIVE,
+            termination=reason,
+        )
+
+
+def _apply_work_attempt_started(state: FleetState, event: Event) -> None:
+    attempt = WorkAttempt(
+        attempt_id=event.payload["attempt_id"],
+        mission_id=event.payload["mission_id"],
+        vessel_id=event.payload["vessel_id"],
+        lease_id=event.payload["lease_id"],
+        restartable=event.payload.get("restartable", False),
+        started_at=event.timestamp,
+        start_event_id=event.id,
+    )
+    state.attempts[attempt.attempt_id] = attempt
+    mission = _mission(state, attempt.mission_id)
+    mission.status = MissionRunStatus.ACTIVE
+    mission.attempt_ids.append(attempt.attempt_id)
+    mission.active_attempt_ids.append(attempt.attempt_id)
+
+
+def _apply_work_attempt_interrupted(state: FleetState, event: Event) -> None:
+    _end_attempt(
+        state,
+        event.payload["attempt_id"],
+        event=event,
+        status=AttemptStatus.INCONCLUSIVE,
+        termination=_interruption_reason(event.payload["reason"]),
+    )
+
+
+def _apply_work_attempt_timed_out(state: FleetState, event: Event) -> None:
+    _end_attempt(
+        state,
+        event.payload["attempt_id"],
+        event=event,
+        status=AttemptStatus.TIMED_OUT,
+        termination=AttemptTermination.EXECUTION_TIMEOUT,
+    )
+
+
+def _apply_work_attempt_completed(state: FleetState, event: Event) -> None:
+    if "attempt_id" not in event.payload:
+        return
+    _end_attempt(
+        state,
+        event.payload["attempt_id"],
+        event=event,
+        status=AttemptStatus.COMPLETED,
+        termination=None,
+    )
+
+
+_EVENT_HANDLERS: dict[str, Callable[[FleetState, Event], None]] = {
+    "embodiment_change": _apply_embodiment_change,
+    "competence_update": _apply_competence_update,
+    "rupture": _apply_rupture,
+    "repair": _apply_repair,
+    "resource_admitted": _apply_resource_admitted,
+    "resource_lease_renewed": _apply_resource_lease_renewed,
+    "resource_disappeared": _apply_resource_disappeared,
+    "work_attempt_started": _apply_work_attempt_started,
+    "work_attempt_interrupted": _apply_work_attempt_interrupted,
+    "work_attempt_timed_out": _apply_work_attempt_timed_out,
+    "work_attempt_completed": _apply_work_attempt_completed,
+}
+
+
+def _apply_event(state: FleetState, event: Event) -> None:
+    handler = _EVENT_HANDLERS.get(event.event_type)
+    if handler is not None:
+        handler(state, event)
+
+
 def materialize(
     events: list[Event],
     initial_crew: list[CrewMember] | None = None,
@@ -117,72 +233,5 @@ def materialize(
         vessels={vessel.id: vessel.model_copy(deep=True) for vessel in initial_vessels},
     )
     for event in events:
-        if event.event_type == "embodiment_change":
-            member = state.crew[event.payload["crew_id"]]
-            member.embodiment = Embodiment.model_validate(event.payload["embodiment"])
-            member.generation = event.payload.get("generation", member.generation + 1)
-        elif event.event_type == "competence_update":
-            state.crew[event.payload["crew_id"]].competence = event.payload["competence"]
-        elif event.event_type == "rupture": state.ruptures.append(event.payload)
-        elif event.event_type == "repair": state.ruptures = [r for r in state.ruptures if r.get("id") != event.payload.get("rupture_id")]
-        elif event.event_type == "resource_admitted":
-            vessel = Vessel.model_validate(event.payload["vessel"])
-            state.vessels[vessel.id] = vessel
-            state.unavailable_vessels.pop(vessel.id, None)
-        elif event.event_type == "resource_lease_renewed":
-            vessel = state.vessels.get(event.payload["vessel_id"])
-            if vessel is not None:
-                vessel.lease = ResourceLease.model_validate(event.payload["lease"])
-        elif event.event_type == "resource_disappeared":
-            vessel_id = event.payload["vessel_id"]
-            lease_id = event.payload["lease_id"]
-            reason = _interruption_reason(event.payload["reason"])
-            state.unavailable_vessels[vessel_id] = lease_id
-            for attempt_id in event.payload.get("interrupted_attempt_ids", []):
-                _end_attempt(
-                    state,
-                    attempt_id,
-                    event=event,
-                    status=AttemptStatus.INCONCLUSIVE,
-                    termination=reason,
-                )
-        elif event.event_type == "work_attempt_started":
-            attempt = WorkAttempt(
-                attempt_id=event.payload["attempt_id"],
-                mission_id=event.payload["mission_id"],
-                vessel_id=event.payload["vessel_id"],
-                lease_id=event.payload["lease_id"],
-                restartable=event.payload.get("restartable", False),
-                started_at=event.timestamp,
-                start_event_id=event.id,
-            )
-            state.attempts[attempt.attempt_id] = attempt
-            mission = _mission(state, attempt.mission_id)
-            mission.status = MissionRunStatus.ACTIVE
-            mission.attempt_ids.append(attempt.attempt_id)
-            mission.active_attempt_ids.append(attempt.attempt_id)
-        elif event.event_type == "work_attempt_interrupted":
-            _end_attempt(
-                state,
-                event.payload["attempt_id"],
-                event=event,
-                status=AttemptStatus.INCONCLUSIVE,
-                termination=_interruption_reason(event.payload["reason"]),
-            )
-        elif event.event_type == "work_attempt_timed_out":
-            _end_attempt(
-                state,
-                event.payload["attempt_id"],
-                event=event,
-                status=AttemptStatus.TIMED_OUT,
-                termination=AttemptTermination.EXECUTION_TIMEOUT,
-            )
-        elif event.event_type == "work_attempt_completed" and "attempt_id" in event.payload:
-            _end_attempt(
-                state,
-                event.payload["attempt_id"],
-                event=event,
-                status=AttemptStatus.COMPLETED,
-                termination=None,
-            )
+        _apply_event(state, event)
     return state
