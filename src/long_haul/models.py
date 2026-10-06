@@ -9,6 +9,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from .ephemeral import ResourceLease, VesselLifecycle
+
 SCHEMA_VERSION = 1
 
 
@@ -78,12 +80,18 @@ class Link(BaseModel):
 class Vessel(BaseModel):
     id: str; name: str; class_name: Literal["station", "ship", "light_craft"]; tailscale_name: str | None = None
     resources: list[Resource] = Field(default_factory=list); links: list[Link] = Field(default_factory=list)
+    lifecycle: VesselLifecycle = VesselLifecycle.PERSISTENT
+    lease: ResourceLease | None = None
     @model_validator(mode="after")
     def resource_references_exist(self) -> Vessel:
         ids = {r.id for r in self.resources}
         if len(ids) != len(self.resources): raise ValueError("resource ids must be unique within a vessel")
         for link in self.links:
             if link.source not in ids or link.target not in ids: raise ValueError("links must reference vessel resources")
+        if self.lifecycle is not VesselLifecycle.PERSISTENT and self.lease is None:
+            raise ValueError("ephemeral and external vessels require a resource lease")
+        if self.lifecycle is VesselLifecycle.PERSISTENT and self.lease is not None:
+            raise ValueError("persistent vessels cannot carry an ephemeral resource lease")
         return self
 
 class ModelArtifact(BaseModel):

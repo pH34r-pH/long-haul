@@ -25,7 +25,7 @@ The normal data flow is discovery or a checked-in fixture → normalized domain 
 
 | Area | Source of truth | Reads/writes | Change route |
 | --- | --- | --- | --- |
-| Domain identity and topology | [`src/long_haul/models.py`](../src/long_haul/models.py) | Registry, discovery, scheduler, events, tests | Model/invariant change; run model and scheduler tests |
+| Domain identity and topology | [`src/long_haul/models.py`](../src/long_haul/models.py), [`src/long_haul/ephemeral.py`](../src/long_haul/ephemeral.py) | Registry, discovery, scheduler, events, lease lifecycle, tests | Model/invariant change; run model, lifecycle, and scheduler tests |
 | Manifests and probes | [`src/long_haul/registry.py`](../src/long_haul/registry.py), [`src/long_haul/discovery/`](../src/long_haul/discovery/) | YAML/JSON/CUE inputs become `Vessel`/`CrewMember` | Preserve unknown capability and measured-vs-simulated provenance |
 | Runtime identity | [`src/long_haul/runtime.py`](../src/long_haul/runtime.py), [`src/long_haul/adapters/`](../src/long_haul/adapters/) | Profiles, binaries, validation, execution results | Keep runtime identity separate from crew/artifact identity |
 | Planning and evidence | [`src/long_haul/scheduler/core.py`](../src/long_haul/scheduler/core.py), [`src/long_haul/benchmarks/`](../src/long_haul/benchmarks/) | Validations and measured observations produce eligible/ranked candidates | Require exact profile, placement, runtime, workload, and compatible evidence |
@@ -53,6 +53,7 @@ Use the narrowest command that covers the changed boundary, then run the full re
 | Change | Focused command |
 | --- | --- |
 | Models, topology, decisions | `python -m pytest -q tests/test_models.py tests/test_core.py tests/test_decisions.py tests/test_admission_regressions.py` |
+| Vessel leases and resource lifecycle | `python -m pytest -q tests/test_ephemeral.py tests/test_models.py tests/test_core.py` |
 | Scheduler/runtime/benchmark evidence | `python -m pytest -q tests/test_scheduler_evidence.py tests/test_benchmark_scheduler.py tests/test_anchorage_benchmark_harness.py tests/test_llama_preflight.py tests/test_llama_bench_import.py` |
 | Work contracts, evaluator, checkpoints, progress, Pi adapter | `python -m pytest -q tests/test_work_contracts.py tests/test_evaluator.py tests/test_checkpoints.py tests/test_progress.py tests/test_pi_rpc.py` |
 | Discovery/parsers | `python -m pytest -q tests/test_parsers.py tests/test_windows_discovery.py tests/test_reference.py` |

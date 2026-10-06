@@ -82,6 +82,12 @@ Long Haul classifies harness steps independently of model prose as information a
 
 The MVP uses append-only JSONL events plus materialized views. SQLite remains an optional future index; event provenance remains exportable and human-readable.
 
+### Dynamic resources and leases
+
+Persistent vessels need no lease. Ephemeral and externally managed vessels carry a provider-neutral `ResourceLease` with its identity, acquisition/expiry window, preemption and renewal support, trust domain, state-durability claim, and optional cost metadata. Admission, renewal, disappearance, and work-attempt transitions are recorded in the append-only event store and rebuilt into fleet and mission state. Lease metadata describes compute availability; mission and attempt continuity remains in Long Haul's durable event history.
+
+When an admitted resource disappears, attempts bound to that lease become inconclusive and the mission is marked for replanning. `lease_lost` and `runner_interrupted` remain separate from `execution_timeout`: a task timeout is an execution outcome, while lease loss says the host stopped being available before Long Haul received an outcome. The scheduler excludes leases that have not started or have expired, can prefer preemptible capacity for explicitly restartable missions, and rejects it when mission continuity policy forbids preemption. Provider-specific allocation and notification details belong behind adapters.
+
 ### Work checkpoints and session context
 
 The event log is authoritative history. A `WorkCheckpoint` is a deterministic compact materialization of contract-scoped facts, active constraints, subgoal state, unresolved failures, and the last externally verified artifact; it is disposable and rebuildable from events. A `TaskDigest` is a hard-bounded rendering of that checkpoint for a new harness/model session and explicitly reports omissions. A harness conversation is transient execution context, not durable memory. Resuming work creates a new session identity while retaining the work contract, crew identity, execution-plan linkage, and checkpoint provenance. Crew memory/continuity remains a separate institutional concern and must not be inferred from a model session transcript.

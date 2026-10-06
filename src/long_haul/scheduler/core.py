@@ -5,7 +5,8 @@ import json
 import math
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import Literal
 
 from ..benchmarks import BenchmarkObservation
 from ..benchmarks.store import Workload, evidence_is_fresh
@@ -27,20 +28,31 @@ class MissionRequirements:
     workload: Workload | None = None
     evidence_not_before: datetime | None = None
     safety_ok: bool = True; cooperation_ok: bool = True; minimum_memory_mib: float = 0; allow_unknown_runtime: bool = False
+    restartable: bool = False
+    preemption_policy: Literal["allow", "prefer", "forbid"] = "allow"
 
     def __post_init__(self) -> None:
         if not math.isfinite(self.minimum_memory_mib) or self.minimum_memory_mib < 0:
             raise ValueError("minimum_memory_mib must be finite and nonnegative")
+        if self.preemption_policy not in {"allow", "prefer", "forbid"}:
+            raise ValueError("preemption_policy must be allow, prefer, or forbid")
+        if self.preemption_policy == "prefer" and not self.restartable:
+            raise ValueError("preemptible resources can only be preferred for restartable work")
 
 @dataclass
 class CandidateResult:
     plan: ExecutionPlan; eligible: bool; reasons: list[str]
     evidence: BenchmarkObservation | None = None
-    rank: tuple[int, int, int, int, int, float] | None = None
+    preemption_preference: int = 0
+    rank: tuple[int, int, int, int, int, int, float] | None = None
 
 class Scheduler:
-    def __init__(self, vessels: Iterable[Vessel], links: Iterable[Link] = (), benchmarks: Iterable[BenchmarkObservation] = (), validations: Iterable[ProfileValidation] = (), current_runtimes: Iterable[RuntimeIdentity] = ()):
+    def __init__(self, vessels: Iterable[Vessel], links: Iterable[Link] = (), benchmarks: Iterable[BenchmarkObservation] = (), validations: Iterable[ProfileValidation] = (), current_runtimes: Iterable[RuntimeIdentity] = (), *, now: datetime | None = None):
         self.vessels = list(vessels); self.links = list(links); self.benchmarks = list(benchmarks)
+        self.vessels_by_id = {v.id: v for v in self.vessels}
+        self.now = now or datetime.now(UTC)
+        if self.now.tzinfo is None or self.now.utcoffset() is None:
+            raise ValueError("scheduler time must be timezone-aware")
         self.resources = {r.id: r for v in self.vessels for r in v.resources}
         self.validations = list(validations)
         runtime_groups: dict[str, list[RuntimeIdentity]] = {}
@@ -112,7 +124,20 @@ class Scheduler:
         reasons.extend(self._placement_reasons(mission, plan, profile))
         evidence = self._evidence(mission, plan, profile)
         if evidence is None: reasons.append("no comparable benchmark evidence; uncertainty retained")
-        return CandidateResult(plan, not reasons or reasons == ["no comparable benchmark evidence; uncertainty retained"], reasons, evidence)
+        uses_preemptible = any(
+            (self.vessels_by_id.get(vessel_id) is not None)
+            and self.vessels_by_id[vessel_id].lease is not None
+            and self.vessels_by_id[vessel_id].lease.preemptible
+            for vessel_id in plan.vessels
+        )
+        preemption_preference = int(mission.preemption_policy == "prefer" and not uses_preemptible)
+        return CandidateResult(
+            plan,
+            not reasons or reasons == ["no comparable benchmark evidence; uncertainty retained"],
+            reasons,
+            evidence,
+            preemption_preference,
+        )
     def _placement_reasons(self, mission: MissionRequirements, plan: ExecutionPlan, profile: InferenceProfile) -> list[str]:
         reasons: list[str] = []
         if not mission.safety_ok: reasons.append("hard safety constraint failed")
@@ -120,11 +145,27 @@ class Scheduler:
         if plan.mode not in mission.allow_modes: reasons.append("mode is outside mission constraints")
         if not mission.required_resources <= set(plan.resources): reasons.append("required resource placement missing")
         if set(profile.participating_resources) != set(plan.resources): reasons.append("plan/profile resource pairing mismatch")
+        reasons.extend(self._lease_reasons(mission, plan))
         memory_issue = self._memory_issue(mission, plan, profile)
         if memory_issue is not None:
             reasons.append(memory_issue)
         if self._unacceptable_pipeline_link(mission, plan):
             reasons.append("synchronous PIPELINE requires acceptable direct Tailscale path")
+        return reasons
+
+    def _lease_reasons(self, mission: MissionRequirements, plan: ExecutionPlan) -> list[str]:
+        reasons: list[str] = []
+        missing = [vessel_id for vessel_id in plan.vessels if vessel_id not in self.vessels_by_id]
+        if missing:
+            reasons.append("planned vessel is unavailable")
+        for vessel_id in plan.vessels:
+            vessel = self.vessels_by_id.get(vessel_id)
+            if vessel is None or vessel.lease is None:
+                continue
+            if not vessel.lease.active(self.now):
+                reasons.append(f"resource lease for vessel {vessel_id} is expired or not yet active")
+            if mission.preemption_policy == "forbid" and vessel.lease.preemptible:
+                reasons.append(f"preemptible resource is forbidden for vessel {vessel_id}")
         return reasons
 
     def _unacceptable_pipeline_link(self, mission: MissionRequirements, plan: ExecutionPlan) -> bool:
@@ -159,7 +200,7 @@ class Scheduler:
             evidence = result.evidence
             throughput = (evidence.prefill_tps if evidence.workload.prompt_tokens and not evidence.workload.output_tokens else evidence.decode_tps) if evidence else None
             efficiency = -(throughput or 0.0)
-            result.rank = (0, 0, 0, -measured, -continuity, efficiency)
+            result.rank = (0, 0, 0, -measured, result.preemption_preference, -continuity, efficiency)
         return sorted(candidates, key=lambda c: (not c.eligible, c.rank or (99,)*6, c.plan.plan_id))
     def select(self, mission: MissionRequirements, profiles: Iterable[InferenceProfile]) -> CandidateResult:
         profiles_by_id = {p.id:p for p in profiles}
