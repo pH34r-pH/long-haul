@@ -1,11 +1,14 @@
 import json
 from datetime import UTC, datetime
 
+import pytest
+
+from long_haul.benchmarks import BenchmarkCorrelation
 from long_haul.llama_bench_import import import_profile
 from long_haul.runtime import RuntimeIdentity
 
 
-def test_import_native_llama_bench_updates_matrix_report_and_store(tmp_path):
+def _write_and_check_fixture(tmp_path):
     manifest = tmp_path / "matrix.yaml"
     manifest.write_text(
         """
@@ -77,17 +80,103 @@ workloads:
     report = json.loads((tmp_path / "out" / "matrix-report.json").read_text())
     assert report["profiles"][0]["profile"]["id"] == "anc-g0"
     assert report["profiles"][0]["measured_validation"]["runtime"]["build_id"] == "abcdef1234"
+    assert [row["provenance"] for row in observations] == ["imported", "imported"]
+    assert all(row["import_provenance"]["measured_at"] is None for row in observations)
+
+
+def test_import_native_llama_bench_updates_matrix_report_and_store(tmp_path):
+    _write_and_check_fixture(tmp_path)
 
 
 
 def test_import_retains_exact_runtime_identity_and_measurement_time(tmp_path):
-    test_import_native_llama_bench_updates_matrix_report_and_store(tmp_path)
+    _write_and_check_fixture(tmp_path)
     manifest = tmp_path / "matrix.yaml"
     raw = tmp_path / "raw.json"
     identity = RuntimeIdentity(runtime_id="llama.cpp", version="b11146", build_id="source:binary:sm61", capabilities={"binary_sha256": "a" * 64})
     measured_at = datetime(2026, 9, 30, tzinfo=UTC)
-    bound = import_profile(manifest, "anc-g0", raw, tmp_path / "bound", runtime_identity=identity, measured_at=measured_at)
+    source_commit = "c" * 40
+    importer_commit = "d" * 40
+    bound = import_profile(
+        manifest,
+        "anc-g0",
+        raw,
+        tmp_path / "bound",
+        runtime_identity=identity,
+        measured_at=measured_at,
+        source_id="native-run-01",
+        source_repository="synthetic/producer",
+        source_commit=source_commit,
+        importer_commit=importer_commit,
+        correlation=BenchmarkCorrelation(request_id="native-request-01"),
+    )
     rows = [json.loads(line) for line in (tmp_path / "bound" / "benchmarks.jsonl").read_text().splitlines()]
     assert rows[0]["runtime"] == identity.model_dump(mode="json")
     assert datetime.fromisoformat(rows[0]["timestamp"]) == measured_at
     assert bound["measured_validation"]["runtime"] == identity.model_dump(mode="json")
+    assert rows[0]["provenance"] == "measured"
+    assert rows[0]["import_provenance"]["measured_at"] == measured_at.isoformat().replace(
+        "+00:00", "Z"
+    )
+    assert rows[0]["import_provenance"]["source_commit"] == source_commit
+    assert rows[0]["import_provenance"]["importer_commit"] == importer_commit
+    assert rows[0]["runtime"]["build_id"] == "source:binary:sm61"
+    assert rows[0]["correlation"]["request_id"] == "native-request-01"
+
+
+def test_reimport_is_idempotent_and_reports_stable_source_occurrences(tmp_path):
+    _write_and_check_fixture(tmp_path)
+    manifest = tmp_path / "matrix.yaml"
+    raw = tmp_path / "raw.json"
+    output = tmp_path / "idempotent"
+
+    first = import_profile(manifest, "anc-g0", raw, output, source_id="bench-run-a")
+    first_bytes = (output / "benchmarks.jsonl").read_bytes()
+    first_report = (output / "matrix-report.json").read_bytes()
+    second = import_profile(manifest, "anc-g0", raw, output, source_id="bench-run-a")
+
+    assert first == second
+    assert (output / "benchmarks.jsonl").read_bytes() == first_bytes
+    assert (output / "matrix-report.json").read_bytes() == first_report
+    assert [run["source_occurrence_id"] for run in first["runs"]] == [
+        run["source_occurrence_id"] for run in second["runs"]
+    ]
+
+
+def test_distinct_source_ids_preserve_identical_independent_measurements(tmp_path):
+    _write_and_check_fixture(tmp_path)
+    manifest = tmp_path / "matrix.yaml"
+    raw = tmp_path / "raw.json"
+    output = tmp_path / "replicates"
+    measured_at = datetime(2026, 9, 30, tzinfo=UTC)
+
+    first = import_profile(
+        manifest, "anc-g0", raw, output, source_id="acquisition-a", measured_at=measured_at
+    )
+    second = import_profile(
+        manifest, "anc-g0", raw, output, source_id="acquisition-b", measured_at=measured_at
+    )
+    rows = [
+        json.loads(line)
+        for line in (output / "benchmarks.jsonl").read_text().splitlines()
+    ]
+
+    assert len(rows) == 4
+    assert {run["observation_id"] for run in first["runs"]}.isdisjoint(
+        {run["observation_id"] for run in second["runs"]}
+    )
+    assert [row["decode_tps"] for row in rows].count(22.5) == 2
+
+
+def test_same_source_id_with_changed_bytes_fails_visibly(tmp_path):
+    _write_and_check_fixture(tmp_path)
+    manifest = tmp_path / "matrix.yaml"
+    raw = tmp_path / "raw.json"
+    output = tmp_path / "conflict"
+    import_profile(manifest, "anc-g0", raw, output, source_id="immutable-run")
+
+    value = json.loads(raw.read_text())
+    value[0]["avg_ts"] += 1
+    raw.write_text(json.dumps(value))
+    with pytest.raises(ValueError, match="conflicting bytes for source_id"):
+        import_profile(manifest, "anc-g0", raw, output, source_id="immutable-run")

@@ -130,6 +130,18 @@ def test_manifest_matrix_records_cpu_and_exploratory_gpu(fixture_runtime, tmp_pa
     assert len(lines) == 2
     observations = [json.loads(line) for line in lines]
     assert {item["profile"]["id"] for item in observations} == {"anc-cpu", "anc-g0"}
+    request_ids = {
+        run["observation_id"]: run["result"]["request_id"]
+        for profile in report["profiles"]
+        for run in profile["runs"]
+    }
+    assert all(
+        item["correlation"]["request_id"] == request_ids[item["id"]]
+        and item["correlation"]["work_contract_id"] is None
+        and item["correlation"]["compiler_attempt_id"] is None
+        and item["correlation"]["traceparent"] is None
+        for item in observations
+    )
     gpu = next(item for item in report["profiles"] if item["profile"]["id"] == "anc-g0")
     assert gpu["preflight"]["state"] == "UNKNOWN"
     assert gpu["measured_validation"]["state"] == "SUPPORTED"

@@ -9,7 +9,12 @@ import yaml
 from pydantic import BaseModel, Field
 
 from .adapters.llama_cpp import LlamaCppAdapter
-from .benchmarks import BenchmarkObservation, BenchmarkStore, Workload
+from .benchmarks import (
+    BenchmarkCorrelation,
+    BenchmarkObservation,
+    BenchmarkStore,
+    Workload,
+)
 from .models import ExecutionMode, InferenceProfile, ModelArtifact
 from .runtime import (
     ExecutionRequest,
@@ -63,6 +68,7 @@ def _observation(
     profile: InferenceProfile,
     workload: MatrixWorkload,
     result,
+    request_id: str | None = None,
 ) -> BenchmarkObservation:
     error = None
     if not result.success:
@@ -80,6 +86,7 @@ def _observation(
             cold=True,
         ),
         provenance="measured",
+        correlation=(BenchmarkCorrelation(request_id=request_id) if request_id else None),
         load_seconds=result.timings.load_seconds,
         ttft_seconds=result.timings.ttft_seconds,
         prefill_tps=result.timings.prefill_tps,
@@ -137,7 +144,9 @@ def _run_profile(
                 allow_unknown_runtime=specification.explore_unknown,
             )
             result = adapter.execute(request)
-            observation = store.append(_observation(profile, workload, result))
+            observation = store.append(
+                _observation(profile, workload, result, request_id=request.request_id)
+            )
             record["runs"].append(
                 {
                     "workload": workload.name,
