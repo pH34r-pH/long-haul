@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -18,13 +19,35 @@ from .benchmarks import (
     imported_observation_id,
     source_occurrence_id,
 )
-from .models import ExecutionMode
+from .models import ExecutionMode, InferenceProfile
 from .runtime import (
     ProfileValidation,
     RuntimeIdentity,
     ValidationDepth,
     ValidationState,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class LlamaBenchImportOptions:
+    """Caller-supplied identity and correlation metadata for one offline import."""
+
+    runtime_identity: RuntimeIdentity | None = None
+    measured_at: datetime | None = None
+    source_id: str | None = None
+    source_repository: str | None = None
+    source_commit: str | None = None
+    importer_commit: str | None = None
+    correlation: BenchmarkCorrelation | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class _ImportContext:
+    profile: InferenceProfile
+    options: LlamaBenchImportOptions
+    source_id: str
+    source_sha256: str
+    imported_at: datetime
 
 
 class LlamaBenchRow(BaseModel):
@@ -83,44 +106,35 @@ def _rows(path: str | Path) -> list[LlamaBenchRow]:
 
 def _append_observations(
     store: BenchmarkStore,
-    profile,
     rows: list[LlamaBenchRow],
-    runtime_identity: RuntimeIdentity | None = None,
-    measured_at: datetime | None = None,
-    *,
-    source_id: str,
-    source_sha256: str,
-    source_repository: str | None,
-    source_commit: str | None,
-    importer_commit: str | None,
-    correlation: BenchmarkCorrelation | None,
-    imported_at: datetime,
+    context: _ImportContext,
 ) -> list[BenchmarkObservation]:
     observations = []
+    options = context.options
     for occurrence_index, row in enumerate(rows):
         occurrence_id = source_occurrence_id(
-            source_id, source_sha256, occurrence_index
+            context.source_id, context.source_sha256, occurrence_index
         )
         import_provenance = BenchmarkImportProvenance(
-            source_id=source_id,
-            source_sha256=source_sha256,
+            source_id=context.source_id,
+            source_sha256=context.source_sha256,
             occurrence_index=occurrence_index,
             source_occurrence_id=occurrence_id,
-            source_repository=source_repository,
-            source_commit=source_commit,
-            importer_commit=importer_commit,
-            imported_at=imported_at,
-            measured_at=measured_at,
+            source_repository=options.source_repository,
+            source_commit=options.source_commit,
+            importer_commit=options.importer_commit,
+            imported_at=context.imported_at,
+            measured_at=options.measured_at,
         )
         observation = BenchmarkObservation(
             id=imported_observation_id(occurrence_id),
-            timestamp=measured_at or imported_at,
-            runtime=runtime_identity or _runtime(row),
-            profile=profile,
+            timestamp=options.measured_at or context.imported_at,
+            runtime=options.runtime_identity or _runtime(row),
+            profile=context.profile,
             plan_mode=ExecutionMode.LOCAL,
-            resources=profile.participating_resources,
+            resources=context.profile.participating_resources,
             workload=_workload(row),
-            provenance="measured" if measured_at is not None else "imported",
+            provenance="measured" if options.measured_at is not None else "imported",
             prefill_tps=row.avg_ts if row.n_prompt and not row.n_gen else None,
             decode_tps=row.avg_ts if row.n_gen else None,
             utilization={
@@ -128,7 +142,7 @@ def _append_observations(
                 if row.stddev_ts is not None
                 else 0.0
             },
-            correlation=correlation,
+            correlation=options.correlation,
             import_provenance=import_provenance,
         )
         observations.append(store.append_imported(observation))
@@ -210,15 +224,10 @@ def import_profile(
     raw_path: str | Path,
     output_dir: str | Path,
     *,
-    runtime_identity: RuntimeIdentity | None = None,
-    measured_at: datetime | None = None,
-    source_id: str | None = None,
-    source_repository: str | None = None,
-    source_commit: str | None = None,
-    importer_commit: str | None = None,
-    correlation: BenchmarkCorrelation | None = None,
+    options: LlamaBenchImportOptions | None = None,
 ) -> dict[str, object]:
-    if measured_at is not None and measured_at.tzinfo is None:
+    selected_options = options or LlamaBenchImportOptions()
+    if selected_options.measured_at is not None and selected_options.measured_at.tzinfo is None:
         raise ValueError("measured_at must be timezone-aware")
     manifest = load_manifest(manifest_path)
     specification = next((item for item in manifest.profiles if item.id == profile_id), None)
@@ -233,30 +242,32 @@ def import_profile(
     default_source_id = "file-" + hashlib.sha256(
         f"{basename_digest}:{source_sha256}".encode("ascii")
     ).hexdigest()[:32]
-    import_source_id = source_id if source_id is not None else default_source_id
+    import_source_id = (
+        selected_options.source_id
+        if selected_options.source_id is not None
+        else default_source_id
+    )
     imported_at = datetime.now(UTC)
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     benchmark_path = out / "benchmarks.jsonl"
+    context = _ImportContext(
+        profile,
+        selected_options,
+        import_source_id,
+        source_sha256,
+        imported_at,
+    )
     observations = _append_observations(
         BenchmarkStore(benchmark_path),
-        profile,
         rows,
-        runtime_identity,
-        measured_at,
-        source_id=import_source_id,
-        source_sha256=source_sha256,
-        source_repository=source_repository,
-        source_commit=source_commit,
-        importer_commit=importer_commit,
-        correlation=correlation,
-        imported_at=imported_at,
+        context,
     )
     validation = _validation(
         profile,
         rows[0],
-        runtime_identity,
-        measured_at,
+        selected_options.runtime_identity,
+        selected_options.measured_at,
         observations[0].import_provenance.imported_at
         if observations[0].import_provenance is not None
         else imported_at,

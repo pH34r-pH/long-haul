@@ -14,6 +14,7 @@ from .store import (
     BenchmarkObservation,
     BenchmarkStore,
     Workload,
+    compatibility_reasons,
     imported_observation_id,
 )
 
@@ -110,34 +111,10 @@ def observation_from_fact(fact: dict[str, Any]) -> BenchmarkObservation:
     """Validate and rehydrate a v1 fact, preserving the source observation."""
     if fact.get("schema") != FACT_SCHEMA:
         raise ValueError("unsupported benchmark fact schema")
-    profile = InferenceProfile.model_validate(fact["profile"])
-    if fact.get("profile_identity") != profile.identity:
-        raise ValueError("exported profile identity does not match the full profile")
-    if fact.get("artifact") != profile.artifact.model_dump(mode="json"):
-        raise ValueError("exported artifact does not match the full profile")
-    if fact.get("artifact_key") != profile.artifact.key:
-        raise ValueError("exported artifact key does not match the full artifact")
-
     metrics = fact["measurements"]
-    _require_unit(metrics["load_time"], "s")
-    _require_unit(metrics["time_to_first_token"], "s")
-    _require_unit(metrics["prefill_throughput"], "token/s")
-    _require_unit(metrics["decode_throughput"], "token/s")
-    _require_unit(metrics["power"], "W")
-    for item in metrics["resident_memory"].values():
-        _require_unit(item, "MiB")
-    for name, item in metrics["utilization"].items():
-        expected_unit = "token/s" if name == "llama_bench_stddev_tps" else "unknown"
-        _require_unit(item, expected_unit)
-    for item in metrics["network"].values():
-        if item.get("unit") not in {"unknown", "not_applicable"}:
-            raise ValueError("unsupported network measurement unit")
-
+    profile = _validated_profile(fact)
     workload = fact["workload"]
-    _require_unit(workload["prompt_tokens"], "token")
-    _require_unit(workload["output_tokens"], "token")
-    correlation_value = fact.get("correlation")
-    source_value = fact.get("source_provenance")
+    _validate_fact_units(metrics, workload)
     recorded_at = datetime.fromisoformat(fact["recorded_at"])
     measured_at_value = fact.get("measured_at")
     measured_at = (
@@ -145,22 +122,7 @@ def observation_from_fact(fact: dict[str, Any]) -> BenchmarkObservation:
         if measured_at_value is not None
         else None
     )
-    source_provenance = (
-        None
-        if source_value is None
-        else BenchmarkImportProvenance.model_validate(source_value)
-    )
-    expected_measured_at = (
-        source_provenance.measured_at
-        if source_provenance is not None
-        else recorded_at
-    )
-    if measured_at != expected_measured_at:
-        raise ValueError("exported measured_at does not match source measurement provenance")
-    if source_provenance is not None:
-        expected_id = imported_observation_id(source_provenance.source_occurrence_id)
-        if fact["observation_id"] != expected_id:
-            raise ValueError("imported observation ID does not match source occurrence")
+    source_provenance = _validated_source_provenance(fact, recorded_at, measured_at)
     return BenchmarkObservation(
         id=fact["observation_id"],
         timestamp=recorded_at,
@@ -193,17 +155,69 @@ def observation_from_fact(fact: dict[str, Any]) -> BenchmarkObservation:
         power_watts=metrics["power"]["value"],
         error=fact.get("error"),
         schema_version=fact.get("source_schema_version", 1),
-        correlation=(
-            BenchmarkCorrelation.model_validate(correlation_value)
-            if correlation_value is not None and any(
-                value is not None for value in correlation_value.values()
-            )
-            else None
-        ),
-        import_provenance=(
-            source_provenance
-        ),
+        correlation=_fact_correlation(fact.get("correlation")),
+        import_provenance=source_provenance,
     )
+
+
+def _validated_profile(fact: dict[str, Any]) -> InferenceProfile:
+    profile = InferenceProfile.model_validate(fact["profile"])
+    if fact.get("profile_identity") != profile.identity:
+        raise ValueError("exported profile identity does not match the full profile")
+    if fact.get("artifact") != profile.artifact.model_dump(mode="json"):
+        raise ValueError("exported artifact does not match the full profile")
+    if fact.get("artifact_key") != profile.artifact.key:
+        raise ValueError("exported artifact key does not match the full artifact")
+    return profile
+
+
+def _validate_fact_units(metrics: dict[str, Any], workload: dict[str, Any]) -> None:
+    expected_metrics = {
+        "load_time": "s",
+        "time_to_first_token": "s",
+        "prefill_throughput": "token/s",
+        "decode_throughput": "token/s",
+        "power": "W",
+    }
+    for name, unit in expected_metrics.items():
+        _require_unit(metrics[name], unit)
+    for item in metrics["resident_memory"].values():
+        _require_unit(item, "MiB")
+    for name, item in metrics["utilization"].items():
+        unit = "token/s" if name == "llama_bench_stddev_tps" else "unknown"
+        _require_unit(item, unit)
+    for item in metrics["network"].values():
+        if item.get("unit") not in {"unknown", "not_applicable"}:
+            raise ValueError("unsupported network measurement unit")
+    _require_unit(workload["prompt_tokens"], "token")
+    _require_unit(workload["output_tokens"], "token")
+
+
+def _validated_source_provenance(
+    fact: dict[str, Any],
+    recorded_at: datetime,
+    measured_at: datetime | None,
+) -> BenchmarkImportProvenance | None:
+    source_value = fact.get("source_provenance")
+    if source_value is None:
+        expected_measured_at = recorded_at
+        source_provenance = None
+    else:
+        source_provenance = BenchmarkImportProvenance.model_validate(source_value)
+        expected_measured_at = source_provenance.measured_at
+    if measured_at != expected_measured_at:
+        raise ValueError("exported measured_at does not match source measurement provenance")
+    if source_provenance is not None:
+        expected_id = imported_observation_id(source_provenance.source_occurrence_id)
+        if fact["observation_id"] != expected_id:
+            raise ValueError("imported observation ID does not match source occurrence")
+    return source_provenance
+
+
+def _fact_correlation(value: Any) -> BenchmarkCorrelation | None:
+    if value is None or not any(item is not None for item in value.values()):
+        return None
+    return BenchmarkCorrelation.model_validate(value)
 
 
 def _require_unit(item: dict[str, Any], unit: str) -> None:
@@ -235,7 +249,7 @@ def build_comparison_snapshot(
 
     facts = []
     for observation in sorted(observations, key=lambda item: item.id):
-        reasons = store.explain_compatible(
+        reasons = compatibility_reasons(
             observation,
             reference.profile,
             reference.runtime,

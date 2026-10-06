@@ -122,7 +122,7 @@ def _replay(args) -> None:
 
 def _native(args) -> None:
     from .benchmarks import BenchmarkCorrelation
-    from .llama_bench_import import import_profile
+    from .llama_bench_import import LlamaBenchImportOptions, import_profile
 
     correlation_fields = {
         "work_contract_id": args.work_contract_id,
@@ -141,12 +141,14 @@ def _native(args) -> None:
         args.profile_id,
         args.raw,
         args.output,
-        measured_at=_parse_datetime(args.measured_at),
-        source_id=args.source_id,
-        source_repository=args.source_repository,
-        source_commit=args.source_commit,
-        importer_commit=args.importer_commit,
-        correlation=correlation,
+        options=LlamaBenchImportOptions(
+            measured_at=_parse_datetime(args.measured_at),
+            source_id=args.source_id,
+            source_repository=args.source_repository,
+            source_commit=args.source_commit,
+            importer_commit=args.importer_commit,
+            correlation=correlation,
+        ),
     )
     print(json.dumps(result, indent=2))
 

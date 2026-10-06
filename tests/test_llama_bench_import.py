@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 import pytest
 
 from long_haul.benchmarks import BenchmarkCorrelation
-from long_haul.llama_bench_import import import_profile
+from long_haul.llama_bench_import import LlamaBenchImportOptions, import_profile
 from long_haul.runtime import RuntimeIdentity
 
 
@@ -102,13 +102,15 @@ def test_import_retains_exact_runtime_identity_and_measurement_time(tmp_path):
         "anc-g0",
         raw,
         tmp_path / "bound",
-        runtime_identity=identity,
-        measured_at=measured_at,
-        source_id="native-run-01",
-        source_repository="synthetic/producer",
-        source_commit=source_commit,
-        importer_commit=importer_commit,
-        correlation=BenchmarkCorrelation(request_id="native-request-01"),
+        options=LlamaBenchImportOptions(
+            runtime_identity=identity,
+            measured_at=measured_at,
+            source_id="native-run-01",
+            source_repository="synthetic/producer",
+            source_commit=source_commit,
+            importer_commit=importer_commit,
+            correlation=BenchmarkCorrelation(request_id="native-request-01"),
+        ),
     )
     rows = [json.loads(line) for line in (tmp_path / "bound" / "benchmarks.jsonl").read_text().splitlines()]
     assert rows[0]["runtime"] == identity.model_dump(mode="json")
@@ -130,10 +132,11 @@ def test_reimport_is_idempotent_and_reports_stable_source_occurrences(tmp_path):
     raw = tmp_path / "raw.json"
     output = tmp_path / "idempotent"
 
-    first = import_profile(manifest, "anc-g0", raw, output, source_id="bench-run-a")
+    options = LlamaBenchImportOptions(source_id="bench-run-a")
+    first = import_profile(manifest, "anc-g0", raw, output, options=options)
     first_bytes = (output / "benchmarks.jsonl").read_bytes()
     first_report = (output / "matrix-report.json").read_bytes()
-    second = import_profile(manifest, "anc-g0", raw, output, source_id="bench-run-a")
+    second = import_profile(manifest, "anc-g0", raw, output, options=options)
 
     assert first == second
     assert (output / "benchmarks.jsonl").read_bytes() == first_bytes
@@ -151,10 +154,22 @@ def test_distinct_source_ids_preserve_identical_independent_measurements(tmp_pat
     measured_at = datetime(2026, 9, 30, tzinfo=UTC)
 
     first = import_profile(
-        manifest, "anc-g0", raw, output, source_id="acquisition-a", measured_at=measured_at
+        manifest,
+        "anc-g0",
+        raw,
+        output,
+        options=LlamaBenchImportOptions(
+            source_id="acquisition-a", measured_at=measured_at
+        ),
     )
     second = import_profile(
-        manifest, "anc-g0", raw, output, source_id="acquisition-b", measured_at=measured_at
+        manifest,
+        "anc-g0",
+        raw,
+        output,
+        options=LlamaBenchImportOptions(
+            source_id="acquisition-b", measured_at=measured_at
+        ),
     )
     rows = [
         json.loads(line)
@@ -173,10 +188,11 @@ def test_same_source_id_with_changed_bytes_fails_visibly(tmp_path):
     manifest = tmp_path / "matrix.yaml"
     raw = tmp_path / "raw.json"
     output = tmp_path / "conflict"
-    import_profile(manifest, "anc-g0", raw, output, source_id="immutable-run")
+    options = LlamaBenchImportOptions(source_id="immutable-run")
+    import_profile(manifest, "anc-g0", raw, output, options=options)
 
     value = json.loads(raw.read_text())
     value[0]["avg_ts"] += 1
     raw.write_text(json.dumps(value))
     with pytest.raises(ValueError, match="conflicting bytes for source_id"):
-        import_profile(manifest, "anc-g0", raw, output, source_id="immutable-run")
+        import_profile(manifest, "anc-g0", raw, output, options=options)

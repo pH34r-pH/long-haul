@@ -167,6 +167,19 @@ def compatibility_reasons(
     as_of: datetime | None = None,
 ) -> list[str]:
     """Explain the exact predicates used by ``BenchmarkStore.query_compatible``."""
+    reasons = _identity_reasons(observation, profile, runtime, workload, mode)
+    reasons.extend(_evidence_reasons(observation))
+    reasons.extend(_freshness_reasons(observation, not_before, as_of))
+    return reasons
+
+
+def _identity_reasons(
+    observation: BenchmarkObservation,
+    profile: InferenceProfile,
+    runtime: RuntimeIdentity,
+    workload: Workload,
+    mode: ExecutionMode | None,
+) -> list[str]:
     reasons: list[str] = []
     if mode is not None and observation.plan_mode != mode:
         reasons.append("execution_mode_mismatch")
@@ -180,22 +193,34 @@ def compatibility_reasons(
         reasons.append("workload_mismatch")
     if observation.resources != profile.participating_resources:
         reasons.append("resource_placement_mismatch")
+    return reasons
+
+
+def _evidence_reasons(observation: BenchmarkObservation) -> list[str]:
+    reasons: list[str] = []
     if observation.provenance != "measured":
         reasons.append("provenance_not_measured")
     if observation.error is not None:
         reasons.append("run_failed")
-    if not evidence_is_fresh(observation.timestamp, not_before, as_of=as_of):
-        if observation.timestamp.tzinfo is None:
-            reasons.append("measurement_time_unknown")
-        elif not_before.tzinfo is None or (as_of is not None and as_of.tzinfo is None):
-            reasons.append("freshness_boundary_unknown")
-        elif observation.timestamp < not_before:
-            reasons.append("stale")
-        elif as_of is not None and observation.timestamp > as_of:
-            reasons.append("future_dated")
-        else:
-            reasons.append("outside_freshness_window")
     return reasons
+
+
+def _freshness_reasons(
+    observation: BenchmarkObservation,
+    not_before: datetime,
+    as_of: datetime | None,
+) -> list[str]:
+    if evidence_is_fresh(observation.timestamp, not_before, as_of=as_of):
+        return []
+    if observation.timestamp.tzinfo is None:
+        return ["measurement_time_unknown"]
+    if not_before.tzinfo is None or (as_of is not None and as_of.tzinfo is None):
+        return ["freshness_boundary_unknown"]
+    if observation.timestamp < not_before:
+        return ["stale"]
+    if as_of is not None and observation.timestamp > as_of:
+        return ["future_dated"]
+    return ["outside_freshness_window"]
 
 
 class BenchmarkStore:
@@ -257,27 +282,6 @@ class BenchmarkStore:
             and (mode is None or observation.plan_mode == mode)
             and (resources is None or resources <= set(observation.resources))
         ]
-
-    def explain_compatible(
-        self,
-        observation: BenchmarkObservation,
-        profile: InferenceProfile,
-        runtime: RuntimeIdentity,
-        workload: Workload,
-        not_before: datetime,
-        mode: ExecutionMode | None = None,
-        *,
-        as_of: datetime | None = None,
-    ) -> list[str]:
-        return compatibility_reasons(
-            observation,
-            profile,
-            runtime,
-            workload,
-            not_before,
-            mode,
-            as_of=as_of,
-        )
 
     def query_compatible(
         self,

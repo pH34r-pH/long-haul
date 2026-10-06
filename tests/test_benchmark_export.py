@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -59,45 +60,41 @@ def _runtime(**capabilities):
 
 def _observation(
     observation_id: str,
-    *,
-    timestamp: datetime = datetime(2026, 2, 1, tzinfo=UTC),
-    profile=None,
-    runtime="default",
-    resources: list[str] | None = None,
-    workload: Workload | None = None,
-    provenance="measured",
-    error: str | None = None,
-    plan_mode=ExecutionMode.LOCAL,
-    correlation: BenchmarkCorrelation | None = None,
-):
-    selected_profile = profile or _profile()
-    selected_runtime = _runtime() if runtime == "default" else runtime
-    selected_workload = workload or Workload(
+    **overrides: Any,
+) -> BenchmarkObservation:
+    selected_profile = overrides.pop("profile", None) or _profile()
+    selected_runtime = overrides.pop("runtime", "default")
+    if selected_runtime == "default":
+        selected_runtime = _runtime()
+    selected_workload = overrides.pop("workload", None) or Workload(
         name="synthetic-prompt-4-output-8",
         prompt_tokens=4,
         output_tokens=8,
         cold=True,
     )
-    return BenchmarkObservation(
-        id=observation_id,
-        timestamp=timestamp,
-        profile=selected_profile,
-        runtime=selected_runtime,
-        plan_mode=plan_mode,
-        resources=resources or selected_profile.participating_resources.copy(),
-        workload=selected_workload,
-        provenance=provenance,
-        load_seconds=0.125,
-        ttft_seconds=0.25,
-        prefill_tps=128.0,
-        decode_tps=32.0,
-        residency_mib={"gpu-0": 512.5},
-        utilization={"gpu_percent": 75.0, "llama_bench_stddev_tps": 1.25},
-        network={"throughput": 4.5, "path": "synthetic-local"},
-        power_watts=42.0,
-        error=error,
-        correlation=correlation,
-    )
+    selected_resources = overrides.pop("resources", None)
+    values = {
+        "id": observation_id,
+        "timestamp": overrides.pop("timestamp", datetime(2026, 2, 1, tzinfo=UTC)),
+        "profile": selected_profile,
+        "runtime": selected_runtime,
+        "plan_mode": ExecutionMode.LOCAL,
+        "resources": selected_resources or selected_profile.participating_resources.copy(),
+        "workload": selected_workload,
+        "provenance": "measured",
+        "load_seconds": 0.125,
+        "ttft_seconds": 0.25,
+        "prefill_tps": 128.0,
+        "decode_tps": 32.0,
+        "residency_mib": {"gpu-0": 512.5},
+        "utilization": {"gpu_percent": 75.0, "llama_bench_stddev_tps": 1.25},
+        "network": {"throughput": 4.5, "path": "synthetic-local"},
+        "power_watts": 42.0,
+        "error": None,
+        "correlation": None,
+    }
+    values.update(overrides)
+    return BenchmarkObservation(**values)
 
 
 def _save_store(path, observations):
@@ -250,12 +247,40 @@ def test_saved_synthetic_comparison_fixture_uses_existing_compatibility_policy(t
     assert len([item for item in summary["runs"] if item["query_compatible"]]) == 2
 
 
-def test_comparison_labels_match_query_compatible_for_every_existing_gate(tmp_path):
+def _comparison_results(tmp_path, rows):
+    store = _save_store(tmp_path / "parity.jsonl", rows)
+    reference = rows[0]
+    assert reference.runtime is not None
+    report = build_comparison_snapshot(store, reference.id, NOT_BEFORE, as_of=AS_OF)
+    exported = {
+        run["fact"]["observation_id"]
+        for run in report["facts"]
+        if run["comparison"]["query_compatible"]
+    }
+    selected = {
+        observation.id
+        for observation in store.query_compatible(
+            reference.profile,
+            reference.runtime,
+            reference.workload,
+            NOT_BEFORE,
+            reference.plan_mode,
+            as_of=AS_OF,
+        )
+    }
+    reason_by_id = {
+        run["fact"]["observation_id"]: run["comparison"]["reasons"]
+        for run in report["facts"]
+    }
+    assert exported == selected
+    return exported, reason_by_id
+
+
+def test_comparison_labels_match_query_for_identity_and_workload_gates(tmp_path):
     profile = _profile()
     workload = Workload(
         name="synthetic-prompt-4-output-8", prompt_tokens=4, output_tokens=8, cold=True
     )
-    runtime = _runtime()
     reference = _observation("reference", profile=profile, workload=workload)
     rows = [
         reference,
@@ -297,6 +322,25 @@ def test_comparison_labels_match_query_compatible_for_every_existing_gate(tmp_pa
                 cold=False,
             ),
         ),
+    ]
+    exported, reason_by_id = _comparison_results(tmp_path, rows)
+
+    assert exported == {"reference", "independent-repeat"}
+    assert reason_by_id["artifact-change"] == ["profile_identity_mismatch"]
+    assert reason_by_id["runtime-change"] == ["runtime_identity_mismatch"]
+    assert reason_by_id["placement-change"] == ["resource_placement_mismatch"]
+    assert reason_by_id["prompt-token-change"] == ["workload_mismatch"]
+    assert reason_by_id["cold-state-change"] == ["workload_mismatch"]
+
+
+def test_comparison_labels_match_query_for_evidence_and_time_gates(tmp_path):
+    profile = _profile()
+    workload = Workload(
+        name="synthetic-prompt-4-output-8", prompt_tokens=4, output_tokens=8, cold=True
+    )
+    rows = [
+        _observation("reference", profile=profile, workload=workload),
+        _observation("independent-repeat", profile=profile, workload=workload),
         _observation(
             "stale",
             profile=profile,
@@ -320,36 +364,9 @@ def test_comparison_labels_match_query_compatible_for_every_existing_gate(tmp_pa
             plan_mode=ExecutionMode.POOL,
         ),
     ]
-    store = _save_store(tmp_path / "parity.jsonl", rows)
+    exported, reason_by_id = _comparison_results(tmp_path, rows)
 
-    report = build_comparison_snapshot(store, "reference", NOT_BEFORE, as_of=AS_OF)
-    exported = {
-        run["fact"]["observation_id"]
-        for run in report["facts"]
-        if run["comparison"]["query_compatible"]
-    }
-    selected = {
-        observation.id
-        for observation in store.query_compatible(
-            profile,
-            runtime,
-            workload,
-            NOT_BEFORE,
-            ExecutionMode.LOCAL,
-            as_of=AS_OF,
-        )
-    }
-
-    assert exported == selected == {"reference", "independent-repeat"}
-    reason_by_id = {
-        run["fact"]["observation_id"]: run["comparison"]["reasons"]
-        for run in report["facts"]
-    }
-    assert reason_by_id["artifact-change"] == ["profile_identity_mismatch"]
-    assert reason_by_id["runtime-change"] == ["runtime_identity_mismatch"]
-    assert reason_by_id["placement-change"] == ["resource_placement_mismatch"]
-    assert reason_by_id["prompt-token-change"] == ["workload_mismatch"]
-    assert reason_by_id["cold-state-change"] == ["workload_mismatch"]
+    assert exported == {"reference", "independent-repeat"}
     assert reason_by_id["stale"] == ["stale"]
     assert reason_by_id["future"] == ["future_dated"]
     assert reason_by_id["failed"] == ["run_failed"]
