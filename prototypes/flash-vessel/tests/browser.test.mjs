@@ -221,6 +221,47 @@ async function waitForSignal(signals, signal, expectedCount = 1, timeoutMs = 3_0
   assert.fail(`Timed out waiting for browser lifecycle signal ${signal}`);
 }
 
+async function cancelLocalInferenceWhenHidden(page, signals, windowId) {
+  let releaseRuntime;
+  const runtimeRequested = new Promise((resolveRequest) => {
+    void page.route(mockRuntimeUrl, (route) => {
+      resolveRequest();
+      return new Promise((resolveRoute) => {
+        releaseRuntime = () => {
+          void route.fulfill({
+            status: 200,
+            contentType: "text/javascript; charset=utf-8",
+            body: mockRuntimeSource,
+          }).catch(() => {}).finally(resolveRoute);
+        };
+      });
+    });
+  });
+  try {
+    await page.getByRole("button", { name: "Stop this tab's worker" }).click();
+    await waitForWorkerState(page, ["stopped"]);
+    const terminated = "/__test/worker-terminated?role=visibility";
+    const terminatedCount = signals.filter((signal) => signal === terminated).length;
+    await page.bringToFront();
+    await page.getByRole("button", { name: "Start local matching" }).click();
+    await runtimeRequested;
+
+    const hidden = "/__test/visibility?role=visibility&value=hidden";
+    await execFileAsync("xdotool", ["windowminimize", "--sync", windowId]);
+    await waitForSignal(signals, hidden, 2, 5_000);
+    await page.waitForFunction(() => document.querySelector("#local-status")?.dataset.state === "cancelled");
+    assert.match(await page.locator("#local-status").textContent(), /tab was hidden/);
+    await waitForSignal(signals, terminated, terminatedCount + 1);
+
+    await execFileAsync("xdotool", ["windowactivate", "--sync", windowId]);
+    await waitForSignal(signals, "/__test/visibility?role=visibility&value=visible", 2, 5_000);
+    assert.equal(await page.locator("#local-status").getAttribute("data-state"), "cancelled");
+  } finally {
+    releaseRuntime?.();
+    await page.unroute(mockRuntimeUrl).catch(() => {});
+  }
+}
+
 async function waitForWindowId(title) {
   const { stdout } = await execFileAsync("xdotool", ["getactivewindow"]);
   const windowId = stdout.trim();
@@ -532,9 +573,9 @@ test("live browser model produces the reference local result when explicitly ena
   }
 });
 
-test("native page visibility pauses and resumes its worker when available", {
+test("native visibility pauses capability work and cancels local inference when available", {
   ...browserTestOptions,
-  timeout: 45_000,
+  timeout: 60_000,
   skip: !chromium
     ? "Playwright is not installed; browser visibility test unavailable"
     : !process.env.DISPLAY && process.env.REQUIRE_VISIBILITY_TEST !== "1"
@@ -598,6 +639,7 @@ test("native page visibility pauses and resumes its worker when available", {
     await waitForSignal(signals, active);
     assert.ok(signals.indexOf(paused) < signals.indexOf(active));
     await waitForWorkerState(page, ["active"], 5_000);
+    await cancelLocalInferenceWhenHidden(page, signals, windowId);
   } finally {
     await closeVisibilityBrowser(browser, browserProcess, userDataDir);
     await new Promise((resolveClose, rejectClose) => server.close((error) => error ? rejectClose(error) : resolveClose()));
