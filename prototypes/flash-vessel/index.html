@@ -6,8 +6,8 @@
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#f4f9fd" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#00070d" media="(prefers-color-scheme: dark)">
-  <meta name="description" content="A capability-only browser prototype. Join this tab to view a small set of exposed browser hints.">
-  <title>Flash Vessel capability prototype</title>
+  <meta name="description" content="An opt-in browser-local semantic matching preview with conservative limits and no queue connection.">
+  <title>Flash Vessel local preview</title>
   <style>
     :root {
       --header-height: 58px;
@@ -375,6 +375,68 @@
     #status[data-state="paused"] { border-left-color: var(--accent-strong); }
     #status[data-state="error"] { border-left-color: #a4232b; }
 
+    .work-panel { grid-column: 1 / -1; }
+    .work-inputs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+    .work-inputs label {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: 7px;
+      color: var(--muted);
+      font: 800 9px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .work-inputs textarea {
+      width: 100%;
+      min-height: 94px;
+      padding: 12px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 0;
+      background: var(--depth);
+      color: var(--ink);
+      font: 500 14px/1.5 ui-sans-serif, system-ui, sans-serif;
+      letter-spacing: normal;
+      text-transform: none;
+    }
+    .work-note { max-width: 78ch; color: var(--muted); font-size: .88rem; }
+    .work-controls { margin-top: 16px; }
+    .controls #run-local {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: var(--accent-ink);
+    }
+    .controls #run-local:hover:not(:disabled) { background: var(--accent-strong); }
+    #local-status {
+      min-height: 48px;
+      margin: 18px 0 0;
+      padding: 12px 14px;
+      border-left: 2px solid var(--line);
+      background: color-mix(in srgb, var(--accent) 7%, var(--panel));
+      color: var(--ink);
+      font-size: .92rem;
+    }
+    #local-status[data-state="loading"], #local-status[data-state="embedding"] { border-left-color: var(--accent); }
+    #local-status[data-state="unsupported"], #local-status[data-state="error"] { border-left-color: #a4232b; }
+    #local-result {
+      display: block;
+      min-height: 58px;
+      margin-top: 12px;
+      padding: 14px;
+      overflow-wrap: anywhere;
+      border: 1px solid var(--line);
+      background: var(--depth);
+      color: var(--ink);
+      font: .82rem/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: pre-wrap;
+    }
+
     .snapshot-panel { display: flex; flex-direction: column; }
     .snapshot-panel h2 { margin-bottom: 18px; }
     #snapshot {
@@ -418,6 +480,8 @@
       h1 { max-width: 16ch; font-size: clamp(3rem, 14vw, 5rem); }
       .panels { grid-template-columns: 1fr; gap: 12px; padding: 18px 0 56px; }
       .panel { padding: 20px; }
+      .work-panel { grid-column: auto; }
+      .work-inputs { grid-template-columns: 1fr; }
       #snapshot { min-height: 180px; }
     }
 
@@ -462,18 +526,18 @@
   <header class="topbar">
     <a class="brand" href="#main-content">TJHG <span>/ Flash</span></a>
     <nav aria-label="Primary">
-      <a href="#session">Session</a>
+      <a href="#local-work">Local Work</a>
       <a href="https://experiments.tyharbin.com/">Experiments ↗</a>
       <a class="owner-ops" href="https://dashboard.ph34r.dev/" target="_blank" rel="noopener" aria-label="Owner ops, private Grafana dashboard; sign-in required; opens in a new tab">Owner ops ↗</a>
     </nav>
   </header>
   <main id="main-content" tabindex="-1">
     <section class="hero" aria-labelledby="page-title">
-      <div class="register"><span>TYLER J.H.G.</span><span>FLASH / BROWSER WORKER</span><span class="signal">CAPABILITY-ONLY PROTOTYPE</span></div>
-      <p class="eyebrow">EXPLICIT LOCAL SESSION</p>
-      <h1 id="page-title"><span class="title-line">Flash Vessel</span><span class="title-line title-accent">capability prototype.</span></h1>
-      <p class="lede">Join only this tab to read browser-exposed capability hints. This page-owned session never reserves host capacity.</p>
-      <p class="notice">Capability-only prototype: after you select Join, this page reads a small set of exposed browser hints. It does not benchmark or run work, load a model, request sensor access, or contact a queue or backend. The hints may be coarse or unavailable and do not promise free capacity.</p>
+      <div class="register"><span>TYLER J.H.G.</span><span>FLASH / BROWSER WORKER</span><span class="signal">LOCAL INFERENCE PREVIEW</span></div>
+      <p class="eyebrow">EXPLICIT LOCAL WORK</p>
+      <h1 id="page-title"><span class="title-line">Flash Vessel</span><span class="title-line title-accent">local preview.</span></h1>
+      <p class="lede">Run one bounded semantic match in a page-owned CPU worker. Text stays in this tab; there is no task queue, telemetry service, or Fleet connection.</p>
+      <p class="notice">This experimental preview downloads a pinned public runtime and model only after you select Start. The browser compares one short query with three short notes on one CPU thread. It does not use a GPU, request sensors, save your text or results, or prove that the device has spare capacity. It is not an approved Flash work tier.</p>
     </section>
     <section class="panels" id="session" aria-label="Session controls and capability snapshot">
       <section class="panel session-panel" aria-labelledby="session-heading">
@@ -482,7 +546,7 @@
           <span class="panel-index" aria-hidden="true">01</span>
         </div>
         <h2 id="session-heading">Local session</h2>
-        <p class="panel-copy">The worker starts only after your action below. Stop it here or close this tab to end the session.</p>
+        <p class="panel-copy">This separate read-only control shows browser-exposed hints. Joining does not start inference or reserve host capacity.</p>
         <div class="controls">
           <button id="join" type="button">Join for this tab</button>
           <button id="stop" type="button" disabled>Stop this tab's worker</button>
@@ -497,10 +561,39 @@
         <h2 id="snapshot-heading">Capability snapshot</h2>
         <pre id="snapshot">No snapshot yet.</pre>
       </section>
+      <section class="panel work-panel" id="local-work" aria-labelledby="work-heading">
+        <div class="panel-head">
+          <p class="eyebrow">ONE QUERY / THREE NOTES / ONE CPU THREAD</p>
+          <span class="panel-index" aria-hidden="true">03</span>
+        </div>
+        <h2 id="work-heading">Find the closest note</h2>
+        <p class="panel-copy">A small sentence-embedding model ranks the notes by cosine similarity. This helps surface related text; the score is not a fact check or acceptance decision.</p>
+        <div class="work-inputs">
+          <label for="local-query">Query
+            <textarea id="local-query" maxlength="280" required>A parcel arrived late and needs a new delivery time.</textarea>
+          </label>
+          <label for="local-note-1">Note 1
+            <textarea id="local-note-1" maxlength="280" required>Arrange a new delivery appointment for the delayed parcel.</textarea>
+          </label>
+          <label for="local-note-2">Note 2
+            <textarea id="local-note-2" maxlength="280" required>Reset a forgotten password for an online account.</textarea>
+          </label>
+          <label for="local-note-3">Note 3
+            <textarea id="local-note-3" maxlength="280" required>Choose vegetables for a roasted dinner.</textarea>
+          </label>
+        </div>
+        <p class="work-note">At most 280 characters per field and 128 model tokens per text. The quantized model weights are about 55 MB and may be cached by your browser. Your text is sent only to this tab's worker; only runtime/model assets are fetched from public hosts.</p>
+        <div class="controls work-controls">
+          <button id="run-local" type="button">Start local matching</button>
+          <button id="stop-local" type="button" disabled>Stop local matching</button>
+        </div>
+        <p id="local-status" data-state="idle" role="status" aria-live="polite">Ready. No model or worker is active.</p>
+        <pre id="local-result" aria-live="polite">No local result yet.</pre>
+      </section>
     </section>
   </main>
   <footer>
-    <span>CAPABILITY ONLY · NO WORK IS BEING RUN</span>
+    <span>EXPLICIT START · LOCAL CPU WORK · NO QUEUE</span>
     <a href="https://github.com/pH34r-pH/long-haul/tree/main/prototypes/flash-vessel">Source on GitHub</a>
   </footer>
   <script type="module" src="./main.mjs"></script>
