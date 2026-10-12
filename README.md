@@ -3,9 +3,7 @@
 [![CI](https://github.com/pH34r-pH/long-haul/actions/workflows/ci.yml/badge.svg)](https://github.com/pH34r-pH/long-haul/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/pH34r-pH/long-haul)](LICENSE)
 
-<p align="center">
-  <img src="docs/assets/hero.webp" alt="Long Haul — heterogeneous compute vessels operating across a shared orchestration network" width="100%">
-</p>
+![Long Haul — heterogeneous compute vessels operating across a shared orchestration network](docs/assets/hero.png)
 
 **Topology-aware orchestration for heterogeneous local inference crews.**
 
