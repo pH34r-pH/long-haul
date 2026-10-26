@@ -28,3 +28,20 @@ Consequential runs preserve independent judgments before peer positions are reve
 The project should not add crew complexity merely because more agents are available. Expansion is justified by measured value relative to coordination cost.
 
 See [docs/experiments.md](https://github.com/pH34r-pH/long-haul/blob/main/docs/experiments.md).
+
+## Evidence and publication path
+
+Long Haul experiments reuse the shared research stack rather than adding a local experiment/archive system:
+
+```text
+Long Haul question/runtime hypothesis
+  -> source-owned protocol + evidence
+  -> Experiment Compiler exact package/lifecycle
+  -> Fleet-authorized execution where physical hardware is required
+  -> source-owner interpretation / disclosure review
+  -> experiments.tyharbin.com live reproduction projection
+  -> optional exact-byte archival release in pH34r-pH/compiled-experiments
+  -> human-reviewed GitHub Release -> owner-controlled Zenodo DOI
+```
+
+The archive/DOI is publication provenance. It is not a scheduler input, a production-promotion permission, or evidence that a claim is correct. Integration is tracked in `pH34r-pH/compiled-experiments#1`.
