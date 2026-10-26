@@ -1,0 +1,1173 @@
+{
+  "schema_version": 1,
+  "simulated": true,
+  "cases": [
+    {
+      "case_id": "independent-root-supports",
+      "program": {
+        "schema_version": 1,
+        "assertions": [
+          {
+            "assertion_id": "P",
+            "proposition_id": "P",
+            "polarity": "positive"
+          }
+        ],
+        "justifications": []
+      },
+      "events": [
+        {
+          "id": "urn:fixture:independent-root-supports:event:1",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "add_support",
+              "support_id": "evidence:one",
+              "assertion_id": "P",
+              "kind": "evidence",
+              "evidence_ref": "urn:artifact:synthetic:one"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:independent-root-supports:event:2",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "add_support",
+              "support_id": "assumption:two",
+              "assertion_id": "P",
+              "kind": "assumption"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:independent-root-supports:event:3",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "withdraw_support",
+              "support_id": "evidence:one"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:independent-root-supports:event:4",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "withdraw_support",
+              "support_id": "assumption:two"
+            }
+          }
+        }
+      ],
+      "checkpoints": [
+        {
+          "after": 0,
+          "supported_assertions": [],
+          "states": {
+            "P": "NEITHER"
+          },
+          "explanations": []
+        },
+        {
+          "after": 1,
+          "supported_assertions": [
+            "P"
+          ],
+          "states": {
+            "P": "SUPPORTED_ONLY"
+          },
+          "explanations": [
+            {
+              "assertion_id": "P",
+              "direct_support_ids": [
+                "evidence:one"
+              ],
+              "justification_ids": [],
+              "root_support_ids": [
+                "evidence:one"
+              ],
+              "root_event_ids": [
+                "urn:fixture:independent-root-supports:event:1"
+              ],
+              "justification_event_ids": []
+            }
+          ]
+        },
+        {
+          "after": 2,
+          "supported_assertions": [
+            "P"
+          ],
+          "states": {
+            "P": "SUPPORTED_ONLY"
+          },
+          "explanations": [
+            {
+              "assertion_id": "P",
+              "direct_support_ids": [
+                "assumption:two",
+                "evidence:one"
+              ],
+              "justification_ids": [],
+              "root_support_ids": [
+                "assumption:two",
+                "evidence:one"
+              ],
+              "root_event_ids": [
+                "urn:fixture:independent-root-supports:event:2",
+                "urn:fixture:independent-root-supports:event:1"
+              ],
+              "justification_event_ids": []
+            }
+          ]
+        },
+        {
+          "after": 3,
+          "supported_assertions": [
+            "P"
+          ],
+          "states": {
+            "P": "SUPPORTED_ONLY"
+          },
+          "explanations": [
+            {
+              "assertion_id": "P",
+              "direct_support_ids": [
+                "assumption:two"
+              ],
+              "justification_ids": [],
+              "root_support_ids": [
+                "assumption:two"
+              ],
+              "root_event_ids": [
+                "urn:fixture:independent-root-supports:event:2"
+              ],
+              "justification_event_ids": []
+            }
+          ]
+        },
+        {
+          "after": 4,
+          "supported_assertions": [],
+          "states": {
+            "P": "NEITHER"
+          },
+          "explanations": [
+            {
+              "assertion_id": "P",
+              "direct_support_ids": [],
+              "justification_ids": [],
+              "root_support_ids": [],
+              "root_event_ids": [],
+              "justification_event_ids": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "independent-justifications-and-cascade",
+      "program": {
+        "schema_version": 1,
+        "assertions": [
+          {
+            "assertion_id": "A",
+            "proposition_id": "A",
+            "polarity": "positive"
+          },
+          {
+            "assertion_id": "B",
+            "proposition_id": "B",
+            "polarity": "positive"
+          },
+          {
+            "assertion_id": "C",
+            "proposition_id": "C",
+            "polarity": "positive"
+          },
+          {
+            "assertion_id": "D",
+            "proposition_id": "D",
+            "polarity": "positive"
+          },
+          {
+            "assertion_id": "U",
+            "proposition_id": "U",
+            "polarity": "positive"
+          }
+        ],
+        "justifications": [
+          {
+            "justification_id": "via-A",
+            "premises": [
+              "A"
+            ],
+            "conclusion": "C"
+          },
+          {
+            "justification_id": "via-B",
+            "premises": [
+              "B"
+            ],
+            "conclusion": "C"
+          },
+          {
+            "justification_id": "downstream",
+            "premises": [
+              "C"
+            ],
+            "conclusion": "D"
+          }
+        ]
+      },
+      "events": [
+        {
+          "id": "urn:fixture:independent-justifications-and-cascade:event:1",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "enable_justification",
+              "justification_id": "via-A"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:independent-justifications-and-cascade:event:2",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "enable_justification",
+              "justification_id": "via-B"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:independent-justifications-and-cascade:event:3",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "enable_justification",
+              "justification_id": "downstream"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:independent-justifications-and-cascade:event:4",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "add_support",
+              "support_id": "root:A",
+              "assertion_id": "A",
+              "kind": "assumption"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:independent-justifications-and-cascade:event:5",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "add_support",
+              "support_id": "root:B",
+              "assertion_id": "B",
+              "kind": "evidence",
+              "evidence_ref": "urn:artifact:B"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:independent-justifications-and-cascade:event:6",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "add_support",
+              "support_id": "root:U",
+              "assertion_id": "U",
+              "kind": "evidence",
+              "evidence_ref": "urn:artifact:U"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:independent-justifications-and-cascade:event:7",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "withdraw_support",
+              "support_id": "root:A"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:independent-justifications-and-cascade:event:8",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "withdraw_support",
+              "support_id": "root:B"
+            }
+          }
+        }
+      ],
+      "checkpoints": [
+        {
+          "after": 3,
+          "supported_assertions": [],
+          "states": {
+            "A": "NEITHER",
+            "B": "NEITHER",
+            "C": "NEITHER",
+            "D": "NEITHER",
+            "U": "NEITHER"
+          },
+          "explanations": []
+        },
+        {
+          "after": 4,
+          "supported_assertions": [
+            "A",
+            "C",
+            "D"
+          ],
+          "states": {
+            "A": "SUPPORTED_ONLY",
+            "B": "NEITHER",
+            "C": "SUPPORTED_ONLY",
+            "D": "SUPPORTED_ONLY",
+            "U": "NEITHER"
+          },
+          "explanations": []
+        },
+        {
+          "after": 5,
+          "supported_assertions": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "states": {
+            "A": "SUPPORTED_ONLY",
+            "B": "SUPPORTED_ONLY",
+            "C": "SUPPORTED_ONLY",
+            "D": "SUPPORTED_ONLY",
+            "U": "NEITHER"
+          },
+          "explanations": [
+            {
+              "assertion_id": "C",
+              "direct_support_ids": [],
+              "justification_ids": [
+                "via-A",
+                "via-B"
+              ],
+              "root_support_ids": [
+                "root:A",
+                "root:B"
+              ],
+              "root_event_ids": [
+                "urn:fixture:independent-justifications-and-cascade:event:4",
+                "urn:fixture:independent-justifications-and-cascade:event:5"
+              ],
+              "justification_event_ids": [
+                "urn:fixture:independent-justifications-and-cascade:event:1",
+                "urn:fixture:independent-justifications-and-cascade:event:2"
+              ]
+            },
+            {
+              "assertion_id": "D",
+              "direct_support_ids": [],
+              "justification_ids": [
+                "downstream"
+              ],
+              "root_support_ids": [
+                "root:A",
+                "root:B"
+              ],
+              "root_event_ids": [
+                "urn:fixture:independent-justifications-and-cascade:event:4",
+                "urn:fixture:independent-justifications-and-cascade:event:5"
+              ],
+              "justification_event_ids": [
+                "urn:fixture:independent-justifications-and-cascade:event:3"
+              ]
+            }
+          ]
+        },
+        {
+          "after": 6,
+          "supported_assertions": [
+            "A",
+            "B",
+            "C",
+            "D",
+            "U"
+          ],
+          "states": {
+            "A": "SUPPORTED_ONLY",
+            "B": "SUPPORTED_ONLY",
+            "C": "SUPPORTED_ONLY",
+            "D": "SUPPORTED_ONLY",
+            "U": "SUPPORTED_ONLY"
+          },
+          "explanations": []
+        },
+        {
+          "after": 7,
+          "supported_assertions": [
+            "B",
+            "C",
+            "D",
+            "U"
+          ],
+          "states": {
+            "A": "NEITHER",
+            "B": "SUPPORTED_ONLY",
+            "C": "SUPPORTED_ONLY",
+            "D": "SUPPORTED_ONLY",
+            "U": "SUPPORTED_ONLY"
+          },
+          "explanations": [
+            {
+              "assertion_id": "C",
+              "direct_support_ids": [],
+              "justification_ids": [
+                "via-B"
+              ],
+              "root_support_ids": [
+                "root:B"
+              ],
+              "root_event_ids": [
+                "urn:fixture:independent-justifications-and-cascade:event:5"
+              ],
+              "justification_event_ids": [
+                "urn:fixture:independent-justifications-and-cascade:event:2"
+              ]
+            }
+          ]
+        },
+        {
+          "after": 8,
+          "supported_assertions": [
+            "U"
+          ],
+          "states": {
+            "A": "NEITHER",
+            "B": "NEITHER",
+            "C": "NEITHER",
+            "D": "NEITHER",
+            "U": "SUPPORTED_ONLY"
+          },
+          "explanations": [
+            {
+              "assertion_id": "C",
+              "direct_support_ids": [],
+              "justification_ids": [],
+              "root_support_ids": [],
+              "root_event_ids": [],
+              "justification_event_ids": []
+            },
+            {
+              "assertion_id": "D",
+              "direct_support_ids": [],
+              "justification_ids": [],
+              "root_support_ids": [],
+              "root_event_ids": [],
+              "justification_event_ids": []
+            },
+            {
+              "assertion_id": "U",
+              "direct_support_ids": [
+                "root:U"
+              ],
+              "justification_ids": [],
+              "root_support_ids": [
+                "root:U"
+              ],
+              "root_event_ids": [
+                "urn:fixture:independent-justifications-and-cascade:event:6"
+              ],
+              "justification_event_ids": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "signed-conflict-no-explosion",
+      "program": {
+        "schema_version": 1,
+        "assertions": [
+          {
+            "assertion_id": "P+",
+            "proposition_id": "P",
+            "polarity": "positive"
+          },
+          {
+            "assertion_id": "P-",
+            "proposition_id": "P",
+            "polarity": "negative"
+          },
+          {
+            "assertion_id": "Q",
+            "proposition_id": "Q",
+            "polarity": "positive"
+          },
+          {
+            "assertion_id": "unrelated",
+            "proposition_id": "unrelated",
+            "polarity": "positive"
+          }
+        ],
+        "justifications": [
+          {
+            "justification_id": "negative-to-Q",
+            "premises": [
+              "P-"
+            ],
+            "conclusion": "Q"
+          }
+        ]
+      },
+      "events": [
+        {
+          "id": "urn:fixture:signed-conflict-no-explosion:event:1",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "enable_justification",
+              "justification_id": "negative-to-Q"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:signed-conflict-no-explosion:event:2",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "add_support",
+              "support_id": "positive",
+              "assertion_id": "P+",
+              "kind": "evidence",
+              "evidence_ref": "urn:artifact:positive"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:signed-conflict-no-explosion:event:3",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "add_support",
+              "support_id": "negative",
+              "assertion_id": "P-",
+              "kind": "evidence",
+              "evidence_ref": "urn:artifact:negative"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:signed-conflict-no-explosion:event:4",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "withdraw_support",
+              "support_id": "positive"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:signed-conflict-no-explosion:event:5",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "withdraw_support",
+              "support_id": "negative"
+            }
+          }
+        }
+      ],
+      "checkpoints": [
+        {
+          "after": 0,
+          "supported_assertions": [],
+          "states": {
+            "P": "NEITHER",
+            "Q": "NEITHER",
+            "unrelated": "NEITHER"
+          },
+          "explanations": []
+        },
+        {
+          "after": 2,
+          "supported_assertions": [
+            "P+"
+          ],
+          "states": {
+            "P": "SUPPORTED_ONLY",
+            "Q": "NEITHER",
+            "unrelated": "NEITHER"
+          },
+          "explanations": []
+        },
+        {
+          "after": 3,
+          "supported_assertions": [
+            "P+",
+            "P-",
+            "Q"
+          ],
+          "states": {
+            "P": "BOTH",
+            "Q": "SUPPORTED_ONLY",
+            "unrelated": "NEITHER"
+          },
+          "explanations": [
+            {
+              "assertion_id": "P+",
+              "direct_support_ids": [
+                "positive"
+              ],
+              "justification_ids": [],
+              "root_support_ids": [
+                "positive"
+              ],
+              "root_event_ids": [
+                "urn:fixture:signed-conflict-no-explosion:event:2"
+              ],
+              "justification_event_ids": []
+            },
+            {
+              "assertion_id": "P-",
+              "direct_support_ids": [
+                "negative"
+              ],
+              "justification_ids": [],
+              "root_support_ids": [
+                "negative"
+              ],
+              "root_event_ids": [
+                "urn:fixture:signed-conflict-no-explosion:event:3"
+              ],
+              "justification_event_ids": []
+            },
+            {
+              "assertion_id": "Q",
+              "direct_support_ids": [],
+              "justification_ids": [
+                "negative-to-Q"
+              ],
+              "root_support_ids": [
+                "negative"
+              ],
+              "root_event_ids": [
+                "urn:fixture:signed-conflict-no-explosion:event:3"
+              ],
+              "justification_event_ids": [
+                "urn:fixture:signed-conflict-no-explosion:event:1"
+              ]
+            }
+          ]
+        },
+        {
+          "after": 4,
+          "supported_assertions": [
+            "P-",
+            "Q"
+          ],
+          "states": {
+            "P": "REFUTED_ONLY",
+            "Q": "SUPPORTED_ONLY",
+            "unrelated": "NEITHER"
+          },
+          "explanations": []
+        },
+        {
+          "after": 5,
+          "supported_assertions": [],
+          "states": {
+            "P": "NEITHER",
+            "Q": "NEITHER",
+            "unrelated": "NEITHER"
+          },
+          "explanations": [
+            {
+              "assertion_id": "Q",
+              "direct_support_ids": [],
+              "justification_ids": [],
+              "root_support_ids": [],
+              "root_event_ids": [],
+              "justification_event_ids": []
+            },
+            {
+              "assertion_id": "unrelated",
+              "direct_support_ids": [],
+              "justification_ids": [],
+              "root_support_ids": [],
+              "root_event_ids": [],
+              "justification_event_ids": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "conjunction-disable-and-reenable",
+      "program": {
+        "schema_version": 1,
+        "assertions": [
+          {
+            "assertion_id": "A",
+            "proposition_id": "A",
+            "polarity": "positive"
+          },
+          {
+            "assertion_id": "B",
+            "proposition_id": "B",
+            "polarity": "positive"
+          },
+          {
+            "assertion_id": "C",
+            "proposition_id": "C",
+            "polarity": "positive"
+          },
+          {
+            "assertion_id": "D",
+            "proposition_id": "D",
+            "polarity": "positive"
+          }
+        ],
+        "justifications": [
+          {
+            "justification_id": "conjunction",
+            "premises": [
+              "A",
+              "B"
+            ],
+            "conclusion": "C"
+          },
+          {
+            "justification_id": "downstream",
+            "premises": [
+              "C"
+            ],
+            "conclusion": "D"
+          }
+        ]
+      },
+      "events": [
+        {
+          "id": "urn:fixture:conjunction-disable-and-reenable:event:1",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "enable_justification",
+              "justification_id": "conjunction"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:conjunction-disable-and-reenable:event:2",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "enable_justification",
+              "justification_id": "downstream"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:conjunction-disable-and-reenable:event:3",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "add_support",
+              "support_id": "root:A",
+              "assertion_id": "A",
+              "kind": "assumption"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:conjunction-disable-and-reenable:event:4",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "add_support",
+              "support_id": "root:B",
+              "assertion_id": "B",
+              "kind": "assumption"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:conjunction-disable-and-reenable:event:5",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "add_support",
+              "support_id": "direct:C",
+              "assertion_id": "C",
+              "kind": "evidence",
+              "evidence_ref": "urn:artifact:C"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:conjunction-disable-and-reenable:event:6",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "disable_justification",
+              "justification_id": "conjunction"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:conjunction-disable-and-reenable:event:7",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "withdraw_support",
+              "support_id": "direct:C"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:conjunction-disable-and-reenable:event:8",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "enable_justification",
+              "justification_id": "conjunction"
+            }
+          }
+        },
+        {
+          "id": "urn:fixture:conjunction-disable-and-reenable:event:9",
+          "timestamp": "2026-09-29T00:00:00Z",
+          "event_type": "observation",
+          "actor": "urn:fixture:author",
+          "source": "synthetic-conformance-corpus",
+          "schema_version": 1,
+          "payload": {
+            "reason_maintenance_experiment": {
+              "schema_version": 1,
+              "operation": "withdraw_support",
+              "support_id": "root:B"
+            }
+          }
+        }
+      ],
+      "checkpoints": [
+        {
+          "after": 3,
+          "supported_assertions": [
+            "A"
+          ],
+          "states": {
+            "A": "SUPPORTED_ONLY",
+            "B": "NEITHER",
+            "C": "NEITHER",
+            "D": "NEITHER"
+          },
+          "explanations": []
+        },
+        {
+          "after": 4,
+          "supported_assertions": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "states": {
+            "A": "SUPPORTED_ONLY",
+            "B": "SUPPORTED_ONLY",
+            "C": "SUPPORTED_ONLY",
+            "D": "SUPPORTED_ONLY"
+          },
+          "explanations": []
+        },
+        {
+          "after": 5,
+          "supported_assertions": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "states": {
+            "A": "SUPPORTED_ONLY",
+            "B": "SUPPORTED_ONLY",
+            "C": "SUPPORTED_ONLY",
+            "D": "SUPPORTED_ONLY"
+          },
+          "explanations": [
+            {
+              "assertion_id": "C",
+              "direct_support_ids": [
+                "direct:C"
+              ],
+              "justification_ids": [
+                "conjunction"
+              ],
+              "root_support_ids": [
+                "direct:C",
+                "root:A",
+                "root:B"
+              ],
+              "root_event_ids": [
+                "urn:fixture:conjunction-disable-and-reenable:event:5",
+                "urn:fixture:conjunction-disable-and-reenable:event:3",
+                "urn:fixture:conjunction-disable-and-reenable:event:4"
+              ],
+              "justification_event_ids": [
+                "urn:fixture:conjunction-disable-and-reenable:event:1"
+              ]
+            }
+          ]
+        },
+        {
+          "after": 6,
+          "supported_assertions": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "states": {
+            "A": "SUPPORTED_ONLY",
+            "B": "SUPPORTED_ONLY",
+            "C": "SUPPORTED_ONLY",
+            "D": "SUPPORTED_ONLY"
+          },
+          "explanations": [
+            {
+              "assertion_id": "C",
+              "direct_support_ids": [
+                "direct:C"
+              ],
+              "justification_ids": [],
+              "root_support_ids": [
+                "direct:C"
+              ],
+              "root_event_ids": [
+                "urn:fixture:conjunction-disable-and-reenable:event:5"
+              ],
+              "justification_event_ids": []
+            }
+          ]
+        },
+        {
+          "after": 7,
+          "supported_assertions": [
+            "A",
+            "B"
+          ],
+          "states": {
+            "A": "SUPPORTED_ONLY",
+            "B": "SUPPORTED_ONLY",
+            "C": "NEITHER",
+            "D": "NEITHER"
+          },
+          "explanations": [
+            {
+              "assertion_id": "C",
+              "direct_support_ids": [],
+              "justification_ids": [],
+              "root_support_ids": [],
+              "root_event_ids": [],
+              "justification_event_ids": []
+            },
+            {
+              "assertion_id": "D",
+              "direct_support_ids": [],
+              "justification_ids": [],
+              "root_support_ids": [],
+              "root_event_ids": [],
+              "justification_event_ids": []
+            }
+          ]
+        },
+        {
+          "after": 8,
+          "supported_assertions": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "states": {
+            "A": "SUPPORTED_ONLY",
+            "B": "SUPPORTED_ONLY",
+            "C": "SUPPORTED_ONLY",
+            "D": "SUPPORTED_ONLY"
+          },
+          "explanations": [
+            {
+              "assertion_id": "C",
+              "direct_support_ids": [],
+              "justification_ids": [
+                "conjunction"
+              ],
+              "root_support_ids": [
+                "root:A",
+                "root:B"
+              ],
+              "root_event_ids": [
+                "urn:fixture:conjunction-disable-and-reenable:event:3",
+                "urn:fixture:conjunction-disable-and-reenable:event:4"
+              ],
+              "justification_event_ids": [
+                "urn:fixture:conjunction-disable-and-reenable:event:8"
+              ]
+            }
+          ]
+        },
+        {
+          "after": 9,
+          "supported_assertions": [
+            "A"
+          ],
+          "states": {
+            "A": "SUPPORTED_ONLY",
+            "B": "NEITHER",
+            "C": "NEITHER",
+            "D": "NEITHER"
+          },
+          "explanations": []
+        }
+      ]
+    }
+  ]
+}
