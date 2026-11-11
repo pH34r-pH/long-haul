@@ -26,7 +26,7 @@ The profile follows the W3C Profiles Vocabulary pattern. It composes existing st
 
 ODRL AI Vocabulary and DPV 2.0 are Community Group outputs, not W3C Recommendations. Their exact versions must remain pinned and visible in evidence.
 
-The canonical exchange form is JSON-LD. Runtime code uses the Pydantic projection in `long_haul.resource_policy`; no RDF store is required. `contracts/resource-policy/profile.shacl.ttl` validates the top-level canonical profile, while `profile_json_schema()` exports the ordinary JSON/YAML authoring schema.
+Runtime code uses the Pydantic projection in `long_haul.resource_policy`; no RDF store is required. `profile_json_schema()` exports the ordinary JSON/YAML authoring schema. The current JSON-LD export and top-level SHACL assets are preliminary: nested policy semantics, lossless import, executable SHACL validation, and Croissant/SPDX package exports remain open under #248. They are not qualified interchange or dataset/BOM outputs.
 
 ## Local authority classes
 
@@ -95,6 +95,10 @@ Rules:
 6. Retraction, deletion, expiry, and unavailable state cannot be optimized away.
 7. A derived resource use is allowed only when every relevant source policy allows the same action and purpose.
 8. Redaction or anonymization creates a new derived resource with its own identity and evidence; it does not rewrite the source.
+
+Decisions bind the complete authenticated request fingerprint. Derived decisions require identical action, purpose, caller, context, and time across sources and retain each source policy fingerprint. Unscoped prohibitions apply to every purpose; privacy purpose, invalidation, deletion-required, and retention boundaries cannot be overridden by a permission. Explicit deletion permission permits cleanup of expired or invalidated resources without granting other use.
+
+Policy profiles, caller identity, fulfilled-duty evidence, and time are admitted by authenticated control code. Loading a profile-shaped object from repository text does not authenticate it. Consumers must compare exact reviewed policy fingerprints before invoking this evaluator; its result does not authenticate its input issuer or assert legal validity.
 
 ## Enforcement boundary
 

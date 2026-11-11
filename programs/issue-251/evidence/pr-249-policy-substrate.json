@@ -1,0 +1,87 @@
+{
+  "baseline_main": "eff55fbee5ab07b200ec21829a3f9de8d707fc2b",
+  "checks": [
+    {
+      "command": "python -m pytest -q",
+      "result": "387 passed, 27 skipped",
+      "seconds": 8.57
+    },
+    {
+      "command": "python -m ruff check src tests",
+      "result": "passed"
+    },
+    {
+      "command": "python -m unittest tools.test_requirements tools.test_requirements_boundaries",
+      "result": "21 tests; OK; 5 skipped"
+    },
+    {
+      "command": "python .github/actions/repository-governance/validate.py governance/repository-profile.json",
+      "result": "passed"
+    },
+    {
+      "command": "python scripts/export_resource_policy_profile.py --output-dir /tmp/issue-251-policy-export",
+      "result": "passed"
+    },
+    {
+      "command": "ruff structural lint and lizard on policy modules and Pi/Nacre adapter",
+      "result": "no new findings after typed launch-options refactor"
+    }
+  ],
+  "control_issue": 252,
+  "environment": {
+    "packages": {
+      "PyYAML": "6.0.3",
+      "lizard": "1.24.0",
+      "pydantic": "2.14.3",
+      "pytest": "9.2.0",
+      "ruff": "0.16.9"
+    },
+    "python": "3.12.14"
+  },
+  "implementation_pr": 249,
+  "issue": 248,
+  "negative_cases": [
+    "purpose-free prohibition",
+    "privacy purpose mismatch",
+    "required deletion",
+    "provenance invalidation",
+    "retention deadline equality",
+    "explicit cleanup permission",
+    "mixed derived caller",
+    "source policy change",
+    "decision action/caller substitution",
+    "dangling/ancestor symlinks"
+  ],
+  "regression_tests": {
+    "after": "31 focused tests passed",
+    "before": "8 failed, 15 passed (including pre-existing dangling-symlink failure)"
+  },
+  "remaining": [
+    "lossless standards-native JSON-LD import/export",
+    "executable SHACL conformance",
+    "Croissant/SPDX package exports",
+    "pinned provisional vocabulary revision"
+  ],
+  "restored_branch_head": "d463680e3437e9b0db50561b96138511e2748de7",
+  "schema_version": 1,
+  "scope": "Required shared policy prerequisite and Phase 0 reconciliation only.",
+  "source_sha256": {
+    "src/long_haul/adapters/pi_nacre.py": "f1ddd39fbdfcf071f94fdd292c7ad2d3af4044305644031a5d4eaf4d6c9f651b",
+    "src/long_haul/adapters/pi_rpc.py": "14005e1afb37a640f890e37f681de03af4fbf51bd3c9a239578e94b15bde1d38",
+    "src/long_haul/resource_policy.py": "846304380c992c1789b6c6c468e389b01e1eb4de2fe90ab58317068e7146d44a",
+    "src/long_haul/resource_policy_evaluator.py": "e8d9c7221a426d9b3d8cdb0bffa02be886b3fb198229efeda0a54b2224e2a10b",
+    "src/long_haul/resource_policy_models.py": "86aebcfec92f824ded510dddce84ffa1cdc0f4019a1ac7b56002752bb0851136",
+    "tests/test_pi_nacre.py": "678e8a71eda9d5152254ec218db9194313a33652fb98ffd38f1e40ec15b3f3fe",
+    "tests/test_pi_rpc.py": "d918d75d81117694d0dcc4c9b643a278d994fd5bf698ef2ead2e599bfb10cacd",
+    "tests/test_resource_policy.py": "a69841c3893df403776fea04fb13a50f00a001ed24a5ad69eabe76610f4a3e91",
+    "tests/test_resource_policy_artifacts.py": "2cf2719b41f6c4843fc902e30ad888eec4140ad824ad05173d1fa3a0b649674e"
+  },
+  "states": {
+    "deployment": "not performed",
+    "full_issue_248_acceptance": "open",
+    "native_cpu_qualification": "CI required; not run locally",
+    "physical_device": "not performed",
+    "publication": "not performed",
+    "source_tests": "passed"
+  }
+}

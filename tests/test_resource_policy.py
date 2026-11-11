@@ -215,3 +215,61 @@ def test_consequential_action_requires_explicit_purpose():
             caller_id="session",
             now=NOW,
         )
+
+
+def test_purpose_free_prohibition_applies_to_every_purpose():
+    policy = profile(
+        permissions=[PolicyRule(rule_id="scoped", actions=[ResourceAction.AI_AUGMENT],
+                                purposes=["mission-assistance"])],
+        prohibitions=[PolicyRule(rule_id="all-purposes", actions=[ResourceAction.AI_AUGMENT])],
+    )
+    assert ResourcePolicyEvaluator().evaluate(policy, request()).status is PolicyDecisionStatus.CONFLICT
+
+
+@pytest.mark.parametrize("restriction", ["purpose", "deletion", "invalidation", "retention-boundary"])
+def test_privacy_and_invalidation_cannot_be_overridden_by_permission(restriction):
+    policy = profile(permissions=[PolicyRule(
+        rule_id="allow", actions=[ResourceAction.AI_AUGMENT], purposes=["mission-assistance"],
+    )])
+    if restriction == "purpose":
+        policy.privacy.purposes = ["different-purpose"]
+    elif restriction == "deletion":
+        policy.privacy.deletion_required = True
+    elif restriction == "invalidation":
+        policy.invalidated_at = NOW
+    else:
+        policy.privacy.retention_until = NOW
+    assert ResourcePolicyEvaluator().evaluate(policy, request()).status is not PolicyDecisionStatus.ALLOW
+
+
+def test_expired_resource_can_be_deleted_only_with_explicit_permission():
+    policy = profile(permissions=[PolicyRule(rule_id="cleanup", actions=[ResourceAction.DELETE])])
+    policy.privacy.retention_until = NOW
+    policy.privacy.deletion_required = True
+    policy.invalidated_at = NOW
+    evaluator = ResourcePolicyEvaluator()
+    assert evaluator.evaluate(policy, request(ResourceAction.DELETE)).status is PolicyDecisionStatus.ALLOW
+    policy.permissions = []
+    assert evaluator.evaluate(policy, request(ResourceAction.DELETE)).status is not PolicyDecisionStatus.ALLOW
+
+
+def test_derived_use_rejects_mixed_requests_and_binds_source_policies():
+    first = profile(permissions=[PolicyRule(rule_id="read", actions=[ResourceAction.READ])])
+    second = first.model_copy(deep=True)
+    second.identity.resource_id = "urn:test:memory:2"
+
+    def factory(resource_id):
+        return request(ResourceAction.READ).model_copy(update={"resource_id": resource_id})
+
+    evaluator = ResourcePolicyEvaluator()
+    result = evaluator.evaluate_all([first, second], factory)
+    second.policy_id = "urn:policy:changed"
+    changed = evaluator.evaluate_all([first, second], factory)
+    assert result.policy_fingerprint != changed.policy_fingerprint
+    assert evaluator.evaluate_all([second, first], factory) == changed
+
+    def mixed(resource_id):
+        return factory(resource_id).model_copy(update={"caller_id": resource_id})
+
+    with pytest.raises(ValueError, match="same use"):
+        evaluator.evaluate_all([first, second], mixed)

@@ -59,6 +59,17 @@ class PiNacreCallerContext(BaseModel):
     evidence_ref: str = Field(min_length=1)
 
 
+class PiNacreLaunchOptions(BaseModel):
+    profile_id: str = Field(min_length=1)
+    evidence_ref: str = Field(min_length=1)
+    repository_id: str | None = None
+    scopes: list[PiNacreScope] = Field(min_length=1)
+    purpose: str = Field(default="mission-assistance", min_length=1)
+    policy_decisions: list[PiNacrePolicyReceipt] = Field(default_factory=list)
+    source_event_refs: list[str] = Field(default_factory=list)
+    capture_proposals: bool = False
+
+
 class PiNacreLaunchContext(BaseModel):
     caller_context: PiNacreCallerContext
     scopes: list[PiNacreScope] = Field(min_length=1)
@@ -87,6 +98,8 @@ def nacre_policy_receipt(
         raise ValueError("resource-policy request and decision ids do not match")
     if request.resource_id != decision.resource_id:
         raise ValueError("resource-policy request and decision resources do not match")
+    if request.fingerprint != decision.request_fingerprint:
+        raise ValueError("resource-policy request binding does not match decision")
     if request.action is not ResourceAction.AI_AUGMENT:
         raise ValueError("Nacre recall requires an AI_AUGMENT resource request")
     if not request.purpose:
@@ -113,14 +126,7 @@ def build_pi_nacre_context(
     *,
     session: WorkSession,
     contract: WorkContract,
-    profile_id: str,
-    evidence_ref: str,
-    scopes: list[PiNacreScope],
-    purpose: str = "mission-assistance",
-    repository_id: str | None = None,
-    policy_decisions: list[PiNacrePolicyReceipt] | None = None,
-    source_event_refs: list[str] | None = None,
-    capture_proposals: bool = False,
+    options: PiNacreLaunchOptions,
 ) -> PiNacreLaunchContext:
     """Build the only model-independent identity projection Pi may pass to Nacre."""
     if session.contract_id != contract.contract_id:
@@ -130,19 +136,15 @@ def build_pi_nacre_context(
     return PiNacreLaunchContext(
         caller_context=PiNacreCallerContext(
             caller_id=session.session_id,
-            profile_id=profile_id,
+            profile_id=options.profile_id,
             session_id=session.session_id,
             crew_id=session.crew_id,
             mission_id=contract.mission_id,
             contract_id=contract.contract_id,
-            repository_id=repository_id,
-            evidence_ref=evidence_ref,
+            repository_id=options.repository_id,
+            evidence_ref=options.evidence_ref,
         ),
-        scopes=scopes,
-        purpose=purpose,
-        policy_decisions=policy_decisions or [],
-        source_event_refs=source_event_refs or [],
-        capture_proposals=capture_proposals,
+        **options.model_dump(exclude={"profile_id", "evidence_ref", "repository_id"}),
     )
 
 
@@ -150,10 +152,10 @@ def _assert_safe_output_path(path: Path) -> Path:
     absolute = path.expanduser().absolute()
     if not path.is_absolute():
         raise ValueError("Pi/Nacre context path must be absolute")
-    if absolute.exists() and absolute.is_symlink():
+    if absolute.is_symlink():
         raise PermissionError("Pi/Nacre context path cannot be a symlink")
     parent = absolute.parent
-    if parent.exists() and parent.is_symlink():
+    if any(ancestor.is_symlink() for ancestor in (parent, *parent.parents)):
         raise PermissionError("Pi/Nacre context parent cannot be a symlink")
     parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     if os.name == "posix":

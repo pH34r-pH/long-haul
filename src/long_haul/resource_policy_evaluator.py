@@ -10,6 +10,7 @@ from .resource_policy_models import (
     PolicyDecisionStatus,
     PolicyDuty,
     PolicyRule,
+    ResourceAction,
     ResourceLifecycle,
     ResourcePolicyProfile,
     ResourceUseRequest,
@@ -26,6 +27,7 @@ def _decision_fields(
 ) -> DecisionFields:
     return {
         "request_id": request.request_id,
+        "request_fingerprint": request.fingerprint,
         "resource_id": request.resource_id,
         "policy_id": profile.policy_id,
         "policy_fingerprint": profile.fingerprint,
@@ -51,12 +53,12 @@ def _rule_matches_time(rule: PolicyRule, request: ResourceUseRequest) -> bool:
     return starts_in_time and ends_in_time
 
 
-def _rule_matches(rule: PolicyRule, request: ResourceUseRequest) -> bool:
+def _rule_matches(rule: PolicyRule, request: ResourceUseRequest, *, prohibition: bool = False) -> bool:
     if request.action not in rule.actions:
         return False
     if rule.purposes and request.purpose not in rule.purposes:
         return False
-    if not rule.purposes and request.purpose is not None:
+    if not prohibition and not rule.purposes and request.purpose is not None:
         return False
     return _rule_matches_context(rule, request) and _rule_matches_time(rule, request)
 
@@ -101,11 +103,23 @@ def _derived_resource_id(decisions: Iterable[PolicyDecision]) -> str:
 
 
 def _flatten(decisions: Iterable[PolicyDecision], field_name: str) -> list[str]:
-    return [
+    return sorted({
         value
         for decision in decisions
         for value in getattr(decision, field_name)
-    ]
+    })
+
+
+def _privacy_restriction(profile: ResourcePolicyProfile, request: ResourceUseRequest) -> str | None:
+    if request.action is ResourceAction.DELETE:
+        return None  # Cleanup still requires an explicit matching permission.
+    if profile.invalidated_at and request.now >= profile.invalidated_at:
+        return "resource provenance has been invalidated"
+    if profile.privacy.deletion_required:
+        return "resource is pending required deletion"
+    if profile.privacy.purposes and request.purpose not in profile.privacy.purposes:
+        return "requested purpose is incompatible with resource privacy policy"
+    return None
 
 
 def _preflight_decision(
@@ -126,8 +140,11 @@ def _preflight_decision(
             reason=f"resource lifecycle is {profile.lifecycle.value}",
             **common,
         )
+    restriction = _privacy_restriction(profile, request)
+    if restriction:
+        return PolicyDecision(status=PolicyDecisionStatus.DENY, reason=restriction, **common)
     retention_until = profile.privacy.retention_until
-    if retention_until and request.now > retention_until:
+    if request.action is not ResourceAction.DELETE and retention_until and request.now >= retention_until:
         return PolicyDecision(
             status=PolicyDecisionStatus.EXPIRED,
             reason="resource retention period expired",
@@ -141,7 +158,7 @@ def _matching_rules(
     request: ResourceUseRequest,
 ) -> tuple[list[PolicyRule], list[PolicyRule]]:
     permissions = [rule for rule in profile.permissions if _rule_matches(rule, request)]
-    prohibitions = [rule for rule in profile.prohibitions if _rule_matches(rule, request)]
+    prohibitions = [rule for rule in profile.prohibitions if _rule_matches(rule, request, prohibition=True)]
     return permissions, prohibitions
 
 
@@ -214,24 +231,22 @@ def _derived_decision(
     blocked: list[PolicyDecision] | None,
 ) -> PolicyDecision:
     resource_id = _derived_resource_id(decisions)
-    first = (blocked or decisions)[0]
-    if blocked:
-        return PolicyDecision(
-            request_id=first.request_id,
-            resource_id=resource_id,
-            status=first.status,
-            reason=f"derived use blocked by {len(blocked)} source policy decision(s)",
-            matched_permissions=_flatten(decisions, "matched_permissions"),
-            matched_prohibitions=_flatten(decisions, "matched_prohibitions"),
-            unsatisfied_duties=_flatten(decisions, "unsatisfied_duties"),
-            evaluated_at=first.evaluated_at,
-        )
+    first = min(blocked or decisions, key=lambda item: item.resource_id)
+    sources = {item.resource_id: item.policy_fingerprint for item in decisions}
+    fingerprint = hashlib.sha256(canonical_json(sources).encode()).hexdigest()
+    bindings = sorted(item.request_fingerprint for item in decisions)
     return PolicyDecision(
         request_id=first.request_id,
+        request_fingerprint="derived-use-v1:" + hashlib.sha256(canonical_json(bindings).encode()).hexdigest(),
         resource_id=resource_id,
-        status=PolicyDecisionStatus.ALLOW,
-        reason="all source policies explicitly allow the derived use",
+        status=first.status if blocked else PolicyDecisionStatus.ALLOW,
+        reason=(f"derived use blocked by {len(blocked)} source policy decision(s)" if blocked
+                else "all source policies explicitly allow the derived use"),
         matched_permissions=_flatten(decisions, "matched_permissions"),
+        matched_prohibitions=_flatten(decisions, "matched_prohibitions"),
+        unsatisfied_duties=_flatten(decisions, "unsatisfied_duties"),
+        policy_fingerprint="derived-policy-v1:" + fingerprint,
+        source_policy_fingerprints=sources,
         evaluated_at=first.evaluated_at,
     )
 
@@ -256,10 +271,15 @@ class ResourcePolicyEvaluator:
         profiles: Iterable[ResourcePolicyProfile],
         request_factory: RequestFactory,
     ) -> PolicyDecision:
-        decisions = [
-            self.evaluate(profile, request_factory(profile.identity.resource_id))
-            for profile in profiles
-        ]
+        records = list(profiles)
+        requests = [request_factory(profile.identity.resource_id) for profile in records]
+        bindings = {canonical_json(request.model_dump(mode="json", exclude={"resource_id"}))
+                    for request in requests}
+        if len(bindings) > 1:
+            raise ValueError("all source requests must describe the same use")
+        if len({record.identity.resource_id for record in records}) != len(records):
+            raise ValueError("derived source resource ids must be unique")
+        decisions = [self.evaluate(profile, request) for profile, request in zip(records, requests)]
         if not decisions:
             raise ValueError("at least one source policy is required")
         return _derived_decision(decisions, _blocked_decisions(decisions))

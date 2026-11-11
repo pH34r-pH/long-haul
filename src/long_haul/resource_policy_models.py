@@ -338,9 +338,16 @@ class ResourceUseRequest(BaseModel):
             raise ValueError(f"purpose is required for {self.action.value}")
         return self
 
+    @property
+    def fingerprint(self) -> str:
+        return "resource-use-v1:" + hashlib.sha256(
+            canonical_json(self.model_dump(mode="json")).encode()
+        ).hexdigest()
+
 
 class PolicyDecision(BaseModel):
     request_id: str
+    request_fingerprint: str
     resource_id: str
     status: PolicyDecisionStatus
     reason: str
@@ -349,6 +356,7 @@ class PolicyDecision(BaseModel):
     unsatisfied_duties: list[str] = Field(default_factory=list)
     policy_id: str | None = None
     policy_fingerprint: str | None = None
+    source_policy_fingerprints: dict[str, str] = Field(default_factory=dict)
     evaluated_at: datetime
 
 

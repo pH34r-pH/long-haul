@@ -1,0 +1,2331 @@
+{
+  "schema_version": 1,
+  "program": {
+    "name": "Modern repository stabilization",
+    "issue": "https://github.com/pH34r-pH/long-haul/issues/251",
+    "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
+    "handoff": "docs/programs/issue-251-work-mode-handoff.md",
+    "status": "in_progress",
+    "updated_at": "2026-11-11T17:50:05.495Z"
+  },
+  "development_pause": {
+    "active": true,
+    "default_priority": "issue-251",
+    "exceptions": [
+      "active_security_vulnerability",
+      "service_outage",
+      "data_loss_risk",
+      "blocking_ci_or_infrastructure_failure",
+      "dependency_change_required_by_issue_251"
+    ],
+    "exception_journal": "https://github.com/pH34r-pH/long-haul/issues/252"
+  },
+  "execution_policy": {
+    "max_active_repositories": 4,
+    "max_active_pull_requests_per_repository": 1,
+    "merge_when_checks_green": true,
+    "documentation_only_does_not_close_implementation": true,
+    "p0_requires_executable_evidence": true,
+    "p1_default": "implement",
+    "external_gate_policy": "stage_exact_operator_procedure_and_continue",
+    "preserve_protected_human_and_physical_gates": true,
+    "avoid_new_central_platform": true
+  },
+  "phases": [
+    {
+      "id": "phase-0",
+      "name": "Program bootstrap",
+      "status": "completed",
+      "tasks": [
+        {
+          "id": "bootstrap-reconcile",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 252,
+          "status": "completed",
+          "depends_on": [],
+          "acceptance": "All child issues, open PRs, default-branch commits, governance pins, and CI states are reconciled into this execution state and the first checkpoint is posted.",
+          "evidence": [
+            "reconciliation.repositories",
+            "Phase 0 checkpoint on #252"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-1",
+      "name": "Shared platform gate",
+      "status": "in_progress",
+      "tasks": [
+        {
+          "id": "lh-248-policy-substrate",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 248,
+          "status": "in_progress",
+          "depends_on": [
+            "bootstrap-reconcile"
+          ],
+          "implementation_pr": 249,
+          "acceptance": "Restore the existing in-process policy substrate and qualify safe context-consumer decisions on main. #248 remains open for complete standards/interchange acceptance."
+        },
+        {
+          "id": "lh-242-context",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 242,
+          "status": "blocked",
+          "depends_on": [
+            "bootstrap-reconcile",
+            "lh-248-policy-substrate"
+          ],
+          "acceptance": "Exact repository, task, environment, and bounded context identities are implemented and reproducible.",
+          "blocked_reason": "Existing #249 policy implementation is absent on main; reconcile prerequisite first."
+        },
+        {
+          "id": "lh-243-evaluator",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 243,
+          "status": "queued",
+          "depends_on": [
+            "lh-242-context"
+          ],
+          "acceptance": "Public and sealed checks execute in a separate read-only evaluator bound to an exact candidate."
+        },
+        {
+          "id": "lh-244-pi-trace",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 244,
+          "status": "queued",
+          "depends_on": [
+            "lh-242-context"
+          ],
+          "acceptance": "Pi emits replayable privacy-preserving semantic action events with exact harness identity."
+        },
+        {
+          "id": "lh-245-security",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 245,
+          "status": "queued",
+          "depends_on": [
+            "lh-242-context",
+            "lh-243-evaluator",
+            "lh-244-pi-trace"
+          ],
+          "acceptance": "Repository worker profile fails safely under prompt injection, path, dependency, tool-shim, credential, network, and resource attacks."
+        },
+        {
+          "id": "lh-64-pilot",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 64,
+          "status": "queued",
+          "depends_on": [
+            "lh-243-evaluator",
+            "lh-244-pi-trace",
+            "lh-245-security"
+          ],
+          "acceptance": "P0 hermetic fixture and P1 real Pi repository task complete with frozen candidate and independent evidence."
+        },
+        {
+          "id": "compiler-150",
+          "repository": "pH34r-pH/experiment-compiler",
+          "issue": 150,
+          "status": "queued",
+          "depends_on": [
+            "lh-242-context",
+            "lh-243-evaluator"
+          ],
+          "acceptance": "Reusable lifecycle components and repository-task, evaluator, trajectory, and corpus profiles are implemented without changing evidence semantics."
+        },
+        {
+          "id": "fleet-1612",
+          "repository": "pH34r-pH/long-haul-fleet",
+          "issue": 1612,
+          "status": "queued",
+          "depends_on": [
+            "lh-243-evaluator",
+            "lh-245-security"
+          ],
+          "acceptance": "Reusable privileged workflows and common candidate, deployment, probe, rollback, revocation, and cleanup receipts are implemented."
+        },
+        {
+          "id": "specified-13",
+          "repository": "pH34r-pH/specified-development",
+          "issue": 13,
+          "status": "queued",
+          "depends_on": [
+            "lh-242-context"
+          ],
+          "acceptance": "Minimal bundle validator, compact review surface, and deterministic regeneration contract are executable."
+        },
+        {
+          "id": "compiled-7",
+          "repository": "pH34r-pH/compiled-experiments",
+          "issue": 7,
+          "status": "queued",
+          "depends_on": [
+            "compiler-150"
+          ],
+          "acceptance": "Releases receive independent clean rebuild verification, attestations, and use-policy summaries."
+        }
+      ]
+    },
+    {
+      "id": "phase-2",
+      "name": "Research claims proofs and governed corpora",
+      "status": "queued",
+      "tasks": [
+        {
+          "id": "lh-248-interchange",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 248,
+          "status": "queued",
+          "depends_on": [
+            "compiler-150"
+          ],
+          "acceptance": "Complete #248 lossless JSON-LD round-trip, executable SHACL and standards-native corpus/BOM projections using qualified shared Compiler profiles; close only with every acceptance item evidenced."
+        },
+        {
+          "id": "dsl-842",
+          "repository": "pH34r-pH/domain-scaling-lab",
+          "issue": 842,
+          "status": "queued",
+          "depends_on": [
+            "compiler-150"
+          ],
+          "acceptance": "Experiment execution is profile-driven, learning corpora have rights and contamination receipts, and stale claim/evidence links block promotion."
+        },
+        {
+          "id": "knowledge-42",
+          "repository": "pH34r-pH/knowledge",
+          "issue": 42,
+          "status": "queued",
+          "depends_on": [
+            "compiler-150"
+          ],
+          "acceptance": "Every admitted source has exact trust/use/freshness metadata and prompt-injection-safe ingestion with stale-source invalidation."
+        },
+        {
+          "id": "tone-18",
+          "repository": "pH34r-pH/tone",
+          "issue": 18,
+          "status": "queued",
+          "depends_on": [
+            "compiler-150"
+          ],
+          "acceptance": "Immutable corpus releases enforce rights, consent, retention, deletion, partition ancestry, and contamination controls."
+        },
+        {
+          "id": "theorem-20",
+          "repository": "pH34r-pH/theorem-library",
+          "issue": 20,
+          "status": "queued",
+          "depends_on": [
+            "dsl-842"
+          ],
+          "acceptance": "Each theorem links to exact claims and applicability evidence; clean proof builds and adversarial proof evidence are retained."
+        },
+        {
+          "id": "notes-31",
+          "repository": "pH34r-pH/research-notes",
+          "issue": 31,
+          "status": "queued",
+          "depends_on": [
+            "compiler-150",
+            "knowledge-42",
+            "dsl-842"
+          ],
+          "acceptance": "Articles have machine-readable claim/evidence/correction graphs, exact Compiler links, and stale citation/backlink checks."
+        },
+        {
+          "id": "dae-37",
+          "repository": "pH34r-pH/discursive-affective-epistemology",
+          "issue": 37,
+          "status": "queued",
+          "depends_on": [
+            "knowledge-42"
+          ],
+          "acceptance": "Evaluation corpus and independent evaluator are preregistered, and conceptual, implemented, experimental, and deployed states are machine-distinct."
+        }
+      ]
+    },
+    {
+      "id": "phase-3",
+      "name": "Private products and personal data",
+      "status": "queued",
+      "tasks": [
+        {
+          "id": "nacre-24",
+          "repository": "pH34r-pH/nacre-recall",
+          "issue": 24,
+          "status": "queued",
+          "depends_on": [
+            "compiler-150",
+            "lh-64-pilot"
+          ],
+          "acceptance": "Approved source admission and the Long-Haul memory scorecard pass without cross-scope, stale, poisoned, or policy leakage."
+        },
+        {
+          "id": "personal-92",
+          "repository": "pH34r-pH/the-personal-algorithm",
+          "issue": 92,
+          "status": "queued",
+          "depends_on": [
+            "compiler-150"
+          ],
+          "acceptance": "Sources have exact use policy, policy changes replay offline, and learned candidates require explicit operator promotion."
+        },
+        {
+          "id": "family-44",
+          "repository": "pH34r-pH/family-tree",
+          "issue": 44,
+          "status": "queued",
+          "depends_on": [
+            "compiler-150"
+          ],
+          "acceptance": "Private validation, person/source privacy policy, reversible merges, and privacy-filtered exports are executable."
+        },
+        {
+          "id": "jam-25",
+          "repository": "pH34r-pH/jam-day",
+          "issue": 25,
+          "status": "queued",
+          "depends_on": [
+            "fleet-1612"
+          ],
+          "acceptance": "Disposable RSVP E2E, retention/deletion, and calendar/timezone behavior are reproducible without production data."
+        },
+        {
+          "id": "wardriver-548",
+          "repository": "pH34r-pH/blue-swallow-wardriver",
+          "issue": 548,
+          "status": "queued",
+          "depends_on": [
+            "fleet-1612",
+            "lh-243-evaluator"
+          ],
+          "external_gate": "physical_device_qualification",
+          "acceptance": "Android qualification stages are split, scan/outbox state is replayable, and exact emulator versus physical evidence is retained."
+        },
+        {
+          "id": "society-131",
+          "repository": "pH34r-pH/blue-swallow-society",
+          "issue": 131,
+          "status": "queued",
+          "depends_on": [
+            "fleet-1612",
+            "wardriver-548"
+          ],
+          "external_gate": "protected_private_deployment",
+          "acceptance": "Wardriver-owned cutover removes public mutation authority; auth/authz E2E, migration, live probes, and recovery evidence pass."
+        }
+      ]
+    },
+    {
+      "id": "phase-4",
+      "name": "Publication distribution and recovery",
+      "status": "queued",
+      "tasks": [
+        {
+          "id": "portfolio-141",
+          "repository": "pH34r-pH/Portfolio",
+          "issue": 141,
+          "status": "queued",
+          "depends_on": [
+            "compiler-150"
+          ],
+          "external_gate": "protected_publication",
+          "acceptance": "One publication contract governs source, provenance, accessibility, performance, browser evidence, and promotion."
+        },
+        {
+          "id": "book-5",
+          "repository": "pH34r-pH/book-development",
+          "issue": 5,
+          "status": "queued",
+          "depends_on": [
+            "specified-13"
+          ],
+          "external_gate": "human_submission_approval",
+          "acceptance": "Local validator, pinned Quarto/TeX environment, and exact multi-format candidate receipts pass."
+        },
+        {
+          "id": "socials-19",
+          "repository": "pH34r-pH/socials",
+          "issue": 19,
+          "status": "queued",
+          "depends_on": [
+            "knowledge-42"
+          ],
+          "external_gate": "human_account_publication",
+          "acceptance": "Every outward claim resolves to an approved source, identity workspaces are isolated, and posting remains human-approved."
+        },
+        {
+          "id": "arcc-17",
+          "repository": "pH34r-pH/agent-readable-calling-card",
+          "issue": 17,
+          "status": "queued",
+          "depends_on": [
+            "compiler-150"
+          ],
+          "acceptance": "Adversarial recipes fail safely and every published derivative has an exact source, recipe, transformation, freshness, and artifact manifest."
+        },
+        {
+          "id": "blackbox-6",
+          "repository": "pH34r-pH/blackbox",
+          "issue": 6,
+          "status": "queued",
+          "depends_on": [
+            "compiler-150"
+          ],
+          "external_gate": "notion_source_access",
+          "acceptance": "Exports retain exact Notion provenance and use policy; automation cannot write back or enable training/public retrieval by default."
+        }
+      ]
+    },
+    {
+      "id": "phase-5",
+      "name": "Protocol and embodied systems",
+      "status": "queued",
+      "tasks": [
+        {
+          "id": "longband-76",
+          "repository": "pH34r-pH/longband",
+          "issue": 76,
+          "status": "queued",
+          "depends_on": [
+            "compiler-150"
+          ],
+          "external_gate": "independent_security_review",
+          "acceptance": "Executable state machine and Python/Rust accepted/rejected vectors pass; adversarial review is staged or completed."
+        },
+        {
+          "id": "homebot-2",
+          "repository": "pH34r-pH/home-bot",
+          "issue": 2,
+          "status": "queued",
+          "depends_on": [
+            "lh-243-evaluator",
+            "fleet-1612"
+          ],
+          "external_gate": "hardware_in_loop_and_physical_safety",
+          "acceptance": "Exact simulation receipts, replay, simulation-to-real evidence, and independent safety interlocks are demonstrated."
+        }
+      ]
+    },
+    {
+      "id": "phase-6",
+      "name": "Full system qualification and closure",
+      "status": "queued",
+      "tasks": [
+        {
+          "id": "lh-64-full",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 64,
+          "status": "queued",
+          "depends_on": [
+            "lh-64-pilot",
+            "compiler-150",
+            "fleet-1612",
+            "specified-13"
+          ],
+          "acceptance": "Controlled task corpus, matched treatments, required ablations, failure taxonomy, and net-value analysis are complete."
+        },
+        {
+          "id": "lh-246-corpus",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 246,
+          "status": "queued",
+          "depends_on": [
+            "lh-64-full",
+            "tone-18",
+            "dsl-842"
+          ],
+          "acceptance": "Only rights-compatible, decontaminated, externally evaluated trajectories enter the immutable specialization corpus."
+        },
+        {
+          "id": "lh-247-multimodal",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 247,
+          "status": "queued",
+          "depends_on": [
+            "portfolio-141",
+            "wardriver-548",
+            "homebot-2"
+          ],
+          "acceptance": "Browser, Android, simulator, media, privacy, and model-assisted evidence retain exact identity and do not substitute for unavailable physical evidence."
+        },
+        {
+          "id": "lh-241-parent",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 241,
+          "status": "queued",
+          "depends_on": [
+            "lh-64-full",
+            "lh-246-corpus",
+            "lh-247-multimodal"
+          ],
+          "acceptance": "All code-intelligence children, evidence paths, safety boundaries, and benchmark results are reconciled and the parent closes."
+        },
+        {
+          "id": "program-final-reconcile",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 252,
+          "status": "queued",
+          "depends_on": [
+            "lh-248-policy-substrate",
+            "lh-242-context",
+            "lh-243-evaluator",
+            "lh-244-pi-trace",
+            "lh-245-security",
+            "lh-64-pilot",
+            "compiler-150",
+            "fleet-1612",
+            "specified-13",
+            "compiled-7",
+            "lh-248-interchange",
+            "dsl-842",
+            "knowledge-42",
+            "tone-18",
+            "theorem-20",
+            "notes-31",
+            "dae-37",
+            "nacre-24",
+            "personal-92",
+            "family-44",
+            "jam-25",
+            "wardriver-548",
+            "society-131",
+            "portfolio-141",
+            "book-5",
+            "socials-19",
+            "arcc-17",
+            "blackbox-6",
+            "longband-76",
+            "homebot-2",
+            "lh-64-full",
+            "lh-246-corpus",
+            "lh-247-multimodal",
+            "lh-241-parent"
+          ],
+          "acceptance": "All repository issues are closed or externally gated with exact staged procedures; governance and default-branch CI pass everywhere; final evidence ledger is posted."
+        },
+        {
+          "id": "program-close-251",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 251,
+          "status": "queued",
+          "depends_on": [
+            "program-final-reconcile"
+          ],
+          "acceptance": "Every #251 exit criterion is evidenced and both #252 and #251 close."
+        }
+      ]
+    }
+  ],
+  "external_checkpoint_requirements": {
+    "physical_device_qualification": [
+      "ready_to_run_workflow_or_command",
+      "exact_source_and_artifact_identity",
+      "device_os_permissions_and_sensor_prerequisites",
+      "expected_observations_and_failure_criteria",
+      "evidence_collection_path",
+      "cleanup_and_rollback"
+    ],
+    "protected_private_deployment": [
+      "candidate_fingerprint",
+      "protected_environment_and_caller_identity",
+      "preflight_and_live_probes",
+      "rollback_or_revocation",
+      "no_secret_values_in_git"
+    ],
+    "human_account_publication": [
+      "exact_claim_source",
+      "audience_and_identity_approval",
+      "final_candidate_fingerprint",
+      "publication_and_correction_receipt"
+    ],
+    "independent_security_review": [
+      "frozen_protocol_and_implementation_identity",
+      "adversarial_test_package",
+      "reviewer_scope_and_rubric",
+      "retained_findings_and_disposition"
+    ],
+    "hardware_in_loop_and_physical_safety": [
+      "simulation_candidate_identity",
+      "hardware_and_firmware_identity",
+      "operator_and_interlock_authority",
+      "watchdog_and_emergency_stop_test",
+      "physical_evidence_and_cleanup"
+    ]
+  },
+  "final_checks": [
+    "all_governance_workflows_present_and_pinned",
+    "all_default_branch_ci_reconciled",
+    "no_open_unreconciled_alignment_prs",
+    "all_p0_items_executable",
+    "all_p1_items_implemented_or_evidence_dispositioned",
+    "personal_data_retention_and_deletion_enforced",
+    "corpus_rights_partitions_and_contamination_evidenced",
+    "deployment_publication_and_physical_states_separate",
+    "no_retired_repository_or_generated_content_is_current_authority",
+    "final_evidence_ledger_posted_to_issue_251"
+  ],
+  "reconciliation": {
+    "observed_at": "2026-11-11T17:44:08.126Z",
+    "scope": "24 repositories; issue snapshots and comments, all open PRs (<=100 each), default branch source, governance profiles/workflows, and up to 100 recent branch workflow runs; source implementation review occurs before each lane starts",
+    "repositories": [
+      {
+        "repository": "pH34r-pH/experiment-compiler",
+        "default_branch": "main",
+        "baseline_commit": "4b0816e6b10d7d92d8c69ae47f1910ff41a5bfdb",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 150,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/experiment-compiler/issues/150",
+            "updated_at": "2026-11-11T17:30:30Z"
+          }
+        ],
+        "open_pull_requests": [
+          {
+            "number": 147,
+            "title": "Make catalog results, status, and exact package actions readable",
+            "head": "5f10073af1ece8cda95836097387d55b40138189",
+            "url": "https://github.com/pH34r-pH/experiment-compiler/pull/147",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 136,
+            "title": "Document live reproduction vs archival Compiled Experiment publication",
+            "head": "452d9b45692ad02a29847fced0be2e7e577daa54",
+            "url": "https://github.com/pH34r-pH/experiment-compiler/pull/136",
+            "disposition": "paused_pending_source_reconciliation"
+          }
+        ],
+        "default_branch_ci": [
+          {
+            "workflow": "Experiment Compiler lifecycle",
+            "run_id": 43059107336,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "url": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/43059107336"
+          },
+          {
+            "workflow": "Repository governance",
+            "run_id": 43059107459,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/43059107459"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/long-haul-fleet",
+        "default_branch": "main",
+        "baseline_commit": "b175250083f41c2bd39f2f2600b60986ba7ffed1",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 1612,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612",
+            "updated_at": "2026-11-11T17:31:01Z"
+          }
+        ],
+        "open_pull_requests": [
+          {
+            "number": 1609,
+            "title": "Retain bounded SSH observation failure diagnostics",
+            "head": "c154bb72df2fd3213ed95f3aed521ddb3ea689f5",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1609",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1582,
+            "title": "Enable optional KVM for Wardriver CI",
+            "head": "f756100c3375eb9e63aaf3c2c44327844cc56f5c",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1582",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1572,
+            "title": "Recover the reserved DSL worker and stabilize WSL launches",
+            "head": "3d57975c334e64d9d53a2786e39dee24c7c13600",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1572",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1547,
+            "title": "Prototype one-shot DSL interrupted recovery trigger",
+            "head": "4bce4f60a9b339a5a1e7328ac5d812ceca4760c3",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1547",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1543,
+            "title": "Add held desired-state evidence for #1531",
+            "head": "7207e167bcff06a4e155be7d2c9f79a65cea19d9",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1543",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1542,
+            "title": "Hold host lease through completion verification",
+            "head": "0f29b50b5117c3e4116b50333e50d2cf7391b66d",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1542",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1541,
+            "title": "Add offline runner service recovery candidate",
+            "head": "649cbe7b14adf3599944fd8545028f5ac2f3f784",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1541",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1185,
+            "title": "Review exact classifications, native hierarchy imports and closed-leaf pruning",
+            "head": "0d79a5444329a7cd816b3fb54ac0ee3c3d31eeb2",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1185",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1113,
+            "title": "Use Anchorage self-hosted runners for Fleet workflows",
+            "head": "0d6189021ae20252c1a794bef479dd9f4010c847",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1113",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1101,
+            "title": "Align diagnostic and cleanup retention",
+            "head": "7c3d1f5e99fd8c1af016420ecdd8e1da28cfb465",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1101",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1081,
+            "title": "Reconcile Research Engineering hierarchy and archival publication boundary",
+            "head": "3867c48b4975abda98b97859a27cb001af546d57",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1081",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1057,
+            "title": "Add guarded Flash Pages DNS workflow",
+            "head": "75c092f66a99a76310dc2a77ede9ab3ed67d4c81",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1057",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1011,
+            "title": "Anchorage: measure Ryzen 1/2/4/6/12/24-thread baseline",
+            "head": "5d8ae01bf3d7b2c62e3030154d69111e9f542881",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1011",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1010,
+            "title": "Anchorage: serial native-dual-g1-heavy-14b measurement",
+            "head": "771585933c5f1b9138894d0bf0975db41369243f",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1010",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1009,
+            "title": "Anchorage: serial native-dual-g0-heavy-14b measurement",
+            "head": "019dac1dea4bd0db98ba63d44a67c4ab152b0e1b",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1009",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1008,
+            "title": "Anchorage: serial native-dual-balanced-14b measurement",
+            "head": "0e1ef69d870cc912afcfabf74c56064562627f97",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1008",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1007,
+            "title": "Anchorage: serial native-cpu-g1-partial-14b measurement",
+            "head": "c62c8e2c703b65ee75128e592d2e463b97d6ffe1",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1007",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1006,
+            "title": "Anchorage: serial native-cpu-g0-partial-14b measurement",
+            "head": "20d4750eecda76fc72ad336a3af6a6b36b7def98",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1006",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1005,
+            "title": "Anchorage: serial native-g1-full-attempt-14b measurement",
+            "head": "47e54d6ba5df62c8dffa9770c3e4b1b20dc64a80",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1005",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1004,
+            "title": "Anchorage: serial native-g0-full-attempt-14b measurement",
+            "head": "8bc3ed4ed6324b51ed0ed625b6a410d8a78881fd",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1004",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1002,
+            "title": "Anchorage: clean CPU-release control without CUDA DLL staging",
+            "head": "be3c5ca22d0d5a11748daf75a14374c372219f59",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/1002",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 766,
+            "title": "Accept event-driven Codex reconciliation",
+            "head": "938576f57c1b346f4dbc17c864ded1325ba90a1b",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/766",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 731,
+            "title": "Publish Grafana image workflow on main",
+            "head": "b9fe889de2847eeeb39713c07fe99008b5cd4fdf",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/731",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 728,
+            "title": "Add repository-only device compatibility contract tests",
+            "head": "803f80e276b30643625642d87616067531f08d93",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/728",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 361,
+            "title": "Archive and recover exact Research Notes validation receipts",
+            "head": "1dbe47bad503fc4f287797c0423404508de11f3a",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/361",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 96,
+            "title": "Add Kestrel identity install and physical MCP qualification scripts",
+            "head": "7068cdda5d5e2e62fe9e1006a34e15c175407fc5",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/96",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 51,
+            "title": "Fix Portfolio control-plane job summary quoting",
+            "head": "873267e2de75723bb0ee0d5070bd1439d7467d3b",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/pull/51",
+            "disposition": "paused_pending_source_reconciliation"
+          }
+        ],
+        "default_branch_ci": [
+          {
+            "workflow": "Codex agent dispatcher",
+            "run_id": 43065975229,
+            "event": "schedule",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/43065975229"
+          },
+          {
+            "workflow": "Fleet repo CI",
+            "run_id": 43060172368,
+            "event": "push",
+            "status": "queued",
+            "conclusion": null,
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/43060172368"
+          },
+          {
+            "workflow": "Private intake control contracts",
+            "run_id": 43060172382,
+            "event": "push",
+            "status": "queued",
+            "conclusion": null,
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/43060172382"
+          },
+          {
+            "workflow": "Azure fleet IaC validation",
+            "run_id": 43060172405,
+            "event": "push",
+            "status": "queued",
+            "conclusion": null,
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/43060172405"
+          },
+          {
+            "workflow": "Documentation and artifact quality",
+            "run_id": 43060172464,
+            "event": "push",
+            "status": "queued",
+            "conclusion": null,
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/43060172464"
+          },
+          {
+            "workflow": "Structural quality audit",
+            "run_id": 43060172391,
+            "event": "push",
+            "status": "queued",
+            "conclusion": null,
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/43060172391"
+          },
+          {
+            "workflow": "Repository governance",
+            "run_id": 43060172394,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/43060172394"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/long-haul",
+        "default_branch": "main",
+        "baseline_commit": "eff55fbee5ab07b200ec21829a3f9de8d707fc2b",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "repository_local_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 252,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/long-haul/issues/252",
+            "updated_at": "2026-11-11T17:35:33Z"
+          },
+          {
+            "number": 242,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/long-haul/issues/242",
+            "updated_at": "2026-11-11T17:32:55Z"
+          },
+          {
+            "number": 243,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/long-haul/issues/243",
+            "updated_at": "2026-11-11T17:33:00Z"
+          },
+          {
+            "number": 244,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/long-haul/issues/244",
+            "updated_at": "2026-11-11T17:33:05Z"
+          },
+          {
+            "number": 245,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/long-haul/issues/245",
+            "updated_at": "2026-11-11T17:33:09Z"
+          },
+          {
+            "number": 64,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/long-haul/issues/64",
+            "updated_at": "2026-11-11T17:32:48Z"
+          },
+          {
+            "number": 246,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/long-haul/issues/246",
+            "updated_at": "2026-11-11T17:33:14Z"
+          },
+          {
+            "number": 247,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/long-haul/issues/247",
+            "updated_at": "2026-11-11T17:33:26Z"
+          },
+          {
+            "number": 241,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/long-haul/issues/241",
+            "updated_at": "2026-11-11T17:32:42Z"
+          },
+          {
+            "number": 251,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/long-haul/issues/251",
+            "updated_at": "2026-11-11T17:35:45Z"
+          }
+        ],
+        "open_pull_requests": [
+          {
+            "number": 249,
+            "title": "Implement the shared standards-based resource policy profile",
+            "head": "d463680e3437e9b0db50561b96138511e2748de7",
+            "url": "https://github.com/pH34r-pH/long-haul/pull/249",
+            "disposition": "required_prerequisite_reconcile"
+          },
+          {
+            "number": 214,
+            "title": "Add bounded browser-local semantic matching preview",
+            "head": "fca38d364ede03d35138941db31e2ca77b9c0d47",
+            "url": "https://github.com/pH34r-pH/long-haul/pull/214",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 213,
+            "title": "feat: Export exact benchmark facts and comparisons (#184)",
+            "head": "2ecdec7d8056534434578ba5c1db9370ed9f7f39",
+            "url": "https://github.com/pH34r-pH/long-haul/pull/213",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 212,
+            "title": "Document Long Haul research archive and publication boundary",
+            "head": "73a38792aa97f57f4b507765e49d320a744a3d91",
+            "url": "https://github.com/pH34r-pH/long-haul/pull/212",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 207,
+            "title": "Qualify native JSON under a bounded network-none container",
+            "head": "12cff8ea5ea77b91a55c0d95d4643fb07a5da766",
+            "url": "https://github.com/pH34r-pH/long-haul/pull/207",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 200,
+            "title": "Test llama.cpp native token counter parsing",
+            "head": "f9ff424622f131173e7a91a24bf5eed5a5596c52",
+            "url": "https://github.com/pH34r-pH/long-haul/pull/200",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 199,
+            "title": "M3a: Add event-backed objection lifecycle",
+            "head": "8650441eada12fa4a10c82a654a79fe036857a46",
+            "url": "https://github.com/pH34r-pH/long-haul/pull/199",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 197,
+            "title": "Qualify explicit native completion settings and prepared prompts",
+            "head": "c4703d077942e20cfbf090ad6182ff6e4c1a9b83",
+            "url": "https://github.com/pH34r-pH/long-haul/pull/197",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 149,
+            "title": "Add experimental CLIPS reason-maintenance conformance slice",
+            "head": "2f8e4ed5bd6ef2effe4547b6061866ee30eb02bb",
+            "url": "https://github.com/pH34r-pH/long-haul/pull/149",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 148,
+            "title": "Add bounded standards-based epistemic materialization",
+            "head": "e4098c19b29623ca8d4f3039f91c70c56117b9cc",
+            "url": "https://github.com/pH34r-pH/long-haul/pull/148",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 128,
+            "title": "Prepare Anchorage heterogeneous inference controls",
+            "head": "7047870985d242b342c872a2e262295eef7f01b5",
+            "url": "https://github.com/pH34r-pH/long-haul/pull/128",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 117,
+            "title": "Normalize native llama-bench performance evidence",
+            "head": "7cc6eec3629f8c1ea3e6e065f06e931da2ba322c",
+            "url": "https://github.com/pH34r-pH/long-haul/pull/117",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 113,
+            "title": "test: add scheduler mutation-report pilot",
+            "head": "6a3d5f9719c5bcc4143f6f69fb97b9da816c04d8",
+            "url": "https://github.com/pH34r-pH/long-haul/pull/113",
+            "disposition": "paused_pending_source_reconciliation"
+          }
+        ],
+        "default_branch_ci": [
+          {
+            "workflow": "Requirements contract",
+            "run_id": 43069644182,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/long-haul/actions/runs/43069644182"
+          },
+          {
+            "workflow": "Repository governance",
+            "run_id": 43069644336,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/long-haul/actions/runs/43069644336"
+          },
+          {
+            "workflow": "Azure IaC validation",
+            "run_id": 43069644205,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/long-haul/actions/runs/43069644205"
+          },
+          {
+            "workflow": "CI",
+            "run_id": 43069644409,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/long-haul/actions/runs/43069644409"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/compiled-experiments",
+        "default_branch": "main",
+        "baseline_commit": "f872cea4ca3c2ec93cb733206203b8154910b611",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 7,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/compiled-experiments/issues/7",
+            "updated_at": "2026-11-11T17:30:34Z"
+          }
+        ],
+        "open_pull_requests": [
+          {
+            "number": 2,
+            "title": "Integrate compiled-experiments as the archival research layer",
+            "head": "8f22b40b3965b8caeebc33d9f645ba1f0131198a",
+            "url": "https://github.com/pH34r-pH/compiled-experiments/pull/2",
+            "disposition": "paused_pending_source_reconciliation"
+          }
+        ],
+        "default_branch_ci": [
+          {
+            "workflow": "archive verification",
+            "run_id": 43059234855,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/compiled-experiments/actions/runs/43059234855"
+          },
+          {
+            "workflow": "Repository governance",
+            "run_id": 43059235099,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/compiled-experiments/actions/runs/43059235099"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/specified-development",
+        "default_branch": "main",
+        "baseline_commit": "3f48adc34ae26d7d25c44fc3bbef4cc6f3be9ffc",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 13,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/specified-development/issues/13",
+            "updated_at": "2026-11-11T17:32:24Z"
+          }
+        ],
+        "open_pull_requests": [
+          {
+            "number": 10,
+            "title": "feat(skills): package direct implementation and prior-art guidance",
+            "head": "9da757d429c3ec373359b748a48b1e33676590a5",
+            "url": "https://github.com/pH34r-pH/specified-development/pull/10",
+            "disposition": "paused_pending_source_reconciliation"
+          }
+        ],
+        "default_branch_ci": [
+          {
+            "workflow": "Repository governance",
+            "run_id": 43061767039,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/specified-development/actions/runs/43061767039"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/domain-scaling-lab",
+        "default_branch": "main",
+        "baseline_commit": "6bffe5dd87272f5e9d57ec3b0375d2d938e69193",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 842,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/issues/842",
+            "updated_at": "2026-11-11T17:30:26Z"
+          }
+        ],
+        "open_pull_requests": [
+          {
+            "number": 840,
+            "title": "Prepare the frozen CPU reuse plan for the private lifecycle",
+            "head": "d7ad4df2c664fab4b6e5dc33e3ed6819dfe027f1",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/840",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 835,
+            "title": "Add exact-attempt v8 interrupted archive recovery",
+            "head": "974b11b8e883e1d83ff7669f425f3c5441d1ffa7",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/835",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 833,
+            "title": "Queue science-worker admission requests",
+            "head": "6dbbaed601a81971c3f65f4bdb12883e4e757049",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/833",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 668,
+            "title": "test: trim vacuous advanced assertions",
+            "head": "1201f9b9acea7f2bab65c282f8e05c048c61ee63",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/668",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 667,
+            "title": "Split hosted DSL checks into scoped PR and daily reconciliation (#666)",
+            "head": "c0e6a30e687c07b99a78b52cbe7f3b547263a694",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/667",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 662,
+            "title": "Retain the first DBD development baseline and 512-token diagnostic through Compiler (#624)",
+            "head": "405c8b2fbb07c324f1f78ad825b43499ff28d6a8",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/662",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 661,
+            "title": "Integrate compiled-experiments into DSL publication boundaries",
+            "head": "06fb144adaeb143b2d4de8e4f6b70fc78422f3ac",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/661",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 653,
+            "title": "Remove the one-shot #152 reproduction trigger",
+            "head": "2bdbe984e0c8462822d1eaf4488985ef119a7604",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/653",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 652,
+            "title": "Finalize #152 manuscript and arXiv source",
+            "head": "6c5c99b6781c410b8c761f3658697936e80888ee",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/652",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 645,
+            "title": "DBD E0: map primary prior art to controls",
+            "head": "5fef550399e30c7c83e6c5d946e4a658b7f36290",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/645",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 644,
+            "title": "DBD E2: reconcile rendered native token accounting",
+            "head": "24743bacbe8c8a7f788d9a09cc0f0e06cea7be5d",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/644",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 616,
+            "title": "Draft Flash F0 bounded browser qualification source",
+            "head": "fa7416c0a1f9c8af34ba673b6c9ebbac9768bb57",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/616",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 595,
+            "title": "#518: draft fitted additive reference and conditional bootstrap",
+            "head": "baad77ca19c191e86d834aa8caab3dfa915fb80d",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/595",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 594,
+            "title": "#518: add synthetic text-geometry relation controls",
+            "head": "08d42700b9ca04801b1bdb4f103e7d9a1514a066",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/594",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 585,
+            "title": "Draft serial current AdamW execution request",
+            "head": "829c14b288e69813f8217a1ea85e46b56ecca9a6",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/585",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 468,
+            "title": "Notify Fleet when agent issue state changes",
+            "head": "0a8ed4084d88c2ce8f64dddf7619549f4bccd122",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/468",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 395,
+            "title": "chore: standardize Apache-2.0 licensing and attribution",
+            "head": "262aea92524683c6f966382a54e24df1f0ae251d",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/395",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 361,
+            "title": "Add exact-commit #164 workload descriptor and validator",
+            "head": "739ae2d4c8bcc3b358eb81722883195a6ad11301",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/361",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 359,
+            "title": "Automate exact-SHA cleanroom gate with isolated validation and trusted publication",
+            "head": "982d69112c560c7fb81973f025068228a076fbd0",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/359",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 339,
+            "title": "Add credential-free Work VM source bundle and Lean bootstrap",
+            "head": "c9875c335de5d0a533a0db85f7c062a08740d742",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/339",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 333,
+            "title": "Extract public theorem core behind pinned TheoremLibrary dependency",
+            "head": "c94c897c22d8e9d628a4d469f0d85a8ce7955f8f",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/333",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 332,
+            "title": "#331 operational gate: exact frozen state artifacts unavailable",
+            "head": "533994e42b98a5684a7916855e8d17966d38f70c",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/332",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 330,
+            "title": "#178 freeze finite-horizon tangent-dynamics protocol",
+            "head": "530085acd772f143190b6b28a3fc3cbf6bc79bfc",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/330",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 293,
+            "title": "Certify FineWeb sources and freeze the post-formal v2 occupancy study",
+            "head": "cc8845fbbfa2986c2afd878dc4dc919d3d044d03",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/293",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 216,
+            "title": "Audit and freeze adversarial corpus samples before hypersphere replication (#215)",
+            "head": "8ca760fe3a20e019ea3cd96c33660f636a959475",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/216",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 212,
+            "title": "Execute fair stopping-policy comparison with article-level source audit",
+            "head": "7e4274fa34074a34788b493b74ddcc3d4674d60c",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/212",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 210,
+            "title": "Complete frozen research studies and build the reproducible portfolio",
+            "head": "594b7b5e0b581819083a89d0cc67a20fb87af586",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/210",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 103,
+            "title": "Gate A Revision 1: global-position encoding experiment",
+            "head": "e58df65ab762697645b66c1628c64305563ba6b2",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/103",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 93,
+            "title": "Implement spectral Gate A feasibility harness",
+            "head": "82a96cbc5d3da5bd5dfe76e3b1b877be996e5df6",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/pull/93",
+            "disposition": "paused_pending_source_reconciliation"
+          }
+        ],
+        "default_branch_ci": [
+          {
+            "workflow": "test",
+            "run_id": 43058967946,
+            "event": "push",
+            "status": "queued",
+            "conclusion": null,
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/actions/runs/43058967946"
+          },
+          {
+            "workflow": "Repository governance",
+            "run_id": 43058967962,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/domain-scaling-lab/actions/runs/43058967962"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/knowledge",
+        "default_branch": "main",
+        "baseline_commit": "31cda92a72fe7bb20f3c3d60f7950b46de6823ae",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 42,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/knowledge/issues/42",
+            "updated_at": "2026-11-11T17:30:39Z"
+          }
+        ],
+        "open_pull_requests": [
+          {
+            "number": 35,
+            "title": "Remove Graphify and render the Knowledge Wiki",
+            "head": "cfbc156fa1287ff4b0a0e1a6d7c7567486cfe567",
+            "url": "https://github.com/pH34r-pH/knowledge/pull/35",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 8,
+            "title": "research: add recursive depth scaling paper",
+            "head": "d68d1b8c3a73ed8840e05fe7b025a2833c49a66d",
+            "url": "https://github.com/pH34r-pH/knowledge/pull/8",
+            "disposition": "paused_pending_source_reconciliation"
+          }
+        ],
+        "default_branch_ci": [
+          {
+            "workflow": "Repository governance",
+            "run_id": 43059381836,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/knowledge/actions/runs/43059381836"
+          },
+          {
+            "workflow": "external-claim-adapter",
+            "run_id": 43059381963,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/knowledge/actions/runs/43059381963"
+          },
+          {
+            "workflow": "Documentation quality",
+            "run_id": 43059381860,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/knowledge/actions/runs/43059381860"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/theorem-library",
+        "default_branch": "main",
+        "baseline_commit": "950b48d502015daa1c648b5ce7a3b72eee367995",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 20,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/theorem-library/issues/20",
+            "updated_at": "2026-11-11T17:30:45Z"
+          }
+        ],
+        "open_pull_requests": [],
+        "default_branch_ci": [
+          {
+            "workflow": "Repository governance",
+            "run_id": 43059546353,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/theorem-library/actions/runs/43059546353"
+          },
+          {
+            "workflow": "lean",
+            "run_id": 43059546053,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/theorem-library/actions/runs/43059546053"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/tone",
+        "default_branch": "main",
+        "baseline_commit": "0594d6f455842e9b9d74177e5d8a52c527897653",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 18,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/tone/issues/18",
+            "updated_at": "2026-11-11T17:30:53Z"
+          }
+        ],
+        "open_pull_requests": [
+          {
+            "number": 16,
+            "title": "Import Reddit comment and post history",
+            "head": "5a1a774181de3f3ec4e257502690acb547479790",
+            "url": "https://github.com/pH34r-pH/tone/pull/16",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 9,
+            "title": "Derive Reddit voice guidance and broaden corpus coverage",
+            "head": "730a416d003744be4c60f4422f163cd446419d24",
+            "url": "https://github.com/pH34r-pH/tone/pull/9",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 1,
+            "title": "Add provisional chat-history tone analysis",
+            "head": "ea43ef0cfe3832755745f57f852d2b998ec714b0",
+            "url": "https://github.com/pH34r-pH/tone/pull/1",
+            "disposition": "paused_pending_source_reconciliation"
+          }
+        ],
+        "default_branch_ci": [
+          {
+            "workflow": "Repository governance",
+            "run_id": 43059862884,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/tone/actions/runs/43059862884"
+          },
+          {
+            "workflow": "Documentation quality",
+            "run_id": 43059862773,
+            "event": "push",
+            "status": "queued",
+            "conclusion": null,
+            "url": "https://github.com/pH34r-pH/tone/actions/runs/43059862773"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/research-notes",
+        "default_branch": "main",
+        "baseline_commit": "0949214b6bc89593fcfa4d48406277e63078d54e",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 31,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/research-notes/issues/31",
+            "updated_at": "2026-11-11T17:30:49Z"
+          }
+        ],
+        "open_pull_requests": [
+          {
+            "number": 29,
+            "title": "Clarify research entry paths, dependencies, and evidence boundaries",
+            "head": "1e2951d77a82ea1d4b968f1b30830767f4bfc824",
+            "url": "https://github.com/pH34r-pH/research-notes/pull/29",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 25,
+            "title": "Extend reproducibility docs through reviewed archival release",
+            "head": "89b002403528ec93101ed7a87f2a2a24cf43092c",
+            "url": "https://github.com/pH34r-pH/research-notes/pull/25",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 23,
+            "title": "docs: add research maps and documentation hygiene",
+            "head": "26c24b0080473bcd2a74481c5c9fdff4836ad8fb",
+            "url": "https://github.com/pH34r-pH/research-notes/pull/23",
+            "disposition": "paused_pending_source_reconciliation"
+          }
+        ],
+        "default_branch_ci": [
+          {
+            "workflow": "Research Notes publication validation",
+            "run_id": 43059697471,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "failure",
+            "url": "https://github.com/pH34r-pH/research-notes/actions/runs/43059697471"
+          },
+          {
+            "workflow": "Repository governance",
+            "run_id": 43059697452,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/research-notes/actions/runs/43059697452"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/nacre-recall",
+        "default_branch": "main",
+        "baseline_commit": "6dc11b1bb2ed606b6cb21ede69eb2d85784678a0",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 24,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/nacre-recall/issues/24",
+            "updated_at": "2026-11-11T17:31:40Z"
+          }
+        ],
+        "open_pull_requests": [
+          {
+            "number": 22,
+            "title": "Replace the retired provider with Pi-native Long-Haul recall",
+            "head": "5c68282d9db1580da17652d902801e48081156f2",
+            "url": "https://github.com/pH34r-pH/nacre-recall/pull/22",
+            "disposition": "paused_pending_source_reconciliation"
+          }
+        ],
+        "default_branch_ci": [
+          {
+            "workflow": "Repository governance",
+            "run_id": 43060913998,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/nacre-recall/actions/runs/43060913998"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/discursive-affective-epistemology",
+        "default_branch": "main",
+        "baseline_commit": "56a868a051503cd18555d89ff339b6e33030e206",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 37,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/discursive-affective-epistemology/issues/37",
+            "updated_at": "2026-11-11T17:30:57Z"
+          }
+        ],
+        "open_pull_requests": [
+          {
+            "number": 14,
+            "title": "docs: pivot DAE into an EPM comparative testbed",
+            "head": "b2b4958301eb4a16bb5c9b6a009baf89e87b117f",
+            "url": "https://github.com/pH34r-pH/discursive-affective-epistemology/pull/14",
+            "disposition": "paused_pending_source_reconciliation"
+          }
+        ],
+        "default_branch_ci": [
+          {
+            "workflow": "Documentation and artifact quality",
+            "run_id": 43060000024,
+            "event": "push",
+            "status": "queued",
+            "conclusion": null,
+            "url": "https://github.com/pH34r-pH/discursive-affective-epistemology/actions/runs/43060000024"
+          },
+          {
+            "workflow": "Repository governance",
+            "run_id": 43059999962,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/discursive-affective-epistemology/actions/runs/43059999962"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/the-personal-algorithm",
+        "default_branch": "main",
+        "baseline_commit": "7fa1e12ff86411c48d5cb27f863297af867b088a",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 92,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/the-personal-algorithm/issues/92",
+            "updated_at": "2026-11-11T17:31:17Z"
+          }
+        ],
+        "open_pull_requests": [
+          {
+            "number": 72,
+            "title": "test: remove mock-only provider bootstrap case",
+            "head": "030c7a2922fd8939d9f6266acb002e9ca26dc300",
+            "url": "https://github.com/pH34r-pH/the-personal-algorithm/pull/72",
+            "disposition": "paused_pending_source_reconciliation"
+          }
+        ],
+        "default_branch_ci": [
+          {
+            "workflow": "Documentation quality",
+            "run_id": 43060529757,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/the-personal-algorithm/actions/runs/43060529757"
+          },
+          {
+            "workflow": "Repository governance",
+            "run_id": 43060529886,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/the-personal-algorithm/actions/runs/43060529886"
+          },
+          {
+            "workflow": "CI",
+            "run_id": 43060529805,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/the-personal-algorithm/actions/runs/43060529805"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/family-tree",
+        "default_branch": "main",
+        "baseline_commit": "9ea5f5334793543cb75848865250929becf933d4",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 44,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/family-tree/issues/44",
+            "updated_at": "2026-11-11T17:31:28Z"
+          }
+        ],
+        "open_pull_requests": [],
+        "default_branch_ci": [
+          {
+            "workflow": "Repository governance",
+            "run_id": 43060692686,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/family-tree/actions/runs/43060692686"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/jam-day",
+        "default_branch": "main",
+        "baseline_commit": "f86fbc68440d466e6f936ed3e3f1376f8c324a8a",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 25,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/jam-day/issues/25",
+            "updated_at": "2026-11-11T17:31:33Z"
+          }
+        ],
+        "open_pull_requests": [],
+        "default_branch_ci": [
+          {
+            "workflow": "Repository governance",
+            "run_id": 43060802832,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/jam-day/actions/runs/43060802832"
+          },
+          {
+            "workflow": "Documentation and artifact quality",
+            "run_id": 43060802905,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/jam-day/actions/runs/43060802905"
+          },
+          {
+            "workflow": "quality",
+            "run_id": 43060802700,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/jam-day/actions/runs/43060802700"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/blue-swallow-wardriver",
+        "default_branch": "main",
+        "baseline_commit": "c21d88993d8c47e1629a8bb5ff8329820017613f",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 548,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/blue-swallow-wardriver/issues/548",
+            "updated_at": "2026-11-11T17:31:05Z"
+          }
+        ],
+        "open_pull_requests": [
+          {
+            "number": 546,
+            "title": "Preserve shared route coverage beyond point windows",
+            "head": "f54e2ec870afe491cde0bfdf6cde2d29d3997609",
+            "url": "https://github.com/pH34r-pH/blue-swallow-wardriver/pull/546",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 543,
+            "title": "Open recent encounters in the shared signal sheet",
+            "head": "24409d9f28b70df5de085066f3871a8b3a3efd85",
+            "url": "https://github.com/pH34r-pH/blue-swallow-wardriver/pull/543",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 511,
+            "title": "Qualify focused Android emulator tests on Fleet",
+            "head": "af390fb497c9775da1c7cfdc0e186863a169f409",
+            "url": "https://github.com/pH34r-pH/blue-swallow-wardriver/pull/511",
+            "disposition": "paused_pending_source_reconciliation"
+          }
+        ],
+        "default_branch_ci": [
+          {
+            "workflow": "Repository governance",
+            "run_id": 43060288535,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/blue-swallow-wardriver/actions/runs/43060288535"
+          },
+          {
+            "workflow": "Documentation and artifact hygiene",
+            "run_id": 43060288492,
+            "event": "push",
+            "status": "queued",
+            "conclusion": null,
+            "url": "https://github.com/pH34r-pH/blue-swallow-wardriver/actions/runs/43060288492"
+          },
+          {
+            "workflow": "Android CI and signed release promotion",
+            "run_id": 43060288499,
+            "event": "push",
+            "status": "queued",
+            "conclusion": null,
+            "url": "https://github.com/pH34r-pH/blue-swallow-wardriver/actions/runs/43060288499"
+          },
+          {
+            "workflow": "Wardriver vNext contracts",
+            "run_id": 43060288702,
+            "event": "push",
+            "status": "queued",
+            "conclusion": null,
+            "url": "https://github.com/pH34r-pH/blue-swallow-wardriver/actions/runs/43060288702"
+          },
+          {
+            "workflow": "Wardriver private vNext release",
+            "run_id": 43060288528,
+            "event": "push",
+            "status": "queued",
+            "conclusion": null,
+            "url": "https://github.com/pH34r-pH/blue-swallow-wardriver/actions/runs/43060288528"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/Portfolio",
+        "default_branch": "main",
+        "baseline_commit": "1d85514412706ca997c2bf2f14739569cd3ea244",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 141,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/Portfolio/issues/141",
+            "updated_at": "2026-11-11T17:31:47Z"
+          }
+        ],
+        "open_pull_requests": [
+          {
+            "number": 139,
+            "title": "Clarify recruiter, researcher, and developer journeys",
+            "head": "a6db0a1f66499a1f0e3bc8d1a23e74610b111dbe",
+            "url": "https://github.com/pH34r-pH/Portfolio/pull/139",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 126,
+            "title": "Publish approved research and project essays",
+            "head": "7bbe8c6df4068d6e7d69388cb99fda5b78bf5b47",
+            "url": "https://github.com/pH34r-pH/Portfolio/pull/126",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 100,
+            "title": "Add immutable archival citation relation to Portfolio publication model",
+            "head": "2bf6e61157787a73241925e986f4b825e0f3b176",
+            "url": "https://github.com/pH34r-pH/Portfolio/pull/100",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 86,
+            "title": "Draft: 2071 UI glass field and responsive topology",
+            "head": "4498bc8eb7cddd6442ab530da436b1d94a9bce18",
+            "url": "https://github.com/pH34r-pH/Portfolio/pull/86",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 84,
+            "title": "docs: add Portfolio maps and documentation hygiene",
+            "head": "a22037b1c3a11ce36ce15fa96bda6769e9fa3b83",
+            "url": "https://github.com/pH34r-pH/Portfolio/pull/84",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 78,
+            "title": "Rebuild Portfolio as a 2071 research instrument",
+            "head": "104658b713f5c0dc84e1a0e2051a30d72110e393",
+            "url": "https://github.com/pH34r-pH/Portfolio/pull/78",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 29,
+            "title": "Document archived publication and recovery handoff",
+            "head": "9f96c9799f5407a23310b3650efc040bc335e965",
+            "url": "https://github.com/pH34r-pH/Portfolio/pull/29",
+            "disposition": "paused_pending_source_reconciliation"
+          }
+        ],
+        "default_branch_ci": [
+          {
+            "workflow": "Repository governance",
+            "run_id": 43061039576,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/Portfolio/actions/runs/43061039576"
+          },
+          {
+            "workflow": "Portfolio UX quality",
+            "run_id": 43061039788,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "failure",
+            "url": "https://github.com/pH34r-pH/Portfolio/actions/runs/43061039788"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/blue-swallow-society",
+        "default_branch": "main",
+        "baseline_commit": "545756ed9dc8a4356c3d53b820a53e3000e86cd1",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 131,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/blue-swallow-society/issues/131",
+            "updated_at": "2026-11-11T17:31:13Z"
+          }
+        ],
+        "open_pull_requests": [
+          {
+            "number": 120,
+            "title": "Add a mobile Fleet graph to the private Society operator",
+            "head": "10c12872d11c2f08ddd39b79d7362f44e9204968",
+            "url": "https://github.com/pH34r-pH/blue-swallow-society/pull/120",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 113,
+            "title": "ci: avoid rerunning entity unit tests in PostGIS job",
+            "head": "d53706aa4b79da91df617e376af90298ae36068b",
+            "url": "https://github.com/pH34r-pH/blue-swallow-society/pull/113",
+            "disposition": "paused_pending_source_reconciliation"
+          },
+          {
+            "number": 112,
+            "title": "ci: remove duplicate release source test run",
+            "head": "82f0627654547ed689a008b981e3e6cff2b0f347",
+            "url": "https://github.com/pH34r-pH/blue-swallow-society/pull/112",
+            "disposition": "paused_pending_source_reconciliation"
+          }
+        ],
+        "default_branch_ci": [
+          {
+            "workflow": "Requirements contract",
+            "run_id": 43060415477,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/blue-swallow-society/actions/runs/43060415477"
+          },
+          {
+            "workflow": "Documentation and artifact hygiene",
+            "run_id": 43060415505,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/blue-swallow-society/actions/runs/43060415505"
+          },
+          {
+            "workflow": "Repository governance",
+            "run_id": 43060415686,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/blue-swallow-society/actions/runs/43060415686"
+          },
+          {
+            "workflow": "World browser checks",
+            "run_id": 43060415442,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "failure",
+            "url": "https://github.com/pH34r-pH/blue-swallow-society/actions/runs/43060415442"
+          },
+          {
+            "workflow": "Society public CI",
+            "run_id": 43060415497,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "failure",
+            "url": "https://github.com/pH34r-pH/blue-swallow-society/actions/runs/43060415497"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/agent-readable-calling-card",
+        "default_branch": "main",
+        "baseline_commit": "e6a7e9f2abd38a1f723090ab340d6f471602b3a3",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 17,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/agent-readable-calling-card/issues/17",
+            "updated_at": "2026-11-11T17:32:04Z"
+          }
+        ],
+        "open_pull_requests": [],
+        "default_branch_ci": [
+          {
+            "workflow": "Repository governance",
+            "run_id": 43061368436,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/agent-readable-calling-card/actions/runs/43061368436"
+          },
+          {
+            "workflow": "toolkit",
+            "run_id": 43061368454,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/agent-readable-calling-card/actions/runs/43061368454"
+          },
+          {
+            "workflow": "pages build and deployment",
+            "run_id": 43061367804,
+            "event": "dynamic",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/agent-readable-calling-card/actions/runs/43061367804"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/socials",
+        "default_branch": "main",
+        "baseline_commit": "9008cf6da08137d70d4fe16fcea2071001dc4dda",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 19,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/socials/issues/19",
+            "updated_at": "2026-11-11T17:31:56Z"
+          }
+        ],
+        "open_pull_requests": [
+          {
+            "number": 17,
+            "title": "Professional: Seattle research-career pitch, readiness gates, and reputation campaign",
+            "head": "10f2869eca314255f03f600b06f6c96d686f0424",
+            "url": "https://github.com/pH34r-pH/socials/pull/17",
+            "disposition": "paused_pending_source_reconciliation"
+          }
+        ],
+        "default_branch_ci": [
+          {
+            "workflow": "Repository governance",
+            "run_id": 43061270453,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/socials/actions/runs/43061270453"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/book-development",
+        "default_branch": "main",
+        "baseline_commit": "7348385558abe9aaeac758bd90de18bbe7224519",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 5,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/book-development/issues/5",
+            "updated_at": "2026-11-11T17:31:51Z"
+          }
+        ],
+        "open_pull_requests": [],
+        "default_branch_ci": [
+          {
+            "workflow": "Repository governance",
+            "run_id": 43061127187,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/book-development/actions/runs/43061127187"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/blackbox",
+        "default_branch": "main",
+        "baseline_commit": "bed97c49b44ee0f90ed3a5f64f25dc11ba0a9182",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 6,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/blackbox/issues/6",
+            "updated_at": "2026-11-11T17:32:33Z"
+          }
+        ],
+        "open_pull_requests": [],
+        "default_branch_ci": [
+          {
+            "workflow": "Repository governance",
+            "run_id": 43061920962,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/blackbox/actions/runs/43061920962"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/longband",
+        "default_branch": "main",
+        "baseline_commit": "5345376aab073c70c9b75439e01942be66f00e00",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 76,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/longband/issues/76",
+            "updated_at": "2026-11-11T17:32:09Z"
+          }
+        ],
+        "open_pull_requests": [],
+        "default_branch_ci": [
+          {
+            "workflow": "Python Alpha prototypes",
+            "run_id": 43061486781,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "failure",
+            "url": "https://github.com/pH34r-pH/longband/actions/runs/43061486781"
+          },
+          {
+            "workflow": "Repository governance",
+            "run_id": 43061486548,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/longband/actions/runs/43061486548"
+          },
+          {
+            "workflow": "OpenMLS prototype",
+            "run_id": 43061486587,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/longband/actions/runs/43061486587"
+          }
+        ]
+      },
+      {
+        "repository": "pH34r-pH/home-bot",
+        "default_branch": "main",
+        "baseline_commit": "80c677642a73d40ea712f169c9abd06bf3937d75",
+        "governance_validator": {
+          "repository": "pH34r-pH/long-haul",
+          "revision": "28b9afbd17faa2baea9f2fb302abe7db71ee9882",
+          "mode": "pinned_action"
+        },
+        "stabilization_issues": [
+          {
+            "number": 2,
+            "state": "open",
+            "url": "https://github.com/pH34r-pH/home-bot/issues/2",
+            "updated_at": "2026-11-11T17:32:15Z"
+          }
+        ],
+        "open_pull_requests": [],
+        "default_branch_ci": [
+          {
+            "workflow": "Repository governance",
+            "run_id": 43061616373,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/home-bot/actions/runs/43061616373"
+          },
+          {
+            "workflow": "Core checks",
+            "run_id": 43061616356,
+            "event": "push",
+            "status": "completed",
+            "conclusion": "success",
+            "url": "https://github.com/pH34r-pH/home-bot/actions/runs/43061616356"
+          }
+        ]
+      }
+    ],
+    "findings": [
+      {
+        "issue": "https://github.com/pH34r-pH/long-haul/issues/248",
+        "status": "closure_not_supported_by_main",
+        "detail": "PR #249 is open and resource policy source is absent on main. Restore the existing prerequisite rather than duplicating it."
+      },
+      {
+        "status": "dependency_graph_gap",
+        "detail": "Final reconciliation explicitly requires every repository task, including those omitted from its initial depends_on list."
+      },
+      {
+        "status": "ci_not_globally_green",
+        "detail": "Default-branch failures: research-notes, Portfolio, Society, Longband. Fleet, DSL, Tone, DAE, Wardriver have queued checks; Compiler lifecycle is cancelled. Repair in dependency order, without treating governance success as full acceptance."
+      }
+    ]
+  }
+}

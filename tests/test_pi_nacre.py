@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from long_haul.adapters.pi_nacre import (
+    PiNacreLaunchOptions,
     PiNacreScope,
     build_pi_nacre_context,
     nacre_policy_receipt,
@@ -108,13 +109,12 @@ def launch_context():
     return build_pi_nacre_context(
         session=session(),
         contract=contract(),
-        profile_id="crew-profile-1",
-        evidence_ref="event:caller-admitted-1",
-        scopes=[PiNacreScope(scope_type="crew", scope_id="crew-1")],
-        repository_id="pH34r-pH/long-haul",
-        policy_decisions=[policy_receipt()],
-        source_event_refs=["event:mission-admitted-1"],
-        capture_proposals=True,
+        options=PiNacreLaunchOptions(
+            profile_id="crew-profile-1", evidence_ref="event:caller-admitted-1",
+            scopes=[PiNacreScope(scope_type="crew", scope_id="crew-1")],
+            repository_id="pH34r-pH/long-haul", policy_decisions=[policy_receipt()],
+            source_event_refs=["event:mission-admitted-1"], capture_proposals=True,
+        ),
     )
 
 
@@ -137,9 +137,10 @@ def test_context_rejects_missing_crew_or_contract_mismatch():
         build_pi_nacre_context(
             session=session(crew_id=None),
             contract=contract(),
-            profile_id="crew-profile-1",
-            evidence_ref="event:caller-admitted-1",
-            scopes=[PiNacreScope(scope_type="crew", scope_id="crew-1")],
+            options=PiNacreLaunchOptions(
+                profile_id="crew-profile-1", evidence_ref="event:caller-admitted-1",
+                scopes=[PiNacreScope(scope_type="crew", scope_id="crew-1")],
+            ),
         )
 
     mismatched = session().model_copy(update={"contract_id": "other-contract"})
@@ -147,9 +148,10 @@ def test_context_rejects_missing_crew_or_contract_mismatch():
         build_pi_nacre_context(
             session=mismatched,
             contract=contract(),
-            profile_id="crew-profile-1",
-            evidence_ref="event:caller-admitted-1",
-            scopes=[PiNacreScope(scope_type="crew", scope_id="crew-1")],
+            options=PiNacreLaunchOptions(
+                profile_id="crew-profile-1", evidence_ref="event:caller-admitted-1",
+                scopes=[PiNacreScope(scope_type="crew", scope_id="crew-1")],
+            ),
         )
 
 
@@ -174,6 +176,24 @@ def test_policy_receipt_rejects_non_augmentation_requests():
     decision = ResourcePolicyEvaluator().evaluate(profile, request)
     with pytest.raises(ValueError, match="AI_AUGMENT"):
         nacre_policy_receipt(request, decision)
+
+
+def test_policy_receipt_rejects_rebinding_an_allowed_read():
+    request = ResourceUseRequest(
+        request_id="same-id", resource_id="urn:resource", caller_id="original",
+        action=ResourceAction.READ, now=NOW,
+    )
+    profile = ResourcePolicyProfile(
+        identity=ResourceIdentity(resource_id="urn:resource", resource_type="fixture"),
+        lifecycle=ResourceLifecycle.ACTIVE, policy_id="urn:policy", policy_assigner="urn:operator",
+        permissions=[PolicyRule(rule_id="read", actions=[ResourceAction.READ])],
+    )
+    decision = ResourcePolicyEvaluator().evaluate(profile, request)
+    forged = request.model_copy(update={
+        "action": ResourceAction.AI_AUGMENT, "purpose": "mission-assistance", "caller_id": "attacker",
+    })
+    with pytest.raises(ValueError, match="binding"):
+        nacre_policy_receipt(forged, decision)
 
 
 def test_owner_only_context_file_round_trips(tmp_path):
