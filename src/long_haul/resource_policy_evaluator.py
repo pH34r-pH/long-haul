@@ -17,12 +17,13 @@ from .resource_policy_models import (
 )
 
 RequestFactory = Callable[[str], ResourceUseRequest]
+DecisionFields = dict[str, Any]
 
 
 def _decision_fields(
     profile: ResourcePolicyProfile,
     request: ResourceUseRequest,
-) -> dict[str, Any]:
+) -> DecisionFields:
     return {
         "request_id": request.request_id,
         "resource_id": request.resource_id,
@@ -107,6 +108,134 @@ def _flatten(decisions: Iterable[PolicyDecision], field_name: str) -> list[str]:
     ]
 
 
+def _preflight_decision(
+    profile: ResourcePolicyProfile,
+    request: ResourceUseRequest,
+    common: DecisionFields,
+) -> PolicyDecision | None:
+    if request.resource_id != profile.identity.resource_id:
+        return PolicyDecision(
+            status=PolicyDecisionStatus.DENY,
+            reason="resource identity mismatch",
+            **common,
+        )
+    lifecycle_status = _lifecycle_status(profile.lifecycle)
+    if lifecycle_status is not None:
+        return PolicyDecision(
+            status=lifecycle_status,
+            reason=f"resource lifecycle is {profile.lifecycle.value}",
+            **common,
+        )
+    retention_until = profile.privacy.retention_until
+    if retention_until and request.now > retention_until:
+        return PolicyDecision(
+            status=PolicyDecisionStatus.EXPIRED,
+            reason="resource retention period expired",
+            **common,
+        )
+    return None
+
+
+def _matching_rules(
+    profile: ResourcePolicyProfile,
+    request: ResourceUseRequest,
+) -> tuple[list[PolicyRule], list[PolicyRule]]:
+    permissions = [rule for rule in profile.permissions if _rule_matches(rule, request)]
+    prohibitions = [rule for rule in profile.prohibitions if _rule_matches(rule, request)]
+    return permissions, prohibitions
+
+
+def _resolve_matches(
+    permissions: list[PolicyRule],
+    prohibitions: list[PolicyRule],
+    request: ResourceUseRequest,
+    common: DecisionFields,
+) -> PolicyDecision:
+    permission_ids = [rule.rule_id for rule in permissions]
+    prohibition_ids = [rule.rule_id for rule in prohibitions]
+    if permissions and prohibitions:
+        return PolicyDecision(
+            status=PolicyDecisionStatus.CONFLICT,
+            reason="matching permission and prohibition require reviewed resolution",
+            matched_permissions=permission_ids,
+            matched_prohibitions=prohibition_ids,
+            **common,
+        )
+    if prohibitions:
+        return PolicyDecision(
+            status=PolicyDecisionStatus.DENY,
+            reason="an explicit prohibition matched",
+            matched_prohibitions=prohibition_ids,
+            **common,
+        )
+    if not permissions:
+        return PolicyDecision(
+            status=PolicyDecisionStatus.UNKNOWN,
+            reason="no explicit permission matched; fail closed",
+            **common,
+        )
+    duties = _unfulfilled_duties(permissions, request)
+    if duties:
+        return PolicyDecision(
+            status=_duty_status(duties),
+            reason="permission matched but required duties remain unsatisfied",
+            matched_permissions=permission_ids,
+            unsatisfied_duties=[duty.duty_id for duty in duties],
+            **common,
+        )
+    return PolicyDecision(
+        status=PolicyDecisionStatus.ALLOW,
+        reason="explicit permission matched and all duties are satisfied",
+        matched_permissions=permission_ids,
+        **common,
+    )
+
+
+def _blocked_decisions(decisions: list[PolicyDecision]) -> list[PolicyDecision] | None:
+    precedence = (
+        PolicyDecisionStatus.DENY,
+        PolicyDecisionStatus.RETRACTED,
+        PolicyDecisionStatus.EXPIRED,
+        PolicyDecisionStatus.CONFLICT,
+        PolicyDecisionStatus.UNAVAILABLE,
+        PolicyDecisionStatus.REQUIRE_CONSENT,
+        PolicyDecisionStatus.REQUIRE_REVIEW,
+        PolicyDecisionStatus.UNKNOWN,
+    )
+    for status in precedence:
+        blocked = [decision for decision in decisions if decision.status is status]
+        if blocked:
+            return blocked
+    return None
+
+
+def _derived_decision(
+    decisions: list[PolicyDecision],
+    blocked: list[PolicyDecision] | None,
+) -> PolicyDecision:
+    resource_id = _derived_resource_id(decisions)
+    first = (blocked or decisions)[0]
+    if blocked:
+        return PolicyDecision(
+            request_id=first.request_id,
+            resource_id=resource_id,
+            status=first.status,
+            reason=f"derived use blocked by {len(blocked)} source policy decision(s)",
+            matched_permissions=_flatten(decisions, "matched_permissions"),
+            matched_prohibitions=_flatten(decisions, "matched_prohibitions"),
+            unsatisfied_duties=_flatten(decisions, "unsatisfied_duties"),
+            evaluated_at=first.evaluated_at,
+        )
+    return PolicyDecision(
+        request_id=first.request_id,
+        resource_id=resource_id,
+        status=PolicyDecisionStatus.ALLOW,
+        reason="all source policies explicitly allow the derived use",
+        matched_permissions=_flatten(decisions, "matched_permissions"),
+        evaluated_at=first.evaluated_at,
+    )
+
+
 class ResourcePolicyEvaluator:
     """Evaluate resource-side policy; callers still enforce the result."""
 
@@ -116,69 +245,11 @@ class ResourcePolicyEvaluator:
         request: ResourceUseRequest,
     ) -> PolicyDecision:
         common = _decision_fields(profile, request)
-        if request.resource_id != profile.identity.resource_id:
-            return PolicyDecision(
-                status=PolicyDecisionStatus.DENY,
-                reason="resource identity mismatch",
-                **common,
-            )
-
-        lifecycle_status = _lifecycle_status(profile.lifecycle)
-        if lifecycle_status is not None:
-            return PolicyDecision(
-                status=lifecycle_status,
-                reason=f"resource lifecycle is {profile.lifecycle.value}",
-                **common,
-            )
-        if profile.privacy.retention_until and request.now > profile.privacy.retention_until:
-            return PolicyDecision(
-                status=PolicyDecisionStatus.EXPIRED,
-                reason="resource retention period expired",
-                **common,
-            )
-
-        prohibitions = [rule for rule in profile.prohibitions if _rule_matches(rule, request)]
-        permissions = [rule for rule in profile.permissions if _rule_matches(rule, request)]
-        prohibition_ids = [rule.rule_id for rule in prohibitions]
-        permission_ids = [rule.rule_id for rule in permissions]
-
-        if prohibitions and permissions:
-            return PolicyDecision(
-                status=PolicyDecisionStatus.CONFLICT,
-                reason="matching permission and prohibition require reviewed resolution",
-                matched_permissions=permission_ids,
-                matched_prohibitions=prohibition_ids,
-                **common,
-            )
-        if prohibitions:
-            return PolicyDecision(
-                status=PolicyDecisionStatus.DENY,
-                reason="an explicit prohibition matched",
-                matched_prohibitions=prohibition_ids,
-                **common,
-            )
-        if not permissions:
-            return PolicyDecision(
-                status=PolicyDecisionStatus.UNKNOWN,
-                reason="no explicit permission matched; fail closed",
-                **common,
-            )
-
-        duties = _unfulfilled_duties(permissions, request)
-        if duties:
-            return PolicyDecision(
-                status=_duty_status(duties),
-                reason="permission matched but required duties remain unsatisfied",
-                matched_permissions=permission_ids,
-                unsatisfied_duties=[duty.duty_id for duty in duties],
-                **common,
-            )
-        return PolicyDecision(
-            status=PolicyDecisionStatus.ALLOW,
-            reason="explicit permission matched and all duties are satisfied",
-            matched_permissions=permission_ids,
-            **common,
-        )
+        preflight = _preflight_decision(profile, request, common)
+        if preflight is not None:
+            return preflight
+        permissions, prohibitions = _matching_rules(profile, request)
+        return _resolve_matches(permissions, prohibitions, request, common)
 
     def evaluate_all(
         self,
@@ -191,45 +262,4 @@ class ResourcePolicyEvaluator:
         ]
         if not decisions:
             raise ValueError("at least one source policy is required")
-
-        precedence = (
-            PolicyDecisionStatus.DENY,
-            PolicyDecisionStatus.RETRACTED,
-            PolicyDecisionStatus.EXPIRED,
-            PolicyDecisionStatus.CONFLICT,
-            PolicyDecisionStatus.UNAVAILABLE,
-            PolicyDecisionStatus.REQUIRE_CONSENT,
-            PolicyDecisionStatus.REQUIRE_REVIEW,
-            PolicyDecisionStatus.UNKNOWN,
-        )
-        blocked = next(
-            (
-                [decision for decision in decisions if decision.status is status]
-                for status in precedence
-                if any(decision.status is status for decision in decisions)
-            ),
-            None,
-        )
-        resource_id = _derived_resource_id(decisions)
-        if blocked:
-            first = blocked[0]
-            return PolicyDecision(
-                request_id=first.request_id,
-                resource_id=resource_id,
-                status=first.status,
-                reason=f"derived use blocked by {len(blocked)} source policy decision(s)",
-                matched_permissions=_flatten(decisions, "matched_permissions"),
-                matched_prohibitions=_flatten(decisions, "matched_prohibitions"),
-                unsatisfied_duties=_flatten(decisions, "unsatisfied_duties"),
-                evaluated_at=first.evaluated_at,
-            )
-
-        first = decisions[0]
-        return PolicyDecision(
-            request_id=first.request_id,
-            resource_id=resource_id,
-            status=PolicyDecisionStatus.ALLOW,
-            reason="all source policies explicitly allow the derived use",
-            matched_permissions=_flatten(decisions, "matched_permissions"),
-            evaluated_at=first.evaluated_at,
-        )
+        return _derived_decision(decisions, _blocked_decisions(decisions))
