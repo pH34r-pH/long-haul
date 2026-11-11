@@ -12,8 +12,11 @@ deterministic scripted fixture adapter, and a pinned Pi subprocess adapter with 
 separate writable Docker/gVisor worker profile. The scripted fixture performs no tool execution,
 starts no subprocess, and claims no model, sandbox, or real Pi qualification.
 
-The required `Pi worker qualification` job is the real subprocess/worker gate;
-its first run is pending. Independent evaluator acceptance remains separate from both.
+The required `Pi worker qualification` job is the real subprocess/worker gate.
+Prior source `a6cce652` passed eight actual Pi cases and six evaluator prerequisite
+cases in [run 43099422919](https://github.com/pH34r-pH/long-haul/actions/runs/43099422919).
+The current source must qualify again on its exact head. Independent evaluator
+acceptance remains separate from both.
 The existing legacy Pi prompt/tool helper is not replaced by this slice.
 
 ## Admission and privacy
@@ -89,6 +92,25 @@ permission cannot authorize execution. Unknown, malformed, duplicate, cancelled,
 or timed-out interlocks deny. A completion without exactly one matching host
 allow is invalid. Ordinary end events reference the execution admission receipt.
 
+Writes and edits require a separate authenticated output/model policy. Changed
+bytes receive a new derived ResourceIdentity and an operation-bound derivation
+receipt. The original policy's content identity and grants are preserved.
+`ResourcePolicyEvaluator.evaluate_all` checks the same requested action and
+purpose against every source, initial task/context input, observed native-read
+input and output-policy parent. Completion rechecks derivation rights; later
+read/edit uses recheck all parents, including lifecycle, expiry and retention.
+Fresh-session resume imports this typed lineage alongside the exact candidate;
+changing an old profile's content hash cannot substitute for derivation.
+
+An arbitrary prompt callback supplies no authority. The authenticated caller
+must declare policies covering the complete exact task/context view, bound to
+its keyed content fingerprint, context manifest and TaskDigest identity. The
+host checks trace annotation plus current source READ/AI_AUGMENT before queueing
+any text. Input history records only the template reference, keyed actual text
+identity, task/context references, source decisions and requested/acknowledged
+status. A denied or unacknowledged request never claims delivery. These initial
+input policies also restrict every subsequent candidate derivation.
+
 The agent's settings, model/auth configuration and system text are separately
 read-only mounts inside a disposable writable lock/cache parent. The launcher
 scrubs the child environment and disables automatic project context, packages,
@@ -116,6 +138,15 @@ cleanup failure produces no such result. Trusted Git object construction merges
 stopped projected bytes with the frozen base, preserving unprojected files, then
 reuses the existing exact candidate freeze and independent evaluator.
 
+If removal cannot be confirmed, the worker retains its workspace/control trees
+and an owner-only private recovery receipt naming the exact container, attempt
+and environment. The caller must keep the lease held; the executor refuses new
+work or workspace reuse. Explicit `recover()` retries removal and returns the
+existing HarnessCleanup proof only after observed success, then removes the
+staging trees. The failed-state receipt remains immutable beside the recovery
+proof. Recovery paths and container-management details do not enter ordinary
+semantic history.
+
 ## Finish and resume
 
 Finalizing an attempt requires an exact trusted process-tree cleanup receipt.
@@ -138,7 +169,7 @@ is introduced.
 ## Conformance
 
 ```sh
-python -m pytest -q tests/test_harness_trajectory.py tests/test_pi_worker.py tests/test_worker_candidate.py
+python -m pytest -q tests/test_harness_trajectory.py tests/test_pi_worker.py tests/test_worker_candidate.py tests/test_pi_derivation.py tests/test_pi_input.py tests/test_pi_recovery.py
 ```
 
 The fixtures cover deterministic replay, canonical arguments, private canaries,

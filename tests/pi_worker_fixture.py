@@ -17,7 +17,11 @@ from long_haul.adapters.harness_trace import (
     TraceNormalizer,
     TraceUseAdmission,
 )
-from long_haul.adapters.pi_admission import WorkerResourceAdmission
+from long_haul.adapters.pi_admission import (
+    WorkerPolicyBinding,
+    WorkerPromptAdmission,
+    WorkerResourceAdmission,
+)
 from long_haul.adapters.pi_assets import PiRuntimeAssets
 from long_haul.adapters.pi_rpc import pi_prompt
 from long_haul.adapters.pi_worker import (
@@ -41,6 +45,22 @@ PLAN = {"mode": "success", "actions": [
     {"tool": "read", "args": {"path": "program.py"}},
     {"tool": "edit", "args": {"path": "program.py", "edits": [{"oldText": "a - b", "newText": "a + b"}]}},
 ]}
+
+
+def admit_prompt(normalizer, text, *, derive=True):
+    attempt = normalizer.attempt
+    fingerprint = normalizer.fingerprint("prompt-content", text)
+    suffix = fingerprint.split(":")[1]
+    resource = ResourcePolicyProfile(
+        identity=ResourceIdentity(resource_id="urn:fixture:task-view:" + suffix,
+                                  resource_type="complete-task-context-view", content_digest=fingerprint),
+        authority_class="reviewed-task", lifecycle="active", policy_id="urn:fixture:task-policy:" + suffix,
+        policy_assigner="urn:fixture:operator", permissions=[PolicyRule(rule_id="task",
+            actions=["read", "ai-augment", "derive"] if derive else ["read", "ai-augment"],
+            purposes=["repository-work"], crew_ids=[attempt.crew_id], contract_ids=[attempt.contract_id])],
+    )
+    return WorkerPromptAdmission((WorkerPolicyBinding(resource, resource.fingerprint),), fingerprint,
+                                  attempt.context_manifest, attempt.digest)
 
 
 def installed_assets():
@@ -89,6 +109,16 @@ def worker_setup(tmp_path, plan, *, seconds=20):
         policy_assigner="urn:fixture:operator", permissions=[PolicyRule(rule_id="file", actions=["read", "ai-augment", "derive"],
             purposes=["repository-work"], crew_ids=[session.crew_id], contract_ids=[work.contract_id])],
     )
-    registry = {"program.py": WorkerResourceAdmission(resource, resource.fingerprint, digest)}
+    output = ResourcePolicyProfile(
+        identity=ResourceIdentity(resource_id="urn:fixture:synthetic-output", resource_type="output-authority"),
+        authority_class="authoritative-control", lifecycle="active", policy_id="urn:fixture:output-policy",
+        policy_assigner="urn:fixture:operator", permissions=[PolicyRule(rule_id="output", actions=["read", "ai-augment", "derive"],
+            purposes=["repository-work"], crew_ids=[session.crew_id], contract_ids=[work.contract_id])],
+    )
+    registry = {"program.py": WorkerResourceAdmission(resource, resource.fingerprint, digest,
+        output_policy=WorkerPolicyBinding(output, output.fingerprint))}
     prompt = lambda current: pi_prompt(work, session=session, evaluation_time=current)
-    return worker, PiWorkerRequest(root, snapshot, normalizer, registry, prompt, plan), evaluator
+    template = DigestReference(reference="urn:long-haul:pi-prompt-renderer-v1",
+                               digest=content_digest(Path("src/long_haul/adapters/pi_rpc.py").read_bytes()))
+    return worker, PiWorkerRequest(root, snapshot, normalizer, registry, prompt, plan, template,
+                                   admit_prompt(normalizer, prompt(now))), evaluator

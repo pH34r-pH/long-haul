@@ -1,13 +1,31 @@
 """Pinned real Pi RPC adapter; transport and OS cleanup are executor-owned."""
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 
-from ..work.harness import HarnessAttempt, HarnessCleanup, progress_event
+from ..work.harness import (
+    HarnessAttempt,
+    HarnessCleanup,
+    HarnessInputEvidence,
+    progress_event,
+)
 from ..work.progress import ProgressMonitor, ProgressPolicy
+from ..work.repository_models import DigestReference
 from .harness_trace import TraceAdmissionDenied, TraceArgumentsInvalid
-from .pi_admission import PiToolAdmission, regular_contents
+from .pi_admission import PiToolAdmission, WorkerPromptAdmission, regular_contents
 from .pi_trajectory import PiTrajectoryProjector
+
+
+@dataclass(frozen=True)
+class PiPrompt:
+    render: Callable[[datetime], str]
+    template: DigestReference
+    admission: WorkerPromptAdmission | None = None
+
+    def __call__(self, now):
+        return self.render(now)
 
 
 class PiCodingHarness:
@@ -26,6 +44,7 @@ class PiCodingHarness:
         maximum = normalizer.contract.budget.max_no_progress_steps or 6
         self.monitor = ProgressMonitor(ProgressPolicy(max_no_progress_steps=maximum))
         self.progress_events = []
+        self.inputs = []
 
     def _command(self, command, **arguments):
         identifier = "long-haul-" + command
@@ -42,8 +61,12 @@ class PiCodingHarness:
 
     def _response(self, record, now):
         expected = self._responses.pop(record.get("id"), None)
-        if expected is None or record.get("command") != expected or record.get("success") is not True:
+        if expected is None or record.get("command") != expected:
             raise TraceArgumentsInvalid("unmatched or unsuccessful Pi control response")
+        if record.get("success") is not True:
+            if expected == "prompt":
+                self._input("denied", now, prior=self.inputs[0])
+            raise TraceArgumentsInvalid("unsuccessful Pi control response")
         if expected == "get_state":
             state = record["data"]
             native = state["sessionId"]
@@ -54,15 +77,44 @@ class PiCodingHarness:
             self._command("set_auto_compaction", enabled=False)
         elif expected == "prompt":
             if record.get("data", {}).get("disposition") != "started":
+                self._input("denied", now, prior=self.inputs[0])
                 raise TraceArgumentsInvalid("Pi did not start the admitted prompt")
             self._prompt_acknowledged = True
+            self._input("acknowledged", now, prior=self.inputs[0])
         if not self._responses and not self._prompted and not self.projector.state.cancel_requested:
+            self._begin_prompt(now)
+
+    def _make_input(self, status, now, *, text=None, prior=None):
+        attempt = self.projector.state.attempt
+        receipt = self.projector.normalizer.admission.authorize(attempt, now)
+        fingerprint = prior.prompt_fingerprint if prior else self.projector.normalizer.fingerprint("prompt-content", text) if text is not None else None
+        sources = self.guard.admit_prompt(getattr(self.prompt, "admission", None), fingerprint, now) if status != "denied" else ()
+        entry = HarnessInputEvidence(
+            attempt_id=attempt.attempt_id, session_id=attempt.session_id, contract_digest=attempt.contract_digest,
+            context_manifest=attempt.context_manifest, task_digest=attempt.digest,
+            template=getattr(self.prompt, "template", None), status=status, timestamp=now, policy_receipt=receipt,
+            prompt_fingerprint=fingerprint, source_receipts=sources,
+            request=DigestReference(reference="artifact:prompt-request", digest=prior.fingerprint) if prior else None,
+        )
+        return entry
+
+    def _input(self, status, now, *, prior=None):
+        self.inputs.append(self._make_input(status, now, prior=prior))
+
+    def _begin_prompt(self, now):
+        try:
             self.guard._exact_contract()
+            self.projector.normalizer.admission.authorize(self.projector.state.attempt, now)
             prompt = self.prompt(now)  # Recheck context freshness at delivery.
             if not isinstance(prompt, str) or len(prompt.encode()) > 131072:
                 raise TraceArgumentsInvalid("worker prompt exceeds bound")
-            self._prompted = True
+            entry = self._make_input("requested", now, text=prompt)
             self._command("prompt", message=prompt)
+        except (ValueError, TypeError):
+            self._input("denied", now)
+            raise
+        self._prompted = True
+        self.inputs.append(entry)
 
     def _record(self, record, now, tick):
         kind = record["type"]
@@ -88,7 +140,7 @@ class PiCodingHarness:
             self.guard.start(record)
             before = self._workspace_reference()
         elif kind == "tool_execution_end":
-            execution_admission = self.guard.end(record, self.worker)
+            execution_admission = self.guard.end(record, self.worker, now)
             after = self._workspace_reference()
         return self.projector.feed(record, now, tick, candidate_before=before, candidate_after=after,
                                    execution_admission=execution_admission)
@@ -130,4 +182,4 @@ class PiCodingHarness:
         self._command("abort")
 
     def finish(self, cleanup: HarnessCleanup, candidate=None):
-        return self.projector.state.finish(self.projector.events, cleanup, candidate)
+        return self.projector.state.finish(self.projector.events, cleanup, candidate, inputs=tuple(self.inputs))

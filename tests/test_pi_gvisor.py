@@ -6,8 +6,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from pi_worker_fixture import PLAN, worker_setup
-from repository_evaluator_fixture import environment
+from pi_worker_fixture import PLAN, admit_prompt, worker_setup
+from repository_evaluator_fixture import PROGRAM, environment
 
 from long_haul.adapters.harness_trace import TraceNormalizer
 from long_haul.adapters.pi_rpc import pi_prompt
@@ -15,7 +15,6 @@ from long_haul.events.store import EventStore
 from long_haul.work import WorkCheckpoint, WorkSession, render_digest
 from long_haul.work.harness import resume_harness_attempt
 from long_haul.work.repository_evaluator import RepositoryEvaluationRunner
-from long_haul.work.repository_models import content_digest
 from long_haul.work.repository_sandbox import DockerGVisorSandbox
 
 pytestmark = pytest.mark.skipif(os.environ.get("LONG_HAUL_REQUIRE_PI_GVISOR") != "1",
@@ -34,6 +33,7 @@ def test_actual_pi_repair_freezes_after_cleanup_then_independent_evaluator(tmp_p
     evidence(result, events)
     assert result.terminal == "settled" and result.candidate_disposition == "frozen" and snapshot is not None
     assert result.acceptance == "not_evaluated" and result.cleanup.process_tree_stopped
+    assert [entry.status for entry in result.inputs] == ["requested", "acknowledged"]
     assert [event.tool for event in events if event.phase == "end"] == ["read", "edit"]
     assert all(event.execution_admission is not None for event in events if event.phase == "end")
     assert b"a + b" in snapshot.contents["program.py"]
@@ -42,6 +42,22 @@ def test_actual_pi_repair_freezes_after_cleanup_then_independent_evaluator(tmp_p
         request.normalizer.contract, snapshot, profile, attempt_id="independent-after-pi", packet_id="independent-after-pi")
     assert evaluation.disposition.value == "ACCEPTED" and packet.validity == "valid"
     print(json.dumps({"qualification": "independent-evaluation-after-actual-pi", "packet": packet.model_dump(mode="json")}))
+
+
+def test_actual_pi_write_read_edit_keeps_derived_policy_and_operation_identity(tmp_path):
+    plan = {"mode": "success", "actions": [
+        {"tool": "write", "args": {"path": "program.py", "content": PROGRAM.decode()}},
+        {"tool": "read", "args": {"path": "program.py"}},
+        {"tool": "edit", "args": {"path": "program.py", "edits": [{"oldText": "a + b", "newText": "sum((a, b))"}]}},
+    ]}
+    worker, request, _ = worker_setup(tmp_path, plan)
+    result, events, snapshot = worker.run(request)
+    evidence(result, events)
+    assert result.terminal == "settled" and snapshot is not None
+    assert [event.tool for event in events if event.phase == "end"] == ["write", "read", "edit"]
+    assert all(event.execution_admission is not None for event in events if event.phase == "end")
+    assert b"sum((a, b))" in snapshot.contents["program.py"]
+    assert worker.last_derived_bindings["program.py"].identity.content_digest == snapshot.candidate.files[1].digest
 
 
 @pytest.mark.parametrize("plan,expected", [
@@ -96,16 +112,14 @@ def test_actual_pi_resume_starts_fresh_native_session_and_retains_candidate_hist
     normalizer = TraceNormalizer(contract, attempt, request.normalizer.policy,
                                  b"synthetic-public-qualification-only-key-256-bits", trace)
     resource = request.registry["program.py"]
-    source_digest = content_digest(snapshot.contents["program.py"])
-    resource.profile.identity.content_digest = source_digest
-    registry = {"program.py": replace(resource, content_digest=source_digest,
-                                      expected_policy_fingerprint=resource.profile.fingerprint)}
+    registry = {"program.py": replace(resource, derived=worker.last_derived_bindings["program.py"])}
     prompt = lambda now: pi_prompt(contract, digest, session=fresh, evaluation_time=now)
     resumed, new_events, candidate = worker.run(replace(request, base=snapshot, normalizer=normalizer,
-                                                       registry=registry, prompt=prompt, synthetic=plan, event_store=store))
+        registry=registry, prompt=prompt, synthetic=plan, event_store=store,
+        prompt_admission=admit_prompt(normalizer, prompt(datetime.now(UTC)))))
     evidence(resumed, new_events)
     assert resumed.terminal == "settled" and candidate.candidate == snapshot.candidate
     assert resumed.attempt.session_id != old.session_id and worker.last_native_session_tag != first_native
     assert resumed.attempt.previous_attempt.digest == previous.fingerprint and resumed.attempt.checkpoint
-    assert len(store.events()) == len(events) + len(new_events)
+    assert len(store.events()) == len(events) + len(new_events) + len(previous.inputs) + len(resumed.inputs) + 1
     assert "a + b" not in store.export_jsonl()

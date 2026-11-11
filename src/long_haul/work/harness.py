@@ -160,6 +160,32 @@ class HarnessCleanup(FrozenProjection):
     evidence: DigestReference
 
 
+class HarnessInputEvidence(FrozenProjection):
+    attempt_id: str
+    session_id: str
+    contract_digest: str
+    context_manifest: DigestReference
+    task_digest: DigestReference | None = None
+    template: DigestReference | None = None
+    prompt_fingerprint: str | None = Field(default=None, pattern=r"^hmac-sha256:[0-9a-f]{64}$")
+    status: Literal["requested", "acknowledged", "denied"]
+    timestamp: datetime
+    request: DigestReference | None = None
+    policy_receipt: DigestReference
+    source_receipts: tuple[DigestReference, ...] = ()
+    _time = field_validator("timestamp")(harness_time)
+
+    def event(self):
+        return Event(id=self.attempt_id + ":input:" + self.status, timestamp=self.timestamp,
+                     event_type="observation", source="harness-input-v1",
+                     payload={"contract_digest": self.contract_digest, "harness_input": self.model_dump(mode="json")})
+
+    def follows_request(self, prior):
+        return (prior is not None and self.request is not None and self.request.digest == prior.fingerprint
+                and prior.status == "requested" and self.prompt_fingerprint == prior.prompt_fingerprint
+                and self.template == prior.template and self.timestamp >= prior.timestamp)
+
+
 def _check_cleanup(attempt: HarnessAttempt, cleanup: HarnessCleanup) -> None:
     expected_boundary = "fixture" if attempt.harness.harness_id == "fixture" else "sandbox"
     if (cleanup.process_tree_stopped is not True or cleanup.attempt_id != attempt.attempt_id
@@ -176,6 +202,7 @@ class HarnessResult(FrozenProjection):
     candidate: DigestReference | None = None
     candidate_disposition: Literal["none", "frozen", "discarded"] = "none"
     acceptance: Literal["not_evaluated"] = "not_evaluated"
+    inputs: tuple[HarnessInputEvidence, ...] = Field(default=(), max_length=2)
 
     @model_validator(mode="after")
     def consistent_finalization(self):
@@ -183,7 +210,23 @@ class HarnessResult(FrozenProjection):
         expected = "none" if self.candidate is None else "frozen" if self.terminal == "settled" else "discarded"
         if self.candidate_disposition != expected:
             raise ValueError("candidate disposition contradicts terminal or candidate identity")
+        self._input_bindings()
         return self
+
+    def _input_bindings(self):
+        prior = None
+        for entry in self.inputs:
+            actual = (entry.attempt_id, entry.session_id, entry.contract_digest, entry.context_manifest, entry.task_digest)
+            expected = (self.attempt.attempt_id, self.attempt.session_id, self.attempt.contract_digest,
+                        self.attempt.context_manifest, self.attempt.digest)
+            if actual != expected:
+                raise ValueError("input evidence belongs to another attempt or task view")
+            if entry.status == "requested":
+                if prior is not None or entry.request is not None or entry.prompt_fingerprint is None:
+                    raise ValueError("input request is duplicated or lacks exact content identity")
+            elif (entry.status == "acknowledged" or entry.request is not None) and not entry.follows_request(prior):
+                raise ValueError("input acknowledgement lacks its exact requested identity")
+            prior = entry
 
 
 class HarnessState:
@@ -206,7 +249,7 @@ class HarnessState:
         self.terminal = "cancelled" if self.cancel_requested and status == "settled" else status
 
     def finish(self, events: tuple[SemanticActionEventV1, ...], cleanup: HarnessCleanup,
-               candidate: DigestReference | None = None) -> HarnessResult:
+               candidate: DigestReference | None = None, *, inputs=()) -> HarnessResult:
         if self.finished or self.terminal is None:
             raise ValueError("attempt is unfinished or already finalized")
         self._validate_cleanup(cleanup)
@@ -216,7 +259,7 @@ class HarnessState:
         result = HarnessResult(
             attempt=self.attempt, terminal=self.terminal, event_count=len(events), cleanup=cleanup,
             trace=DigestReference(reference="artifact:semantic-trace-v1", digest=content_digest(trace_bytes)),
-            candidate=candidate, candidate_disposition=disposition,
+            candidate=candidate, candidate_disposition=disposition, inputs=inputs,
         )
         self.finished = True
         return result

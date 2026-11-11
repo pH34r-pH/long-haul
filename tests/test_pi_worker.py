@@ -15,6 +15,7 @@ from long_haul.adapters.harness_trace import TraceAdmissionDenied, TraceArgument
 from long_haul.adapters.pi_admission import (
     GUARD_TITLE,
     PiToolAdmission,
+    WorkerPolicyBinding,
     WorkerResourceAdmission,
     regular_contents,
 )
@@ -44,7 +45,14 @@ def setup_guard(tmp_path, *, actions=None, content=b"before\n"):
                                                                     ResourceAction.DERIVE],
                                 purposes=["repository-work"], crew_ids=["crew"], contract_ids=["contract"])],
     )
-    registry = {"fixture/code.py": WorkerResourceAdmission(profile, profile.fingerprint, content_digest(content))}
+    output = ResourcePolicyProfile(
+        identity=ResourceIdentity(resource_id="urn:fixture:model-output", resource_type="output-authority"),
+        authority_class="authoritative-control", lifecycle="active", policy_id="urn:fixture:output-policy",
+        policy_assigner="urn:fixture:operator", permissions=[PolicyRule(rule_id="output", actions=["read", "ai-augment", "derive"],
+            purposes=["repository-work"], crew_ids=["crew"], contract_ids=["contract"])],
+    )
+    registry = {"fixture/code.py": WorkerResourceAdmission(profile, profile.fingerprint, content_digest(content),
+        output_policy=WorkerPolicyBinding(output, output.fingerprint))}
     guard = PiToolAdmission(normalizer, registry)
     return contract, attempt, normalizer, root, registry, guard
 

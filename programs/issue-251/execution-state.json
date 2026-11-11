@@ -6,17 +6,17 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-11T20:20:11.184023+00:00",
+    "updated_at": "2026-11-11T21:36:54.427134+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
         "task": "lh-244-pi-trace",
-        "state": "implementation_after_merged_evaluator"
-      },
-      {
-        "repository": "pH34r-pH/experiment-compiler",
-        "task": "compiler-150",
-        "state": "implementation"
+        "state": "previous_head_actual_runtime_passed_review_corrections_in_progress",
+        "parallel_preparation": {
+          "task": "lh-248-interchange",
+          "implementation_pr": "none_until_current_pr_and_security_order_permit",
+          "scope": "disjoint standards adapters after merged qualified Compiler lifecycle core"
+        }
       },
       {
         "repository": "pH34r-pH/long-haul-fleet",
@@ -26,7 +26,7 @@
       {
         "repository": "pH34r-pH/book-development",
         "task": "book-5",
-        "state": "reconciling_after_specified_gate"
+        "state": "source_and_local_evidence_approved_governance_queued"
       }
     ]
   },
@@ -136,11 +136,11 @@
               43088889747,
               43092685133
             ],
-            "remaining": "default-branch CI separately pending; no full worker/model competence claim"
+            "remaining": "Worker/model competence and downstream security remain separate qualifications; default-branch evaluator and source CI passed."
           },
           "checked_head": "ae21e7611ad375be04c4d41f806aeb7a1f809321",
           "merge_commit": "458bc2f1ec669392963b7fe29e4c252e2e70776c",
-          "default_branch_checks": "in_progress",
+          "default_branch_checks": "passed",
           "evidence": [
             "programs/issue-251/evidence/issue-243-local.json",
             "programs/issue-251/evidence/issue-243-review-fixes.json",
@@ -158,7 +158,25 @@
           ],
           "acceptance": "Pi emits replayable privacy-preserving semantic action events with exact harness identity.",
           "baseline_commit": "458bc2f1ec669392963b7fe29e4c252e2e70776c",
-          "preparation_scope": "Harness core independently reviewed; actual Pi/RPC worker integration now admitted after #243 merge"
+          "preparation_scope": "Harness core independently reviewed; actual Pi/RPC worker integration now admitted after #243 merge",
+          "implementation_pr": 256,
+          "qualification": {
+            "status": "previous_head_passed_review_fixes_pending",
+            "checked_head": "a6cce652bdc2ef78a09f78b3ea63530243ede104",
+            "tree": "dc2bfac442167105f64ea53192f9e92f989d465f",
+            "run": 43099422919,
+            "job": 130785792189,
+            "actual_pi_tests_passed": 8,
+            "provider": "synthetic_loopback_not_a_model",
+            "model_competence": false,
+            "receipt_sha256": "3376b1288c9daa95492d5f84b666ef0b72c90212bc42c47e6bc3980952052a1e",
+            "remaining": [
+              "derived edited-file policy and lifecycle qualification",
+              "failed-cleanup recovery preservation",
+              "actual delivered-prompt keyed identity",
+              "requalify final source on actual Pi and gVisor"
+            ]
+          }
         },
         {
           "id": "lh-245-security",
@@ -193,17 +211,54 @@
           }
         },
         {
-          "id": "compiler-150",
+          "id": "compiler-150-lifecycle-core",
           "repository": "pH34r-pH/experiment-compiler",
           "issue": 150,
-          "status": "in_progress",
+          "status": "completed",
           "depends_on": [
             "lh-242-context",
             "lh-243-evaluator"
           ],
+          "acceptance": "Reusable compile/verify/execute/finalize/publication components, current task/evaluator package admission and independent exact-source clean reconstruction are executable; protected signing remains explicitly staged. This subtask does not close #150.",
+          "implementation_pr": 151,
+          "checked_head": "d5b2cd687ae0befffa14f1ca188ed9fc7e7568eb",
+          "merge_commit": "a471d390a81193324098abb1fc85324c7f0f894c",
+          "default_branch_checks": "passed",
+          "evidence": [
+            "https://github.com/pH34r-pH/experiment-compiler/pull/151#issuecomment-6807396019",
+            "docs/evidence/issue-150-implementation.json",
+            "docs/evidence/issue-150-review-fixes.json",
+            "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-6807481361"
+          ],
+          "qualification": {
+            "local_tests_passed": 188,
+            "root_boundary_tests_passed": 6,
+            "lifecycle_run": 43101921417,
+            "structural_run": 43101921244,
+            "governance_run": 43101921050,
+            "protected_publication_invoked": false,
+            "default_branch_runs": [
+              43102952667,
+              43102952679
+            ]
+          }
+        },
+        {
+          "id": "compiler-150",
+          "repository": "pH34r-pH/experiment-compiler",
+          "issue": 150,
+          "status": "queued",
+          "depends_on": [
+            "compiler-150-lifecycle-core",
+            "lh-244-pi-trace",
+            "lh-245-security",
+            "lh-248-interchange"
+          ],
           "acceptance": "Reusable lifecycle components and repository-task, evaluator, trajectory, and corpus profiles are implemented without changing evidence semantics.",
           "baseline_commit": "4b0816e6b10d7d92d8c69ae47f1910ff41a5bfdb",
-          "upstream_contract_commit": "458bc2f1ec669392963b7fe29e4c252e2e70776c"
+          "upstream_contract_commit": "458bc2f1ec669392963b7fe29e4c252e2e70776c",
+          "remaining": "Implement actual upstream semantic-trajectory and governed-corpus profiles with guarded private-evaluator disclosure. Exact inert references alone do not satisfy #150.",
+          "core_merge_commit": "a471d390a81193324098abb1fc85324c7f0f894c"
         },
         {
           "id": "fleet-1612",
@@ -284,17 +339,20 @@
     {
       "id": "phase-2",
       "name": "Research claims proofs and governed corpora",
-      "status": "queued",
+      "status": "in_progress",
       "tasks": [
         {
           "id": "lh-248-interchange",
           "repository": "pH34r-pH/long-haul",
           "issue": 248,
-          "status": "queued",
+          "status": "in_progress",
           "depends_on": [
-            "compiler-150"
+            "compiler-150-lifecycle-core"
           ],
-          "acceptance": "Complete #248 lossless JSON-LD round-trip, executable SHACL and standards-native corpus/BOM projections using qualified shared Compiler profiles; close only with every acceptance item evidenced."
+          "acceptance": "Complete #248 lossless JSON-LD round-trip, executable SHACL and standards-native corpus/BOM projections using the merged shared Compiler lifecycle core. Preserve source semantics for final Compiler corpus profile qualification; close only with every acceptance item evidenced.",
+          "baseline_commit": "458bc2f1ec669392963b7fe29e4c252e2e70776c",
+          "shared_compiler_commit": "a471d390a81193324098abb1fc85324c7f0f894c",
+          "scope": "disjoint native standards adapters and executable conformance; no competing implementation PR"
         },
         {
           "id": "dsl-842",
@@ -462,6 +520,23 @@
             "local_validation": "required by issue; no hosted/private CI admission prerequisite",
             "publication": "requires_human_author_approval",
             "safe_work": "local_fixture_validation_repeat_builds_and_visual_qualification"
+          },
+          "implementation_pr": 6,
+          "checked_head": "9d71ce9b8e2686cbe5e46db1c3e8590784f3ba54",
+          "qualification": {
+            "status": "local_approved_existing_governance_queued",
+            "candidate_sha256": "707c751fa8d73938894e1c0a46961222cc72e871c492d3a45fc9fbf60374976f",
+            "publication_tests_passed": 18,
+            "offline_tests_passed": 16,
+            "formats_rebuilt_twice": [
+              "html",
+              "docx",
+              "pdf",
+              "epub"
+            ],
+            "governance_run": 43096302292,
+            "actual_browser_layout": "unavailable_alternate_engine_content_inspected",
+            "publication_authorized": false
           }
         },
         {
@@ -621,7 +696,8 @@
             "lh-64-full",
             "lh-246-corpus",
             "lh-247-multimodal",
-            "lh-241-parent"
+            "lh-241-parent",
+            "compiler-150-lifecycle-core"
           ],
           "acceptance": "All repository issues are closed or externally gated with exact staged procedures; governance and default-branch CI pass everywhere; final evidence ledger is posted."
         },
@@ -2540,6 +2616,43 @@
       "runtime_run": 43093995692,
       "closeout": "https://github.com/pH34r-pH/long-haul/issues/243#issuecomment-6806306703",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6806334980"
+    },
+    {
+      "at": "2026-11-11T21:26:57.478440+00:00",
+      "task": "lh-243-evaluator",
+      "status": "default_branch_checks_passed",
+      "merge_commit": "458bc2f1ec669392963b7fe29e4c252e2e70776c",
+      "run": 43095080084,
+      "ci_recovery": "Delayed queued/running state recovered without successful cancellation or rerun. Normal cancel and one job retry were refused; history retained.",
+      "journals": [
+        "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6806627648",
+        "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6806670436"
+      ]
+    },
+    {
+      "at": "2026-11-11T21:26:57.478440+00:00",
+      "task": "compiler-150-lifecycle-core",
+      "status": "completed",
+      "pull_request": 151,
+      "checked_head": "d5b2cd687ae0befffa14f1ca188ed9fc7e7568eb",
+      "merge_commit": "a471d390a81193324098abb1fc85324c7f0f894c",
+      "default_branch_checks": "passed",
+      "full_issue_150": "open_profiles_pending",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6807422095"
+    },
+    {
+      "at": "2026-11-11T21:26:57.478440+00:00",
+      "task": "compiler-150",
+      "status": "dependency_reconciled",
+      "reason": "Separate merged lifecycle/core from final profile qualification: #248 consumes core, then final Compiler corpus profiles consume qualified #248 outputs. Avoid an implicit semantic dependency cycle without admitting inert references as implementation."
+    },
+    {
+      "at": "2026-11-11T21:36:54.427134+00:00",
+      "task": "lh-248-interchange",
+      "status": "disjoint_implementation_after_qualified_lifecycle_core",
+      "shared_compiler_commit": "a471d390a81193324098abb1fc85324c7f0f894c",
+      "active_pr_policy": "PR256 stays sole active Long-Haul implementation PR; #245 follows #244. Standards branch remains isolated until integration is admitted.",
+      "reproduced_gap": "Current example emits no ODRL permission edges despite two authoring permissions; shallow shape conformance cannot certify native policy semantics."
     }
   ]
 }

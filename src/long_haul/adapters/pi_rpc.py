@@ -30,16 +30,9 @@ PI_SOURCE_ARCHIVE_SHA256 = (
 
 
 def pi_tools_for_contract(contract: WorkContract) -> list[str]:
-    """Map Long-Haul capabilities onto Pi's native tool allowlist."""
-    capabilities = set(contract.capabilities)
-    tools: list[str] = []
-    if "read" in capabilities:
-        tools.append("read")
-    if "test" in capabilities or "shell" in capabilities:
-        tools.append("bash")
-    if "edit" in capabilities:
-        tools.extend(["edit", "write"])
-    return tools
+    """Use the shared safe projection; test never grants native Bash authority."""
+    from .harness_trace import supported_pi_tools
+    return list(supported_pi_tools(contract))
 
 
 def pi_prompt(contract: WorkContract, digest: TaskDigest | None = None,

@@ -6,6 +6,7 @@ import os
 import platform
 import selectors
 import shutil
+import subprocess
 import tempfile
 import time
 from collections import deque
@@ -17,7 +18,7 @@ from typing import Literal
 
 import pydantic
 
-from ..events.store import EventStore
+from ..events.store import Event, EventStore
 from ..work.harness import HarnessCleanup
 from ..work.repository_candidate import CandidateSnapshot
 from ..work.repository_evaluation_models import EvaluatorEnvironment
@@ -25,9 +26,15 @@ from ..work.repository_models import DigestReference, content_digest
 from ..work.repository_sandbox import DockerGVisorSandbox
 from ..work.worker_candidate import freeze_stopped_worker
 from .harness_trace import TraceNormalizer, _canonical
-from .pi_admission import WorkerResourceAdmission, worker_path
+from .pi_admission import WorkerPromptAdmission, WorkerResourceAdmission, worker_path
 from .pi_assets import CONTROL, PiRuntimeAssets
-from .pi_harness import PiCodingHarness
+from .pi_harness import PiCodingHarness, PiPrompt
+from .pi_recovery import (
+    PiWorkerCleanupRequired,
+    PiWorkerRecovery,
+    recover_worker,
+    retain_recovery,
+)
 
 NODE_IMAGE = "docker.io/library/node:24.22.3-bookworm-slim@sha256:0e2646ab57e77b7a384a0cb59b6815b182c77e1f9c3ba36bd8435bd9c4e6680e"
 AGENT_FILES = ("settings.json", "models.json", "auth.json", "SYSTEM.md", "APPEND_SYSTEM.md")
@@ -47,6 +54,8 @@ class PiWorkerRequest:
     registry: dict[str, WorkerResourceAdmission] = field(repr=False)
     prompt: Callable[[datetime], str] = field(repr=False)
     synthetic: dict = field(repr=False)
+    prompt_template: DigestReference
+    prompt_admission: WorkerPromptAdmission
     cancel_after: float | None = None
     event_store: EventStore | None = field(default=None, repr=False)
 
@@ -78,6 +87,10 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
         self.assets = assets
         self._control_root = None
         self.last_native_session_tag = None
+        self.recovery_path = None
+        self._cleanup_pending = False
+        self._recovery = None
+        self.last_derived_bindings = {}
         super().__init__(environment, runsc_path, docker_path)
 
     @staticmethod
@@ -86,7 +99,7 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
         names = ("adapters/pi_worker.py", "adapters/pi_harness.py", "adapters/pi_admission.py", "adapters/pi_assets.py",
                  "adapters/pi_trajectory.py", "adapters/harness_trace.py", "work/harness.py", "work/worker_candidate.py",
                  "work/repository_sandbox.py", "work/repository_git.py", "work/repository_candidate.py",
-                 "resource_policy_models.py", "resource_policy_evaluator.py")
+                 "resource_policy_models.py", "resource_policy_evaluator.py", "adapters/pi_recovery.py", "adapters/pi_rpc.py")
         manifest = {name: content_digest((root / name).read_bytes()) for name in names}
         manifest.update({"adapters/pi_control/" + p.name: content_digest(p.read_bytes()) for p in CONTROL.glob("*.mjs")})
         return DigestReference(reference="urn:long-haul:pi-gvisor-worker-v1", digest=content_digest(
@@ -139,6 +152,8 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
 
     def run(self, request: PiWorkerRequest):
         """Synchronous bounded execution; no caller transcript or control secrets mount."""
+        if self._cleanup_pending:
+            raise PiWorkerCleanupRequired(self.recovery_path)
         self.assets.verify()
         normalizer, registry = request.normalizer, request.registry
         contract, attempt = normalizer.contract, normalizer.attempt
@@ -149,16 +164,39 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
                 or contract.repository_work.toolchain != self.assets.toolchain_reference()
                 or attempt.harness != self.harness_identity(request.synthetic)):
             raise ValueError("unsupported or mismatched exact Pi worker attempt")
-        with tempfile.TemporaryDirectory(prefix="long-haul-pi-control-") as controls, tempfile.TemporaryDirectory(prefix="long-haul-pi-work-") as workspace:
-            control, worker = Path(controls), Path(workspace)
-            self._control_root = control
+        control = Path(tempfile.mkdtemp(prefix="long-haul-pi-control-"))
+        worker = Path(tempfile.mkdtemp(prefix="long-haul-pi-work-"))
+        self._control_root = control
+        try:
             _prepare_control(control, attempt, normalizer.tools, request.synthetic)
             self._project(worker, request.base, registry, contract)
-            try:
-                return self._run(request, worker)
-            finally:
+            return self._run(request, worker)
+        finally:
+            if not self._cleanup_pending:
                 control.chmod(0o700)
+                shutil.rmtree(control)
+                shutil.rmtree(worker)
                 self._control_root = None
+
+    def recover(self, receipt_path: Path | None = None):
+        path = receipt_path or self.recovery_path
+        if path is None and self._recovery is not None:
+            path = self.recovery_path = retain_recovery(self._recovery)
+        if path is None or self.recovery_path is not None and path != self.recovery_path:
+            raise ValueError("no matching pending worker cleanup")
+        cleanup = recover_worker(self, path)
+        self._cleanup_pending = False
+        self._recovery = None
+        self._control_root = None
+        return cleanup
+
+    @property
+    def lease_releasable(self):
+        return not self._cleanup_pending
+
+    @property
+    def pending_recovery(self):
+        return self._recovery
 
     @staticmethod
     def _project(worker, base, registry, contract):
@@ -168,7 +206,8 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
             if not contract.permits_path(path):
                 raise ValueError("worker projection outside contract scope")
             data = base.contents.get(path)
-            if (content_digest(data) if data is not None else None) != admission.content_digest:
+            expected = admission.derived.content_digest if admission.derived else admission.content_digest
+            if (content_digest(data) if data is not None else None) != expected:
                 raise ValueError("worker projection source identity mismatch")
             target = worker / path
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -185,10 +224,15 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
         if len(container) != 64 or any(c not in "0123456789abcdef" for c in container):
             raise ValueError("invalid worker container identity")
         harness = None
+        self._cleanup_pending = True
+        environment = DigestReference(reference="artifact:pi-worker-environment", digest=self.environment.fingerprint)
+        self._recovery = PiWorkerRecovery(attempt=normalizer.attempt, container_id=container, workspace=worker,
+                                          control=self._control_root, environment=environment)
         try:
             self._verify_configuration(container, worker)
             with self._attached_process(container) as process:
-                harness = self._drive(process, normalizer, request.registry, worker, request.prompt, request.cancel_after)
+                harness = self._drive(process, normalizer, request.registry, worker,
+                                      PiPrompt(request.prompt, request.prompt_template, request.prompt_admission), request.cancel_after)
                 observed = json.loads(self._control("inspect", container))[0]["State"]
                 if harness.projector.state.terminal is None:
                     now, tick = datetime.now(UTC), time.monotonic_ns()
@@ -198,7 +242,14 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
                         harness.projector.eof(now, tick)
         finally:
             # Success here is mandatory; failures leave no candidate or resume receipt.
-            self._control("rm", "--force", "--volumes", container)
+            try:
+                self._control("rm", "--force", "--volumes", container)
+            except (OSError, ValueError, subprocess.SubprocessError):
+                self.recovery_path = retain_recovery(self._recovery)
+                raise PiWorkerCleanupRequired(self.recovery_path) from None
+            else:
+                self._cleanup_pending = False
+                self._recovery = None
         cleanup = HarnessCleanup(
             attempt_id=normalizer.attempt.attempt_id, session_id=normalizer.attempt.session_id,
             boundary="sandbox", process_tree_stopped=True,
@@ -216,11 +267,16 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
             snapshot = freeze_stopped_worker(request.source_root, request.base, worker, set(request.registry), normalizer.contract)
         candidate = DigestReference(reference="artifact:frozen-worker-candidate", digest=snapshot.candidate.fingerprint) if snapshot else None
         result = harness.finish(cleanup, candidate)
+        self.last_derived_bindings = dict(harness.guard.derived)
         if request.event_store is not None:
             for event in harness.projector.events:
                 request.event_store.append(event.event())
             for event in harness.progress_events:
                 request.event_store.append(event)
+            for item in harness.inputs:
+                request.event_store.append(item.event())
+            for derivation in harness.guard.derivations:
+                request.event_store.append(Event(event_type="observation", source="worker-derivation-v1", payload=derivation))
         return result, harness.projector.events, snapshot
 
     def _drive(self, process, normalizer, registry, worker, prompt, cancel_after):

@@ -1,0 +1,74 @@
+"""Unconfirmed removal retains private recovery state and denies reuse."""
+import json
+import subprocess
+from contextlib import nullcontext
+from types import SimpleNamespace
+
+import pytest
+from pi_worker_fixture import admit_prompt
+from test_harness_trajectory import reference
+from test_pi_worker import setup_guard
+
+from long_haul.adapters.harness_trace import TraceNormalizer
+from long_haul.adapters.pi_harness import PiCodingHarness
+from long_haul.adapters.pi_recovery import PiWorkerCleanupRequired, PiWorkerRecovery
+from long_haul.adapters.pi_worker import DockerGVisorPiWorker, PiWorkerRequest
+from long_haul.work.harness import harness_attempt
+
+
+def fake_executor(tmp_path):
+    contract, _, old, _, registry, _ = setup_guard(tmp_path)
+    contract.capabilities = ["read", "edit"]
+    from long_haul.work import WorkSession
+    session = WorkSession(contract_id=contract.contract_id, session_id=old.attempt.session_id, crew_id=old.attempt.crew_id)
+    attempt = harness_attempt(contract, session, old.attempt.harness, "cleanup-negative")
+    normalizer = TraceNormalizer(contract, attempt, old.policy, b"synthetic-recovery-external-key-256-bits", old.admission)
+    worker = object.__new__(DockerGVisorPiWorker)
+    worker.environment = SimpleNamespace(fingerprint=contract.repository_work.environment.digest)
+    worker.identity = reference("fake-control")
+    worker.assets = SimpleNamespace(verify=lambda: None, toolchain_reference=lambda: contract.repository_work.toolchain)
+    worker.harness_identity = lambda _: attempt.harness
+    worker._cleanup_pending, worker.recovery_path, worker._control_root = False, None, None
+    worker._create_arguments = lambda _: ["create"]
+    worker._verify_configuration = lambda *_: None
+    worker._attached_process = lambda *_: nullcontext(SimpleNamespace())
+    worker.fail_removal = True
+    def control(*arguments):
+        if arguments[0] == "rm" and worker.fail_removal:
+            raise subprocess.CalledProcessError(1, ["docker", "rm"])
+        return "c" * 64 if arguments[0] == "create" else json.dumps([{"State": {"Running": True}}])
+    worker._control = control
+    def drive(process, normalizer, registry, root, prompt, cancel):
+        harness = PiCodingHarness(normalizer, registry, root, lambda _: None, lambda: None, prompt)
+        harness.projector.state.settle("settled")
+        return harness
+    worker._drive = drive
+    base = SimpleNamespace(candidate=SimpleNamespace(base=contract.repository_work.source),
+                           contents={"fixture/code.py": b"before\n"})
+    request = PiWorkerRequest(tmp_path, base, normalizer, registry, lambda _: "task", {}, reference("template"),
+                              admit_prompt(normalizer, "task"))
+    return worker, request
+
+
+def test_failed_removal_keeps_workspace_control_and_private_identity_until_recovery(tmp_path):
+    worker, request = fake_executor(tmp_path)
+    with pytest.raises(PiWorkerCleanupRequired) as failure:
+        worker.run(request)
+    path = failure.value.receipt_path
+    receipt = PiWorkerRecovery.model_validate_json(path.read_bytes())
+    assert receipt.container_id == "c" * 64 and receipt.attempt == request.normalizer.attempt
+    assert receipt.control.exists() and receipt.workspace.exists()
+    assert not receipt.lease_releasable and not receipt.workspace_reusable
+    assert path.stat().st_mode & 0o777 == 0o600
+    assert str(receipt.workspace) not in str(failure.value)
+    with pytest.raises(PiWorkerCleanupRequired):
+        worker.run(request)
+    with pytest.raises(subprocess.CalledProcessError):
+        worker.recover()
+    assert receipt.workspace.exists() and worker._cleanup_pending
+    worker.fail_removal = False
+    cleanup = worker.recover()
+    assert cleanup.process_tree_stopped and cleanup.attempt_id == receipt.attempt.attempt_id
+    assert not receipt.workspace.exists() and not receipt.control.exists()
+    assert path.exists() and (path.parent / "cleanup.json").exists()
+    assert not worker._cleanup_pending and worker.recovery_path is None
