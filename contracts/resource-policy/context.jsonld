@@ -1,0 +1,46 @@
+{
+  "@context": {
+    "@version": 1.1,
+    "conformsTo": {
+      "@id": "dct:conformsTo",
+      "@type": "@id"
+    },
+    "dcat": "http://www.w3.org/ns/dcat#",
+    "dct": "http://purl.org/dc/terms/",
+    "derivedFrom": {
+      "@id": "prov:wasDerivedFrom",
+      "@type": "@id"
+    },
+    "dpv": "https://w3id.org/dpv#",
+    "dqv": "http://www.w3.org/ns/dqv#",
+    "generatedBy": {
+      "@id": "prov:wasGeneratedBy",
+      "@type": "@id"
+    },
+    "hasPolicy": {
+      "@id": "odrl:hasPolicy",
+      "@type": "@id"
+    },
+    "id": "@id",
+    "invalidatedAt": {
+      "@id": "prov:invalidatedAtTime",
+      "@type": "http://www.w3.org/2001/XMLSchema#dateTime"
+    },
+    "lh": "https://ph34r.dev/ns/long-haul/",
+    "license": {
+      "@id": "dct:license",
+      "@type": "@id"
+    },
+    "odrl": "http://www.w3.org/ns/odrl/2/",
+    "prof": "http://www.w3.org/ns/dx/prof/",
+    "prov": "http://www.w3.org/ns/prov#",
+    "rights": {
+      "@id": "dct:rights",
+      "@type": "@id"
+    },
+    "spdx": "https://spdx.org/rdf/3.0.1/terms/",
+    "title": "dct:title",
+    "type": "@type",
+    "version": "dct:hasVersion"
+  }
+}

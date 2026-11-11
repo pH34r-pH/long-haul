@@ -1,5 +1,8 @@
 from long_haul.adapters.pi_rpc import (
+    PI_PACKAGE_NAME,
     PI_PACKAGE_VERSION,
+    PI_SOURCE_ARCHIVE_SHA256,
+    PI_UPSTREAM_REPOSITORY,
     PI_UPSTREAM_REVISION,
     attempt_step_from_pi_event,
     pi_prompt,
@@ -36,19 +39,34 @@ def contract(capabilities):
 
 
 def test_pi_pin_is_explicit():
-    assert PI_PACKAGE_VERSION == "0.87.0"
-    assert len(PI_UPSTREAM_REVISION) == 40
+    assert PI_PACKAGE_NAME == "@earendil-works/pi-coding-agent"
+    assert PI_PACKAGE_VERSION == "1.5.2"
+    assert PI_UPSTREAM_REPOSITORY == "https://github.com/earendil-works/pi"
+    assert PI_UPSTREAM_REVISION == "b4afdddf44e059c67ccf5097e5317d913521b470"
+    assert (
+        PI_SOURCE_ARCHIVE_SHA256
+        == "da14b72e5d674959b64fc541e4a9241ac9fcdfa243431479119d3edb598b2231"
+    )
 
 
 def test_capabilities_map_to_native_pi_allowlist():
     assert pi_tools_for_contract(contract([])) == []
     assert pi_tools_for_contract(contract(["read"])) == ["read"]
-    assert pi_tools_for_contract(contract(["read", "edit", "test"])) == ["read", "bash", "edit", "write"]
+    assert pi_tools_for_contract(contract(["read", "edit", "test"])) == [
+        "read",
+        "bash",
+        "edit",
+        "write",
+    ]
 
 
 def test_prompt_uses_contract_and_bounded_digest():
     item = contract(["read"])
-    digest = TaskDigest(contract_id=item.contract_id, text="Remaining subgoals:\n- inspect failure", max_chars=200)
+    digest = TaskDigest(
+        contract_id=item.contract_id,
+        text="Remaining subgoals:\n- inspect failure",
+        max_chars=200,
+    )
     rendered = pi_prompt(item, digest)
     assert "repair the bounded fixture" in rendered
     assert "preserve public behavior" in rendered
@@ -70,4 +88,10 @@ def test_actual_upstream_tool_end_shape_translates_to_attempt_step():
 
 
 def test_non_completion_event_is_ignored():
-    assert attempt_step_from_pi_event({"type": "tool_execution_start", "toolName": "read"}, "1") is None
+    assert (
+        attempt_step_from_pi_event(
+            {"type": "tool_execution_start", "toolName": "read"},
+            "1",
+        )
+        is None
+    )

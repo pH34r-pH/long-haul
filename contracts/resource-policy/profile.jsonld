@@ -1,0 +1,53 @@
+{
+  "@context": "context.jsonld",
+  "id": "https://ph34r.dev/ns/long-haul/resource-policy/v1",
+  "type": "prof:Profile",
+  "title": "Long-Haul Resource Policy Profile v1",
+  "version": "1",
+  "dct:description": "Application profile for resource identity, provenance, operational authority, privacy, rights, quality, lifecycle, and permitted use.",
+  "prof:isProfileOf": [
+    "https://www.w3.org/TR/dx-prof/",
+    "https://www.w3.org/TR/odrl-model/",
+    "https://w3c.github.io/odrl/ai-vocab/",
+    "https://www.w3.org/TR/prov-o/",
+    "https://www.w3.org/TR/vocab-dcat-3/",
+    "https://www.w3.org/TR/vocab-dqv/",
+    "https://w3id.org/dpv/2.0",
+    "https://docs.mlcommons.org/croissant/docs/croissant-spec-1.1.html",
+    "https://spdx.github.io/spdx-spec/v3.0.1/",
+    "https://in-toto.io/docs/specs/"
+  ],
+  "prof:hasResource": [
+    {
+      "type": "prof:ResourceDescriptor",
+      "prof:hasRole": "prof:roleVocabulary",
+      "prof:hasArtifact": "context.jsonld"
+    },
+    {
+      "type": "prof:ResourceDescriptor",
+      "prof:hasRole": "prof:roleValidation",
+      "prof:hasArtifact": "profile.shacl.ttl"
+    },
+    {
+      "type": "prof:ResourceDescriptor",
+      "prof:hasRole": "prof:roleExample",
+      "prof:hasArtifact": "example-memory.yaml"
+    },
+    {
+      "type": "prof:ResourceDescriptor",
+      "prof:hasRole": "prof:roleGuidance",
+      "prof:hasArtifact": "../../docs/resource-policy.md"
+    }
+  ],
+  "lh:standardsStatus": {
+    "odrl": "W3C Recommendation",
+    "prov": "W3C Recommendation family",
+    "dcat": "W3C Recommendation",
+    "dqv": "W3C Recommendation",
+    "odrl-ai": "W3C Community Group specification; pinned provisional dependency",
+    "dpv": "W3C Community Group Final Report; pinned profile dependency",
+    "croissant": "MLCommons specification",
+    "spdx": "ISO/IEC 5962:2021 ecosystem specification",
+    "in-toto": "CNCF project specification"
+  }
+}

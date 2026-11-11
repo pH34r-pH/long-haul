@@ -1,6 +1,21 @@
 from .llama_cpp import LlamaCppAdapter
+from .pi_nacre import (
+    PI_NACRE_CONTEXT_SCHEMA_VERSION,
+    PiNacreCallerContext,
+    PiNacreLaunchContext,
+    PiNacreLaunchOptions,
+    PiNacrePolicyReceipt,
+    PiNacreScope,
+    build_pi_nacre_context,
+    nacre_policy_receipt,
+    pi_nacre_environment,
+    write_pi_nacre_context,
+)
 from .pi_rpc import (
+    PI_PACKAGE_NAME,
     PI_PACKAGE_VERSION,
+    PI_SOURCE_ARCHIVE_SHA256,
+    PI_UPSTREAM_REPOSITORY,
     PI_UPSTREAM_REVISION,
     attempt_step_from_pi_event,
     pi_prompt,
@@ -8,10 +23,23 @@ from .pi_rpc import (
 )
 
 __all__ = [
+    "PI_NACRE_CONTEXT_SCHEMA_VERSION",
+    "PI_PACKAGE_NAME",
     "PI_PACKAGE_VERSION",
+    "PI_SOURCE_ARCHIVE_SHA256",
+    "PI_UPSTREAM_REPOSITORY",
     "PI_UPSTREAM_REVISION",
     "LlamaCppAdapter",
+    "PiNacreCallerContext",
+    "PiNacreLaunchContext",
+    "PiNacreLaunchOptions",
+    "PiNacrePolicyReceipt",
+    "PiNacreScope",
     "attempt_step_from_pi_event",
+    "build_pi_nacre_context",
+    "nacre_policy_receipt",
+    "pi_nacre_environment",
     "pi_prompt",
     "pi_tools_for_contract",
+    "write_pi_nacre_context",
 ]
