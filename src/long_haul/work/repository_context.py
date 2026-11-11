@@ -250,14 +250,14 @@ def render_repository_context(view: RepositoryContextView) -> str:
 
 
 def render_repository_work(extension) -> str:
+    # Evaluator and extension digests may commit to low-entropy sealed checks.
+    # Keep exact identities in trusted control, not in the model-facing prompt.
     return json.dumps({
-        "repository_work": extension.fingerprint,
         "source": {"repository_id": extension.source.repository_id, "commit": extension.source.commit,
                    "tree": extension.source.tree, "fingerprint": extension.source.fingerprint},
         "task": extension.task.model_dump(mode="json"),
         "environment": extension.environment.model_dump(mode="json"),
         "context_manifest": extension.context_manifest.model_dump(mode="json"),
-        "public_evaluation": extension.public_evaluation.model_dump(mode="json"),
     }, sort_keys=True)
 
 
