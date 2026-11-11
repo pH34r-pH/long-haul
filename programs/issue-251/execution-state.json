@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-11T19:05:25.681247+00:00",
+    "updated_at": "2026-11-11T19:15:22.753798+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -120,7 +120,8 @@
             "lh-242-context"
           ],
           "acceptance": "Public and sealed checks execute in a separate read-only evaluator bound to an exact candidate.",
-          "baseline_commit": "5cab6749e65090b16d0b28970fe4edc81379d646"
+          "baseline_commit": "5cab6749e65090b16d0b28970fe4edc81379d646",
+          "implementation_pr": 255
         },
         {
           "id": "lh-244-pi-trace",
@@ -183,7 +184,25 @@
             "preserve_policy": "Private CI remains on admitted Fleet-managed self-hosted workers; no hosted fallback",
             "known_checks": "Kestrel ARM64 smoke and hosted governance passed; x64 source jobs queued",
             "recovery": "read-only diagnosis and exact existing guarded operator procedure being staged",
-            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6804182211"
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6804182211",
+            "read_only_diagnosis": {
+              "preview_run": 43082523747,
+              "preview_status": "passed_shape_only",
+              "verify_run": 43084234839,
+              "verify_status": "failed_current_state_before_health_or_queue_census",
+              "verify_archive": "passed",
+              "manifest_sha256": "e42efad094d2c2c2dc4f7df973bc551f71ac549848541115eafc8891b8fd39ed",
+              "bundle_sha256": "48944a943d3fdf39889fc5b97180da44ca067510c8817a9377db18d344cefdd0",
+              "task_comparison_run": 43085401688,
+              "task_comparison_status": "queued",
+              "host_mutation": false,
+              "existing_prerequisite_issues": [
+                1533,
+                1579,
+                1609
+              ],
+              "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6804972261"
+            }
           }
         },
         {
@@ -391,7 +410,12 @@
             "specified-13"
           ],
           "external_gate": "human_submission_approval",
-          "acceptance": "Local validator, pinned Quarto/TeX environment, and exact multi-format candidate receipts pass."
+          "acceptance": "Local validator, pinned Quarto/TeX environment, and exact multi-format candidate receipts pass.",
+          "execution_prerequisites": {
+            "private_source_ci": "not_admitted_to_finite_fleet_controller",
+            "publication": "requires_human_author_approval",
+            "safe_work": "local_fixture_qualification_and_reviewed_admission_proposal"
+          }
         },
         {
           "id": "socials-19",
@@ -2412,6 +2436,18 @@
       "default_branch_checks": "passed",
       "receipt_sha256": "e722941fd76c1ceb401b57d716e6ffe3ae6ebbe56b6377fb7bbbbf91b2d0e441",
       "closeout": "https://github.com/pH34r-pH/specified-development/issues/13#issuecomment-6804713011"
+    },
+    {
+      "at": "2026-11-11T19:15:22.753798+00:00",
+      "task": "fleet-1612",
+      "status": "dependency_diagnosis",
+      "repository": "pH34r-pH/long-haul-fleet",
+      "source": "b175250083f41c2bd39f2f2600b60986ba7ffed1",
+      "run": 43084234839,
+      "result": "current_state_predicate_failed_before_fresh_queue_owner_snapshot",
+      "archive": "success",
+      "host_mutation": false,
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6804972261"
     }
   ]
 }

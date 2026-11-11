@@ -11,15 +11,20 @@ from long_haul.work import WorkContract
 from long_haul.work.repository_candidate import freeze_repository_candidate
 from long_haul.work.repository_evaluation_models import (
     FrozenRepositoryCandidate,
+    RepositoryCheckEvidence,
     RepositoryEvaluationProfileV1,
     RepositoryEvidencePacketV1,
+    SandboxExecutionReceipt,
     evaluate_repository_packet,
 )
 from long_haul.work.repository_evaluator import (
     RepositoryEvaluationRunner,
     repository_evidence_event,
 )
+from long_haul.work.repository_models import DigestReference, content_digest
 from long_haul.work.repository_sandbox import (
+    PYTHON_BOOTSTRAP,
+    START_MARKER,
     DockerGVisorSandbox,
     SandboxResult,
     _bounded_output,
@@ -39,7 +44,16 @@ class FixtureSandbox:
         self.calls.append(command)
         values = json.loads(command.stdin)
         output = ("done" if self.wrong else str(sum(values))).encode() + b"\n"
-        return SandboxResult(self.outcome, output, b"", 0, reference("synthetic-receipt"))
+        facts = SandboxExecutionReceipt(
+            container_id="f" * 64, environment_fingerprint=self.environment.fingerprint,
+            outcome=self.outcome, cleanup="removed", process_stopped=True,
+            startup_verified=True,
+            stdout_digest=content_digest(output), stderr_digest=content_digest(b""), exit_code=0,
+            provenance="synthetic-fixture",
+        )
+        return SandboxResult(self.outcome, output, b"", 0,
+                             DigestReference(reference="urn:long-haul:sandbox:" + facts.container_id,
+                                             digest=facts.fingerprint), facts)
 
 
 def run_fixture(tmp_path, **options):
@@ -192,6 +206,7 @@ def test_failed_container_cleanup_remains_invalid_and_unresolved(tmp_path, monke
     adapter = DockerGVisorSandbox.__new__(DockerGVisorSandbox)
     adapter.environment = environment()
     adapter.image_id = "sha256:" + "a" * 64
+    (tmp_path / "program.py").write_text("print(3)\n")
 
     def control(*arguments):
         if arguments[0] == "rm":
@@ -204,3 +219,80 @@ def test_failed_container_cleanup_remains_invalid_and_unresolved(tmp_path, monke
     result = adapter.execute(tmp_path, CandidateCommand(program="program.py", expected_stdout_digest=reference("out").digest))
     assert result.outcome == "invalid" and result.diagnostic == "cleanup_failed"
     assert result.execution_receipt.cleanup == "failed" and result.execution_receipt.process_stopped is None
+
+
+def test_pass_cannot_wrap_invalid_sandbox_outcome(tmp_path):
+    *_, packet, _ = run_fixture(tmp_path)
+    observed = packet.checks[0]
+    facts = SandboxExecutionReceipt(container_id="d" * 64, environment_fingerprint=packet.evaluator_environment.digest,
+                                    outcome="invalid", cleanup="removed", process_stopped=True,
+                                    stdout_digest=observed.stdout_digest, stderr_digest=observed.stderr_digest,
+                                    exit_code=observed.exit_code)
+    value = observed.model_dump()
+    value["sandbox_execution"] = facts.model_dump()
+    value["sandbox_receipt"] = {"reference": "urn:long-haul:sandbox:" + facts.container_id, "digest": facts.fingerprint}
+    with pytest.raises(ValidationError, match="outcome"):
+        RepositoryCheckEvidence.model_validate(value)
+
+
+def test_wrong_observed_output_cannot_be_declared_pass(tmp_path):
+    _, work, snapshot, profile, _, packet, _ = run_fixture(tmp_path)
+    value = packet.model_dump()
+    observed = value["checks"][0]
+    observed["stdout_digest"] = content_digest(b"wrong output")
+    observed["sandbox_execution"]["stdout_digest"] = observed["stdout_digest"]
+    facts = SandboxExecutionReceipt.model_validate(observed["sandbox_execution"])
+    observed["sandbox_receipt"]["digest"] = facts.fingerprint
+    coherent_but_wrong = RepositoryEvidencePacketV1.model_validate(value)
+    with pytest.raises(ValueError, match="expected behavior"):
+        evaluate_repository_packet(work, coherent_but_wrong, snapshot.candidate, profile)
+
+
+def test_exported_candidate_paths_are_unique_and_safe(tmp_path):
+    _, _, snapshot, _, _, _, _ = run_fixture(tmp_path)
+    value = snapshot.candidate.model_dump()
+    value["files"] = (*value["files"], value["files"][0])
+    with pytest.raises(ValidationError, match="unique"):
+        FrozenRepositoryCandidate.model_validate(value)
+    value = snapshot.candidate.model_dump()
+    value["changed_paths"] = ("../outside",)
+    with pytest.raises(ValidationError, match="repository-relative"):
+        FrozenRepositoryCandidate.model_validate(value)
+
+
+def test_unverified_candidate_cannot_spoof_trusted_startup_marker(tmp_path):
+    script = tmp_path / "program.py"
+    script.write_text("import sys;sys.stderr.write('LONG_HAUL_SUT_STARTED_V1\\n');print('forged')")
+    process = subprocess.run([sys.executable, "-I", "-S", "-c", PYTHON_BOOTSTRAP, str(script), "0" * 64],
+                             capture_output=True, check=False)
+    assert process.returncode != 0 and process.stdout == b"" and not process.stderr.startswith(START_MARKER)
+
+
+def test_docker_controls_ignore_ambient_credentials_and_proxy_config(tmp_path, monkeypatch):
+    poisoned = tmp_path / "poisoned"
+    poisoned.mkdir()
+    (poisoned / "config.json").write_text(json.dumps({"proxies": {"default": {"httpProxy": "secret"}}}))
+    monkeypatch.setenv("DOCKER_CONFIG", str(poisoned))
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("HTTP_PROXY", "secret")
+    client = tmp_path / "docker"
+    client.write_text("#!" + sys.executable + "\n" +
+                      "import json,os,pathlib,sys\n" +
+                      "assert sys.argv[1] == '--config'\n" +
+                      "assert list(pathlib.Path(sys.argv[2]).iterdir()) == []\n" +
+                      "assert set(os.environ) <= {'PATH', 'LANG', 'LC_CTYPE'}\n" +
+                      "print(json.dumps({'args':sys.argv[3:]}))\n")
+    client.chmod(0o755)
+    adapter = DockerGVisorSandbox.__new__(DockerGVisorSandbox)
+    adapter.docker_path = client
+    assert json.loads(adapter._control("info")) == {"args": ["info"]}
+    with adapter._attached_process("f" * 64) as process:
+        stdout, stderr = process.communicate()
+        assert process.returncode == 0 and stderr == b""
+        assert json.loads(stdout) == {"args": ["start", "--attach", "--interactive", "f" * 64]}
+    adapter.image_environment = {"PATH": "/usr/local/bin:/usr/bin"}
+    expected = ["PATH=/usr/local/bin:/usr/bin", "PYTHONDONTWRITEBYTECODE=1", "PYTHONHASHSEED=0"]
+    adapter._verify_environment(expected)
+    for injected in ("HTTP_PROXY=secret", "PYTHONHASHSEED=0"):
+        with pytest.raises(ValueError, match="environment differs"):
+            adapter._verify_environment([*expected, injected])

@@ -30,11 +30,13 @@ def evaluator_implementation_reference() -> DigestReference:
     from ..resource_policy_models import canonical_json
     from .repository_models import content_digest
     root = Path(__file__).parent
-    data = b"".join((root / name).read_bytes() for name in (
+    files = (
         "repository_evaluation_models.py", "repository_evaluator.py", "repository_candidate.py", "repository_sandbox.py",
         "contracts.py", "evaluator.py", "repository_models.py", "repository_git.py",
-    ))
-    data += canonical_json({"python": platform.python_version(), "pydantic": pydantic.__version__}).encode()
+    )
+    manifest = {name: content_digest((root / name).read_bytes()) for name in files}
+    manifest["../resource_policy_models.py"] = content_digest((root.parent / "resource_policy_models.py").read_bytes())
+    data = canonical_json({"files": manifest, "python": platform.python_version(), "pydantic": pydantic.__version__}).encode()
     return DigestReference(reference="urn:long-haul:repository-evaluator-v1", digest=content_digest(data))
 
 
@@ -49,14 +51,15 @@ class SandboxLimits(FrozenProjection):
 
 class EvaluatorEnvironment(FrozenProjection):
     image: str = Field(pattern=r"^[a-z0-9./:_-]+@sha256:[0-9a-f]{64}$")
-    runtime: Literal["long-haul-gvisor"] = "long-haul-gvisor"
-    runtime_version: str = Field(pattern=r"^release-[0-9]{8}\.[0-9]+$")
+    runtime: str = Field(default="long-haul-gvisor", pattern=r"^[a-z0-9][a-z0-9._-]{0,63}$")
+    runtime_version: str = Field(min_length=1, max_length=128)
+    runtime_entrypoint: str = "runsc"
     runtime_archive_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     runtime_binary_digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     runtime_files: tuple[tuple[str, str], ...] = Field(min_length=1, max_length=32)
     network: Literal["none"] = "none"
     candidate_access: Literal["read-only"] = "read-only"
-    toolchain: Literal["isolated-python3"] = "isolated-python3"
+    toolchain: str = Field(default="isolated-python3", min_length=1, max_length=128)
     limits: SandboxLimits = Field(default_factory=SandboxLimits)
 
     @model_validator(mode="after")
@@ -68,7 +71,8 @@ class EvaluatorEnvironment(FrozenProjection):
             repository_path(path)
             if not re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
                 raise ValueError("runtime file requires SHA-256 fingerprint")
-        if dict(self.runtime_files).get("runsc") != self.runtime_binary_digest:
+        repository_path(self.runtime_entrypoint)
+        if dict(self.runtime_files).get(self.runtime_entrypoint) != self.runtime_binary_digest:
             raise ValueError("runtime binary must be included in the pinned tool bundle")
         return self
 
@@ -145,12 +149,19 @@ class RepositoryEvaluationProfileV1(FrozenProjection):
                                   if check.requirement.classification == "PUBLIC"]}
 
 
+def _candidate_file_path(value):
+    value = repository_path(value)
+    if value == ".":
+        raise ValueError("candidate path must identify a repository file")
+    return value
+
+
 class CandidateFile(FrozenProjection):
     path: str
     digest: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
-    size_bytes: int = Field(ge=0)
+    size_bytes: int = Field(ge=0, le=1048576)
     executable: bool = False
-    _path = field_validator("path")(repository_path)
+    _path = field_validator("path")(_candidate_file_path)
 
 
 class FrozenRepositoryCandidate(FrozenProjection):
@@ -162,6 +173,24 @@ class FrozenRepositoryCandidate(FrozenProjection):
     changed_paths: tuple[str, ...] = Field(max_length=512)
     contract_fingerprint: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
 
+    @field_validator("changed_paths")
+    @classmethod
+    def safe_changed_paths(cls, paths):
+        normalized = tuple(_candidate_file_path(path) for path in paths)
+        if len(set(normalized)) != len(normalized):
+            raise ValueError("changed paths must be unique")
+        return normalized
+
+    @model_validator(mode="after")
+    def exact_files(self):
+        if len({item.path for item in self.files}) != len(self.files):
+            raise ValueError("candidate file paths must be unique")
+        if sum(item.size_bytes for item in self.files) > 4194304:
+            raise ValueError("candidate exceeds total byte limit")
+        if self.base.repository_id != self.source.repository_id:
+            raise ValueError("candidate and base must identify the same repository")
+        return self
+
 
 class SandboxExecutionReceipt(FrozenProjection):
     container_id: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -170,9 +199,11 @@ class SandboxExecutionReceipt(FrozenProjection):
     outcome: Literal["completed", "invalid", "timeout", "output_limit", "resource_exhausted"]
     cleanup: Literal["removed", "failed"]
     process_stopped: bool | None = None
+    startup_verified: bool = False
     stdout_digest: str | None = None
     stderr_digest: str | None = None
     exit_code: int | None = None
+    provenance: Literal["runtime-observation", "synthetic-fixture"] = "runtime-observation"
 
 
 class RepositoryCheckEvidence(FrozenProjection):
@@ -199,6 +230,10 @@ class RepositoryCheckEvidence(FrozenProjection):
         if (self.started_at.tzinfo is None or self.ended_at.tzinfo is None
                 or self.ended_at < self.started_at):
             raise ValueError("check timestamps must be ordered and timezone-aware")
+        if (self.classification in {"POLICY", "INSPECTION"}
+                and any(value is not None for value in (self.sandbox_receipt, self.sandbox_execution,
+                                                        self.stdout_digest, self.stderr_digest, self.exit_code))):
+            raise ValueError("non-command predicates cannot carry command output/receipts")
         if self.sandbox_execution is not None:
             expected = DigestReference(reference="urn:long-haul:sandbox:" + self.sandbox_execution.container_id,
                                        digest=self.sandbox_execution.fingerprint)
@@ -211,7 +246,27 @@ class RepositoryCheckEvidence(FrozenProjection):
                 raise ValueError("check output contradicts retained sandbox facts")
             if self.state is EvidenceState.PASS and self.sandbox_execution.cleanup != "removed":
                 raise ValueError("unresolved sandbox cleanup cannot pass")
+            _consistent_execution_outcome(self)
+        elif self.classification in {"PUBLIC", "SEALED"} and self.outcome in {"pass", "fail"}:
+            raise ValueError("completed command checks require retained sandbox execution facts")
         return self
+
+
+def _consistent_execution_outcome(check):
+    execution = check.sandbox_execution
+    expected = "completed" if check.outcome in {"pass", "fail"} else check.outcome
+    if execution.outcome != expected:
+        raise ValueError("check outcome contradicts sandbox execution outcome")
+    if check.outcome in {"pass", "fail"}:
+        required = (execution.cleanup == "removed", execution.process_stopped is True,
+                    execution.stdout_digest is not None, execution.stderr_digest is not None,
+                    execution.exit_code is not None, execution.startup_verified)
+        if not all(required):
+            raise ValueError("completed command execution facts are incomplete")
+        if execution.provenance == "runtime-observation" and execution.resolved_image_id is None:
+            raise ValueError("runtime outcome lacks exact resolved image identity")
+    if check.classification in {"POLICY", "INSPECTION"}:
+        raise ValueError("non-command predicates cannot carry command execution facts")
 
 
 class RepositoryEvidencePacketV1(FrozenProjection):
@@ -257,6 +312,10 @@ def _consistent_legacy_evidence(packet):
         if (check.sandbox_execution is not None
                 and check.sandbox_execution.environment_fingerprint != packet.evaluator_environment.digest):
             raise ValueError("sandbox facts refer to another environment")
+        if (packet.sandbox_implementation.reference == "urn:long-haul:docker-gvisor-v1"
+                and check.sandbox_execution is not None
+                and check.sandbox_execution.provenance != "runtime-observation"):
+            raise ValueError("fixture provenance cannot assert real sandbox qualification")
 
 
 def _packet_binding_matches(contract, packet, candidate, profile):
@@ -267,11 +326,12 @@ def _packet_binding_matches(contract, packet, candidate, profile):
     actual = (packet.contract_fingerprint, packet.candidate, packet.task, packet.evaluator_profile.digest,
               packet.evaluator_environment.digest, packet.sandbox_implementation, packet.context_manifest,
               packet.candidate.base, extension.public_evaluation, extension.sealed_evaluator.digest,
-              packet.evidence.evaluator.evaluator_id, packet.evidence.evaluator.version, packet.evidence.evaluator.runtime)
+              packet.evidence.evaluator.evaluator_id, packet.evidence.evaluator.version, packet.evidence.evaluator.runtime,
+              profile.implementation)
     expected = (work_contract_fingerprint(contract), candidate, profile.task, profile.fingerprint,
                 profile.environment.fingerprint, profile.sandbox, extension.context_manifest, extension.source,
                 public_evaluator_reference(profile), profile.fingerprint, profile.evaluator_id,
-                profile.evaluator_version, profile.environment.fingerprint)
+                profile.evaluator_version, profile.environment.fingerprint, evaluator_implementation_reference())
     return actual == expected
 
 
@@ -287,4 +347,24 @@ def evaluate_repository_packet(contract, packet, candidate, evaluator_profile) -
     actual = {c.predicate_id: (c.check_fingerprint, c.classification) for c in packet.checks}
     if actual != expected:
         raise ValueError("observation does not match the frozen evaluator check")
+    _validate_check_results(contract, packet, evaluator_profile)
     return evaluate_packet(contract, packet.evidence, candidate.fingerprint)
+
+
+def _validate_check_results(contract, packet, profile):
+    by_id = {c.predicate_id: c for c in packet.checks}
+    for check in profile.checks:
+        observed = by_id[check.requirement.predicate_id]
+        if check.kind == "command":
+            execution = observed.sandbox_execution
+            correct = (execution.stdout_digest == check.command.expected_stdout_digest
+                       and execution.exit_code == check.command.expected_exit_code)
+            expected = EvidenceState.PASS if correct else EvidenceState.FAIL
+        elif check.kind == "scope":
+            correct = all(contract.permits_path(path) for path in packet.candidate.changed_paths)
+            expected = EvidenceState.PASS if correct else EvidenceState.FAIL
+        else:
+            correct = {item.path: item.digest for item in packet.candidate.files}.get(check.artifact_path) == check.artifact_digest
+            expected = EvidenceState.PASS if correct else EvidenceState.FAIL
+        if observed.state is not expected:
+            raise ValueError("predicate state contradicts the frozen check's expected behavior")

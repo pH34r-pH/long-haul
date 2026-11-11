@@ -1,0 +1,41 @@
+{
+  "issue": 243,
+  "local_checks": [
+    {
+      "command": "python -m pytest tests/test_repository_evaluator.py -q",
+      "result": "22 passed"
+    },
+    {
+      "command": "python -m ruff check src tests",
+      "result": "passed"
+    },
+    {
+      "command": "lizard changed source -C 15 -L 75 -a 7 -w",
+      "result": "no findings"
+    }
+  ],
+  "prior_attempt": {
+    "conclusion": "failure",
+    "head": "d66eca15ba9cee400cb37988ce2c6c5e2f738869",
+    "job": 130747324173,
+    "observed": "Pinned runtime/image acquisition and containment passed; four probes failed with launcher exit 2 and empty output; negative marker probe alone was not qualification.",
+    "run": 43085111636,
+    "url": "https://github.com/pH34r-pH/long-haul/actions/runs/43085111636"
+  },
+  "qualification": "pending mandatory real gVisor CI on corrected head; initial failure retained",
+  "review_fixes": [
+    "exact receipt/check/result consistency and expected-output replay",
+    "safe unique bounded exported candidate paths",
+    "canonical evaluator module manifest including interpreter/package versions",
+    "explicit attach streams and trusted digest-verifying startup bootstrap",
+    "empty Docker CLI configuration and exact pinned container environment",
+    "negative ambient proxy/credential and startup spoof tests"
+  ],
+  "schema_version": 1,
+  "source_sha256": {
+    "src/long_haul/work/repository_evaluation_models.py": "30d64bb9e1f9c7fae2bf734f1f651ffad2bf6dcd4204d754ea54c6ea667afa01",
+    "src/long_haul/work/repository_sandbox.py": "ea52885ce45b9f7b3692ea0bb3b9a550ba13683c9d827069f41a1a250611e125",
+    "tests/test_repository_evaluator.py": "d717d48be053ff694f5865068108f6564c997386628f89c41c15facfb733af25",
+    "tests/test_repository_gvisor.py": "8858fe63d7323d7ce23aac5b3b345b787145657258d42bed35ba364c8ed9ef7d"
+  }
+}

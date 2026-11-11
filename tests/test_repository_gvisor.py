@@ -22,6 +22,13 @@ def sandbox():
     return DockerGVisorSandbox(environment(), runsc)
 
 
+def synthetic_diagnostics(result):
+    # Only these public synthetic probes may expose their bounded startup errors.
+    return {"outcome": result.outcome, "exit_code": result.exit_code,
+            "synthetic_stderr_prefix": result.stderr[:512].decode("utf-8", errors="replace"),
+            "execution": result.execution_receipt.model_dump() if result.execution_receipt else None}
+
+
 def test_real_public_sealed_readonly_candidate_and_redacted_packet(tmp_path, sandbox):
     _, work, snapshot, profile = setup(tmp_path, sandbox.identity)
     runner = RepositoryEvaluationRunner(sandbox)
@@ -58,7 +65,7 @@ def test_worker_workspace_and_candidate_cannot_see_sealed_or_control_material(tm
     snapshot = freeze_repository_candidate(root, git(root, "rev-parse", "HEAD"), work)
     with snapshot.materialize() as target:
         result = sandbox.execute(target, CandidateCommand(program="program.py", expected_stdout_digest=content_digest(b"isolated\n")))
-    assert result.outcome == "completed" and result.exit_code == 0 and result.stdout == b"isolated\n"
+    assert result.outcome == "completed" and result.exit_code == 0 and result.stdout == b"isolated\n", synthetic_diagnostics(result)
     assert sentinel.read_text() == "synthetic-not-a-secret"
     assert result.receipt is not None
     print(json.dumps({"qualification": "readonly-network-secrets", "receipt": result.execution_receipt.model_dump()}))
@@ -76,7 +83,8 @@ def test_timeout_output_limit_and_forced_teardown(tmp_path, sandbox, program, ou
     snapshot = freeze_repository_candidate(root, git(root, "rev-parse", "HEAD"), work)
     with snapshot.materialize() as target:
         result = sandbox.execute(target, CandidateCommand(program="program.py", expected_stdout_digest=content_digest(b"")))
-    assert result.outcome == outcome and result.receipt is not None
+    assert result.outcome == outcome and result.receipt is not None, synthetic_diagnostics(result)
+    assert result.execution_receipt.startup_verified
     assert len(result.stdout) + len(result.stderr) <= sandbox.environment.limits.max_output_bytes
     container = result.receipt.reference.rsplit(":", 1)[1]
     check = subprocess.run(["/usr/bin/docker", "inspect", container], capture_output=True, check=False)

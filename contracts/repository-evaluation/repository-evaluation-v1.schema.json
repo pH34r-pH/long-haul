@@ -128,8 +128,8 @@
           "type": "string"
         },
         "runtime": {
-          "const": "long-haul-gvisor",
           "default": "long-haul-gvisor",
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
           "title": "Runtime",
           "type": "string"
         },
@@ -141,6 +141,11 @@
         "runtime_binary_digest": {
           "pattern": "^sha256:[0-9a-f]{64}$",
           "title": "Runtime Binary Digest",
+          "type": "string"
+        },
+        "runtime_entrypoint": {
+          "default": "runsc",
+          "title": "Runtime Entrypoint",
           "type": "string"
         },
         "runtime_files": {
@@ -163,13 +168,15 @@
           "type": "array"
         },
         "runtime_version": {
-          "pattern": "^release-[0-9]{8}\\.[0-9]+$",
+          "maxLength": 128,
+          "minLength": 1,
           "title": "Runtime Version",
           "type": "string"
         },
         "toolchain": {
-          "const": "isolated-python3",
           "default": "isolated-python3",
+          "maxLength": 128,
+          "minLength": 1,
           "title": "Toolchain",
           "type": "string"
         }

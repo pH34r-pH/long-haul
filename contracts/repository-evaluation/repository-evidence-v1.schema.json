@@ -38,6 +38,7 @@
           "type": "string"
         },
         "size_bytes": {
+          "maximum": 1048576,
           "minimum": 0,
           "title": "Size Bytes",
           "type": "integer"
@@ -548,6 +549,15 @@
           "default": null,
           "title": "Process Stopped"
         },
+        "provenance": {
+          "default": "runtime-observation",
+          "enum": [
+            "runtime-observation",
+            "synthetic-fixture"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
         "resolved_image_id": {
           "anyOf": [
             {
@@ -559,6 +569,11 @@
           ],
           "default": null,
           "title": "Resolved Image Id"
+        },
+        "startup_verified": {
+          "default": false,
+          "title": "Startup Verified",
+          "type": "boolean"
         },
         "stderr_digest": {
           "anyOf": [

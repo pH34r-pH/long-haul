@@ -6,8 +6,10 @@ import json
 import os
 import selectors
 import subprocess
+import tempfile
 import time
-from dataclasses import dataclass
+from contextlib import contextmanager
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
@@ -18,17 +20,26 @@ from .repository_evaluation_models import (
 )
 from .repository_models import DigestReference, content_digest
 
+START_MARKER = b"LONG_HAUL_SUT_STARTED_V1\n"
+PYTHON_BOOTSTRAP = (
+    "import hashlib,os,runpy,sys; path=sys.argv[1]; expected=sys.argv[2]; "
+    "assert hashlib.sha256(open(path,'rb').read()).hexdigest()==expected; "
+    "os.write(2,b'LONG_HAUL_SUT_STARTED_V1\\n'); sys.argv=[path,*sys.argv[3:]]; "
+    "runpy.run_path(path,run_name='__main__')"
+)
+
 
 @dataclass(frozen=True)
 class SandboxResult:
     outcome: str
-    stdout: bytes = b""
-    stderr: bytes = b""
+    stdout: bytes = field(default=b"", repr=False)
+    stderr: bytes = field(default=b"", repr=False)
     exit_code: int | None = None
     receipt: DigestReference | None = None
     execution_receipt: SandboxExecutionReceipt | None = None
     diagnostic: str | None = None
     outputs_observed: bool = True
+    startup_verified: bool = False
 
 
 class SandboxAdapter(Protocol):
@@ -89,6 +100,9 @@ class DockerGVisorSandbox:
     def __init__(self, environment: EvaluatorEnvironment, runsc_path: Path, docker_path=Path("/usr/bin/docker")):
         self.environment, self.runsc_path, self.docker_path = environment, runsc_path, docker_path
         self.identity = self.implementation_reference()
+        if (environment.runtime, environment.runtime_entrypoint, environment.toolchain) != (
+                "long-haul-gvisor", "runsc", "isolated-python3"):
+            raise ValueError("unsupported Docker/gVisor execution profile")
         if content_digest(runsc_path.read_bytes()) != environment.runtime_binary_digest:
             raise ValueError("gVisor runtime binary fingerprint mismatch")
         for name, expected in environment.runtime_files:
@@ -104,21 +118,25 @@ class DockerGVisorSandbox:
             raise ValueError("required gVisor runtime/network configuration is unavailable")
         image = json.loads(self._control("image", "inspect", environment.image))[0]
         self.image_id = image["Id"]  # Acquisition is a separate trusted step.
+        self.image_environment = dict(value.split("=", 1) for value in image["Config"].get("Env", []))
 
     @staticmethod
     def implementation_reference() -> DigestReference:
         return DigestReference(reference="urn:long-haul:docker-gvisor-v1", digest=content_digest(Path(__file__).read_bytes()))
 
     def _control(self, *arguments):
-        result = subprocess.run([str(self.docker_path), *arguments], env=_control_environment(),
-                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=15, check=True)
+        with tempfile.TemporaryDirectory(prefix="long-haul-docker-config-") as config:
+            result = subprocess.run([str(self.docker_path), "--config", config, *arguments], env=_control_environment(),
+                                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=15, check=True)
         if len(result.stdout) > 1048576:
             raise ValueError("sandbox control output exceeds limit")
         return result.stdout.decode()
 
     def _create_arguments(self, candidate, command):
         limits = self.environment.limits
-        return ["create", "--interactive", "--pull=never", "--platform=linux/amd64", "--init",
+        program_digest = hashlib.sha256((candidate / command.program).read_bytes()).hexdigest()
+        return ["create", "--interactive", "--attach=stdin", "--attach=stdout", "--attach=stderr",
+                "--pull=never", "--platform=linux/amd64", "--init",
                 "--runtime=" + self.environment.runtime, "--network=none", "--read-only",
                 "--user=65534:65534", "--cap-drop=ALL", "--security-opt=no-new-privileges",
                 "--cpus=" + str(limits.cpus), "--memory=" + str(limits.memory_mib) + "m",
@@ -126,32 +144,45 @@ class DockerGVisorSandbox:
                 "--tmpfs=/tmp:rw,nosuid,nodev,noexec,size=" + str(limits.scratch_mib) + "m,nr_inodes=1024",
                 "--log-driver=none", "--mount=type=bind,src=" + str(candidate) + ",dst=/candidate,readonly",
                 "--workdir=/candidate", "--env=PYTHONDONTWRITEBYTECODE=1", "--env=PYTHONHASHSEED=0",
-                self.environment.image, "/usr/local/bin/python3", "-I", "-S",
-                "/candidate/" + command.program, *command.arguments]
+                self.environment.image, "/usr/local/bin/python3", "-I", "-S", "-c", PYTHON_BOOTSTRAP,
+                "/candidate/" + command.program, program_digest, *command.arguments]
 
     def _verify_configuration(self, container, candidate):
         info = json.loads(self._control("inspect", container))[0]
         host = info["HostConfig"]
         mounts = info["Mounts"]
-        binds = [mount for mount in mounts if mount["Type"] == "bind"]
         limits = self.environment.limits
         actual = (host["Runtime"], host["NetworkMode"], host["ReadonlyRootfs"], info["Config"]["User"],
                   host["Memory"], host["MemorySwap"], host["PidsLimit"], host["NanoCpus"], info["Image"],
                   "ALL" in [cap.upper() for cap in host.get("CapDrop", [])],
                   any(s.startswith("no-new-privileges") for s in host.get("SecurityOpt", [])),
-                  host.get("Tmpfs", {}), host.get("Privileged", False), host.get("PidMode", ""))
+                  host.get("Tmpfs", {}), host.get("Privileged", False), host.get("PidMode", ""),
+                  info["Config"]["AttachStdout"], info["Config"]["AttachStderr"], info["Config"]["OpenStdin"])
         expected = (self.environment.runtime, "none", True, "65534:65534", limits.memory_mib * 1048576,
                     limits.memory_mib * 1048576, limits.pids, int(limits.cpus * 1000000000), self.image_id,
                     True, True, {"/tmp": "rw,nosuid,nodev,noexec,size=" + str(limits.scratch_mib)
-                                 + "m,nr_inodes=1024"}, False, "")
+                                 + "m,nr_inodes=1024"}, False, "", True, True, True)
         if actual != expected:
             raise ValueError("candidate containment configuration mismatch")
+        self._verify_environment(info["Config"].get("Env", []))
+        self._verify_mounts(mounts, candidate)
+        return info
+
+    def _verify_environment(self, observed_environment):
+        environment = dict(self.image_environment)
+        environment.update(PYTHONDONTWRITEBYTECODE="1", PYTHONHASHSEED="0")
+        actual_environment = dict(value.split("=", 1) for value in observed_environment)
+        if actual_environment != environment or len(actual_environment) != len(observed_environment):
+            raise ValueError("candidate environment differs from pinned image and explicit profile")
+
+    @staticmethod
+    def _verify_mounts(mounts, candidate):
+        binds = [mount for mount in mounts if mount["Type"] == "bind"]
         if (len(binds) != 1 or binds[0]["Destination"] != "/candidate" or binds[0]["RW"]
                 or Path(binds[0]["Source"]).resolve() != candidate.resolve()
                 or any(m["Type"] not in {"bind", "tmpfs"} for m in mounts)
                 or any(m["Destination"] != "/tmp" for m in mounts if m["Type"] == "tmpfs")):
             raise ValueError("candidate containment configuration mismatch")
-        return info
 
     def execute(self, candidate, command):
         container = None
@@ -175,27 +206,41 @@ class DockerGVisorSandbox:
                     pass
         return self._retained_result(container, result, removed)
 
-    def _execute(self, container, command):
-        process = None
-        try:
-            process = subprocess.Popen([str(self.docker_path), "start", "--attach", "--interactive", container],
+    @contextmanager
+    def _attached_process(self, container):
+        with tempfile.TemporaryDirectory(prefix="long-haul-docker-config-") as config:
+            process = subprocess.Popen([str(self.docker_path), "--config", config, "start", "--attach", "--interactive", container],
                                        env=_control_environment(), stdin=subprocess.PIPE,
                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            try:
+                yield process
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                process.communicate(timeout=5)
+
+    def _execute(self, container, command):
+        with self._attached_process(container) as process:
             outcome, stdout, stderr = _bounded_output(process, command.stdin.encode(), self.environment.limits)
             if outcome != "completed":
-                subprocess.run([str(self.docker_path), "kill", container], env=_control_environment(),
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10, check=False)
+                self._control("kill", container)
             state = json.loads(self._control("inspect", container))[0]["State"]
             if state.get("OOMKilled"):
                 outcome = "resource_exhausted"
             if outcome == "completed" and (state.get("Running") or state.get("Error")):
                 outcome = "invalid"
-            return SandboxResult(outcome, stdout, stderr, state.get("ExitCode"))
-        finally:
-            if process is not None:
-                if process.poll() is None:
-                    process.kill()
-                process.communicate(timeout=5)
+            if not stderr.startswith(START_MARKER):
+                try:
+                    stderr += os.read(process.stderr.fileno(), len(START_MARKER))
+                except BlockingIOError:
+                    pass
+            startup_verified = stderr.startswith(START_MARKER)
+            if startup_verified:
+                stderr = stderr[len(START_MARKER):]
+            else:
+                outcome = "invalid"
+            stderr = stderr[:max(0, self.environment.limits.max_output_bytes - len(stdout))]
+            return SandboxResult(outcome, stdout, stderr, state.get("ExitCode"), startup_verified=startup_verified)
 
     def _retained_result(self, container, result, removed):
         if container is None:
@@ -207,9 +252,10 @@ class DockerGVisorSandbox:
             resolved_image_id=self.image_id if result.outputs_observed else None,
             outcome=outcome, cleanup="removed" if removed else "failed",
             process_stopped=True if removed else None,
+            startup_verified=result.startup_verified,
             stdout_digest=content_digest(result.stdout) if result.outputs_observed else None,
             stderr_digest=content_digest(result.stderr) if result.outputs_observed else None, exit_code=result.exit_code,
         )
         return SandboxResult(outcome, result.stdout, result.stderr, result.exit_code,
                              DigestReference(reference="urn:long-haul:sandbox:" + container, digest=facts.fingerprint),
-                             facts, diagnostic, result.outputs_observed)
+                             facts, diagnostic, result.outputs_observed, result.startup_verified)
