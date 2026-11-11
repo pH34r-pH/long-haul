@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-11T22:40:15.182933+00:00",
+    "updated_at": "2026-11-11T23:03:05.026044+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -184,7 +184,17 @@
           ],
           "acceptance": "Repository worker profile fails safely under prompt injection, path, dependency, tool-shim, credential, network, and resource attacks.",
           "baseline_commit": "6de4e4be835c92e5bdad35e284b81e9f51f92662",
-          "local_scope": "projection admission and final candidate derivation; full security issue remains open"
+          "local_scope": "projection admission and final candidate derivation; full security issue remains open",
+          "last_merged_slice": {
+            "pull_request": 257,
+            "checked_head": "848bb84c878d0ddf0ec4b6d638195a74ebbc1e06",
+            "merge_commit": "8fcc1831ad3fc1d7d76a02101cc6ca062b81db25",
+            "pi_gvisor_run": 43114805693,
+            "pi_cases": 10,
+            "main_checks": "passed: CI 43116148168, Pi 43116147690, evaluator 43116147776, governance, requirements and Azure",
+            "review_rule": "owner_authorized_admin_bypass",
+            "issue": "open"
+          }
         },
         {
           "id": "lh-64-pilot",
@@ -2667,6 +2677,18 @@
       "run": 43096302292,
       "result": "HTTP 409 Cannot cancel a workflow run that has not been queued yet",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6808797420"
+    },
+    {
+      "at": "2026-11-11T23:03:05.026044+00:00",
+      "task": "lh-245-security",
+      "status": "projection_and_finalization_slice_merged",
+      "pull_request": 257,
+      "checked_head": "848bb84c878d0ddf0ec4b6d638195a74ebbc1e06",
+      "merge_commit": "8fcc1831ad3fc1d7d76a02101cc6ca062b81db25",
+      "pi_gvisor_run": 43114805693,
+      "review_rule": "owner_authorized_admin_bypass",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6809140180",
+      "remaining": "private evaluator commitments, bounded workspace backing, remaining adversarial fixtures and full issue acceptance"
     }
   ]
 }
