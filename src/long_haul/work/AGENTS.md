@@ -6,6 +6,8 @@ The work boundary turns a bounded objective into externally checkable evidence. 
 
 [`repository_evaluation_models.py`](repository_evaluation_models.py), [`repository_candidate.py`](repository_candidate.py), [`repository_evaluator.py`](repository_evaluator.py), and [`repository_sandbox.py`](repository_sandbox.py) compose exact-candidate evaluation and maintained isolation. Run `tests/test_repository_evaluator.py` for hermetic semantics; `tests/test_repository_gvisor.py` qualifies real isolation only under the strict hosted job. Sealed profiles and expected outputs remain control-plane input and must not enter worker payloads.
 
+The Pi worker checks current READ and AI_AUGMENT policy for all existing files before projecting any bytes. After stopping the worker, changed candidate bytes require a completed, still-authorized derivation. These checks do not by themselves qualify the full adversarial security profile.
+
 ## Invariants
 
 - A model or harness saying “done” is not acceptance evidence.

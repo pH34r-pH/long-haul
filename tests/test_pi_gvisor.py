@@ -9,9 +9,10 @@ import pytest
 from pi_worker_fixture import PLAN, admit_prompt, worker_setup
 from repository_evaluator_fixture import PROGRAM, environment
 
-from long_haul.adapters.harness_trace import TraceNormalizer
+from long_haul.adapters.harness_trace import TraceAdmissionDenied, TraceNormalizer
 from long_haul.adapters.pi_rpc import pi_prompt
 from long_haul.events.store import EventStore
+from long_haul.resource_policy import ResourceAction, ResourceLifecycle
 from long_haul.work import WorkCheckpoint, WorkSession, render_digest
 from long_haul.work.harness import resume_harness_attempt
 from long_haul.work.repository_evaluator import RepositoryEvaluationRunner
@@ -84,11 +85,21 @@ def test_actual_pi_cancel_cleans_process_tree_before_any_candidate(tmp_path):
 def test_native_policy_denial_precedes_filesystem_change(tmp_path):
     plan = {"mode": "success", "actions": [{"tool": "write", "args": {"path": "program.py", "content": "tamper"}}]}
     worker, request, _ = worker_setup(tmp_path, plan)
-    request.registry["program.py"].profile.lifecycle = "retracted"
+    binding = request.registry["program.py"]
+    binding.profile.permissions[0].actions = [ResourceAction.READ, ResourceAction.AI_AUGMENT]
+    request.registry["program.py"] = replace(binding, expected_policy_fingerprint=binding.profile.fingerprint)
     result, events, snapshot = worker.run(request)
     evidence(result, events)
     assert result.terminal == "policy_denied" and snapshot is None
     assert all(event.phase != "end" or event.summary == "interrupted" for event in events)
+
+
+def test_revoked_projection_is_denied_before_worker_launch(tmp_path):
+    worker, request, _ = worker_setup(tmp_path, PLAN)
+    request.registry["program.py"].profile.lifecycle = ResourceLifecycle.RETRACTED
+    with pytest.raises(TraceAdmissionDenied):
+        worker.run(request)
+    assert worker.lease_releasable and worker.pending_recovery is None
 
 
 def test_actual_pi_resume_starts_fresh_native_session_and_retains_candidate_history(tmp_path):
