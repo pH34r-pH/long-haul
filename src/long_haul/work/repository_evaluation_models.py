@@ -187,8 +187,9 @@ class FrozenRepositoryCandidate(FrozenProjection):
             raise ValueError("candidate file paths must be unique")
         if sum(item.size_bytes for item in self.files) > 4194304:
             raise ValueError("candidate exceeds total byte limit")
-        if self.base.repository_id != self.source.repository_id:
-            raise ValueError("candidate and base must identify the same repository")
+        if ((self.base.repository_id, self.base.visibility, self.base.data_class)
+                != (self.source.repository_id, self.source.visibility, self.source.data_class)):
+            raise ValueError("candidate and base must identify the same repository and classification")
         return self
 
 

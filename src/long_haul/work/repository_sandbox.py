@@ -114,7 +114,7 @@ class DockerGVisorSandbox:
         runtimes = json.loads(runtime)
         actual = runtimes.get(environment.runtime, {})
         if (Path(actual.get("path", "")).resolve() != runsc_path.resolve()
-                or "--network=none" not in actual.get("runtimeArgs", [])):
+                or actual.get("runtimeArgs") != ["--network=none"]):
             raise ValueError("required gVisor runtime/network configuration is unavailable")
         image = json.loads(self._control("image", "inspect", environment.image))[0]
         self.image_id = image["Id"]  # Acquisition is a separate trusted step.

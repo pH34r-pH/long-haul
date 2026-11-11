@@ -258,6 +258,10 @@ def test_exported_candidate_paths_are_unique_and_safe(tmp_path):
     value["changed_paths"] = ("../outside",)
     with pytest.raises(ValidationError, match="repository-relative"):
         FrozenRepositoryCandidate.model_validate(value)
+    value = snapshot.candidate.model_dump()
+    value["source"]["visibility"] = "private" if value["base"]["visibility"] == "public" else "public"
+    with pytest.raises(ValidationError, match="same repository and classification"):
+        FrozenRepositoryCandidate.model_validate(value)
 
 
 def test_unverified_candidate_cannot_spoof_trusted_startup_marker(tmp_path):

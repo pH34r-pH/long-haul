@@ -27,5 +27,17 @@ sudo -n "$install_root/runsc" install --runtime=long-haul-gvisor \
 sudo -n systemctl reload docker
 image="$(python -c 'import json; print(json.load(open("tests/fixtures/repository-evaluator.json"))["environment"]["image"])')"
 docker pull --platform=linux/amd64 "$image"
+# Public immutable-image startup probes retain full launcher errors on CI failure.
+for mode in plain init init-expanded-pids; do
+  extra=()
+  pids=32
+  if [[ "$mode" != plain ]]; then extra=(--init); fi
+  if [[ "$mode" == init-expanded-pids ]]; then pids=128; fi
+  echo "Pinned toolchain startup probe: $mode"
+  docker run --rm "${extra[@]}" --runtime=long-haul-gvisor --network=none --read-only \
+    --user=65534:65534 --cap-drop=ALL --security-opt=no-new-privileges \
+    --cpus=1 --memory=256m --memory-swap=256m --pids-limit="$pids" \
+    "$image" /usr/local/bin/python3 -I -S -c 'print("trusted-python-started")' || true
+done
 export LONG_HAUL_RUNSC="$install_root/runsc" LONG_HAUL_REQUIRE_GVISOR=1
 python -m pytest -q -s tests/test_repository_gvisor.py

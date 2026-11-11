@@ -24,9 +24,11 @@ def sandbox():
 
 def synthetic_diagnostics(result):
     # Only these public synthetic probes may expose their bounded startup errors.
-    return {"outcome": result.outcome, "exit_code": result.exit_code,
-            "synthetic_stderr_prefix": result.stderr[:512].decode("utf-8", errors="replace"),
-            "execution": result.execution_receipt.model_dump() if result.execution_receipt else None}
+    diagnostic = {"outcome": result.outcome, "exit_code": result.exit_code,
+                  "synthetic_stderr_prefix": result.stderr[:512].decode("utf-8", errors="replace"),
+                  "execution": result.execution_receipt.model_dump() if result.execution_receipt else None}
+    print(json.dumps(diagnostic))
+    return diagnostic
 
 
 def test_real_public_sealed_readonly_candidate_and_redacted_packet(tmp_path, sandbox):
