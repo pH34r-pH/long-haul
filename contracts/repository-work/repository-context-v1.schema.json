@@ -1,0 +1,599 @@
+{
+  "$defs": {
+    "ContextBudget": {
+      "additionalProperties": false,
+      "properties": {
+        "max_bytes": {
+          "default": 8192,
+          "maximum": 1048576,
+          "minimum": 0,
+          "title": "Max Bytes",
+          "type": "integer"
+        },
+        "max_delivery_bytes": {
+          "default": 16384,
+          "maximum": 1048576,
+          "minimum": 512,
+          "title": "Max Delivery Bytes",
+          "type": "integer"
+        },
+        "max_items": {
+          "default": 16,
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Max Items",
+          "type": "integer"
+        },
+        "max_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Tokens"
+        }
+      },
+      "title": "ContextBudget",
+      "type": "object"
+    },
+    "ContextItem": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_class": {
+          "enum": [
+            "repository-reference",
+            "external-source",
+            "generated-content"
+          ],
+          "title": "Authority Class",
+          "type": "string"
+        },
+        "byte_count": {
+          "minimum": 0,
+          "title": "Byte Count",
+          "type": "integer"
+        },
+        "data_class": {
+          "enum": [
+            "public",
+            "private",
+            "personal",
+            "sensitive",
+            "restricted"
+          ],
+          "title": "Data Class",
+          "type": "string"
+        },
+        "end_line": {
+          "minimum": 1,
+          "title": "End Line",
+          "type": "integer"
+        },
+        "excerpt_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Excerpt Digest",
+          "type": "string"
+        },
+        "lookup": {
+          "$ref": "#/$defs/ContextLookup"
+        },
+        "omitted_byte_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Omitted Byte Count",
+          "type": "integer"
+        },
+        "policy_fingerprint": {
+          "pattern": "^resource-policy-v1:[0-9a-f]{64}$",
+          "title": "Policy Fingerprint",
+          "type": "string"
+        },
+        "request_fingerprint": {
+          "pattern": "^resource-use-v1:[0-9a-f]{64}$",
+          "title": "Request Fingerprint",
+          "type": "string"
+        },
+        "resource_id": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Resource Id",
+          "type": "string"
+        },
+        "source_kind": {
+          "enum": [
+            "source",
+            "test",
+            "build",
+            "config",
+            "documentation",
+            "issue",
+            "pr",
+            "generated"
+          ],
+          "title": "Source Kind",
+          "type": "string"
+        },
+        "source_reference": {
+          "$ref": "#/$defs/DigestReference"
+        },
+        "start_line": {
+          "minimum": 1,
+          "title": "Start Line",
+          "type": "integer"
+        },
+        "symbol": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Symbol"
+        },
+        "truncated": {
+          "default": false,
+          "title": "Truncated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "lookup",
+        "source_kind",
+        "source_reference",
+        "resource_id",
+        "authority_class",
+        "data_class",
+        "policy_fingerprint",
+        "request_fingerprint",
+        "start_line",
+        "end_line",
+        "excerpt_digest",
+        "byte_count"
+      ],
+      "title": "ContextItem",
+      "type": "object"
+    },
+    "ContextLookup": {
+      "additionalProperties": false,
+      "properties": {
+        "end_line": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Line"
+        },
+        "kind": {
+          "default": "range",
+          "enum": [
+            "range",
+            "lexical",
+            "syntax",
+            "symbol"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "query": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query"
+        },
+        "reason": {
+          "default": "task evidence",
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "start_line": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Start Line",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "ContextLookup",
+      "type": "object"
+    },
+    "ContextOmission": {
+      "additionalProperties": false,
+      "properties": {
+        "lookup": {
+          "$ref": "#/$defs/ContextLookup"
+        },
+        "omitted_matches": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Omitted Matches"
+        },
+        "reason": {
+          "enum": [
+            "byte_budget",
+            "item_budget",
+            "token_budget_unavailable",
+            "policy_denied",
+            "missing",
+            "unavailable",
+            "invalid_source",
+            "no_match"
+          ],
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "lookup",
+        "reason"
+      ],
+      "title": "ContextOmission",
+      "type": "object"
+    },
+    "ContextProviderIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "configuration": {
+          "default": [],
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "type": "array"
+          },
+          "title": "Configuration",
+          "type": "array"
+        },
+        "implementation": {
+          "$ref": "#/$defs/DigestReference"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "tool_versions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tool Versions",
+          "type": "array"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version",
+        "tool_versions",
+        "implementation"
+      ],
+      "title": "ContextProviderIdentity",
+      "type": "object"
+    },
+    "ContextSelection": {
+      "additionalProperties": false,
+      "properties": {
+        "admitted_authority_classes": {
+          "default": [
+            "repository-reference"
+          ],
+          "items": {
+            "enum": [
+              "repository-reference",
+              "external-source",
+              "generated-content"
+            ],
+            "type": "string"
+          },
+          "title": "Admitted Authority Classes",
+          "type": "array"
+        },
+        "admitted_data_classes": {
+          "default": [
+            "public"
+          ],
+          "items": {
+            "enum": [
+              "public",
+              "private",
+              "personal",
+              "sensitive",
+              "restricted"
+            ],
+            "type": "string"
+          },
+          "title": "Admitted Data Classes",
+          "type": "array"
+        },
+        "budget": {
+          "$ref": "#/$defs/ContextBudget"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "created_by": {
+          "$ref": "#/$defs/DigestReference"
+        },
+        "environment": {
+          "$ref": "#/$defs/DigestReference"
+        },
+        "lookups": {
+          "items": {
+            "$ref": "#/$defs/ContextLookup"
+          },
+          "maxItems": 128,
+          "title": "Lookups",
+          "type": "array"
+        },
+        "task": {
+          "$ref": "#/$defs/DigestReference"
+        },
+        "use": {
+          "$ref": "#/$defs/ContextUseBinding"
+        }
+      },
+      "required": [
+        "task",
+        "environment",
+        "lookups",
+        "use",
+        "created_by",
+        "created_at"
+      ],
+      "title": "ContextSelection",
+      "type": "object"
+    },
+    "ContextUseBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "caller_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Caller Id",
+          "type": "string"
+        },
+        "contract_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Contract Id",
+          "type": "string"
+        },
+        "crew_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Crew Id",
+          "type": "string"
+        },
+        "mission_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Mission Id",
+          "type": "string"
+        },
+        "purpose": {
+          "maxLength": 256,
+          "minLength": 1,
+          "title": "Purpose",
+          "type": "string"
+        }
+      },
+      "required": [
+        "caller_id",
+        "crew_id",
+        "contract_id",
+        "mission_id",
+        "purpose"
+      ],
+      "title": "ContextUseBinding",
+      "type": "object"
+    },
+    "DigestReference": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "reference": {
+          "maxLength": 512,
+          "pattern": "^(urn|artifact|git):[A-Za-z0-9._:/+@-]+$",
+          "title": "Reference",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reference",
+        "digest"
+      ],
+      "title": "DigestReference",
+      "type": "object"
+    },
+    "RepositoryIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "commit": {
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
+          "title": "Commit",
+          "type": "string"
+        },
+        "data_class": {
+          "enum": [
+            "public",
+            "private",
+            "personal",
+            "sensitive",
+            "restricted"
+          ],
+          "title": "Data Class",
+          "type": "string"
+        },
+        "materials": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RepositoryMaterial"
+          },
+          "maxItems": 256,
+          "title": "Materials",
+          "type": "array"
+        },
+        "repository_id": {
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_.:/-]+$",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "tree": {
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
+          "title": "Tree",
+          "type": "string"
+        },
+        "visibility": {
+          "enum": [
+            "public",
+            "private"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "repository_id",
+        "visibility",
+        "data_class",
+        "commit",
+        "tree"
+      ],
+      "title": "RepositoryIdentity",
+      "type": "object"
+    },
+    "RepositoryMaterial": {
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "pattern": "^(sha256:)?[0-9a-f]{40}([0-9a-f]{24})?$",
+          "title": "Identity",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "submodule",
+            "lfs",
+            "generated"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "kind",
+        "identity"
+      ],
+      "title": "RepositoryMaterial",
+      "type": "object"
+    }
+  },
+  "$id": "https://ph34r.dev/ns/long-haul/repository-context-v1.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "items": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ContextItem"
+      },
+      "maxItems": 1000,
+      "title": "Items",
+      "type": "array"
+    },
+    "omissions": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ContextOmission"
+      },
+      "maxItems": 256,
+      "title": "Omissions",
+      "type": "array"
+    },
+    "profile": {
+      "const": "repository-context-v1",
+      "default": "repository-context-v1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "provider": {
+      "$ref": "#/$defs/ContextProviderIdentity"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "selection": {
+      "$ref": "#/$defs/ContextSelection"
+    },
+    "source": {
+      "$ref": "#/$defs/RepositoryIdentity"
+    }
+  },
+  "required": [
+    "source",
+    "selection",
+    "provider"
+  ],
+  "title": "RepositoryContextManifestV1",
+  "type": "object"
+}

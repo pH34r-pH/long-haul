@@ -1,0 +1,104 @@
+{
+  "baseline_commit": "f5dd3ff13f5a1b7e03c4374e63d74de33fce8a74",
+  "checks": [
+    {
+      "command": "python -m pytest -q",
+      "result": "407 passed, 27 skipped",
+      "seconds": 9.77
+    },
+    {
+      "command": "python -m pytest -q tests/test_repository_context.py",
+      "result": "20 passed"
+    },
+    {
+      "command": "python -m ruff check src tests",
+      "result": "passed"
+    },
+    {
+      "command": "python -m unittest tools.test_requirements tools.test_requirements_boundaries",
+      "result": "21 tests; OK; 5 skipped"
+    },
+    {
+      "command": "python .github/actions/repository-governance/validate.py governance/repository-profile.json",
+      "result": "passed"
+    },
+    {
+      "command": "python scripts/export_repository_work_schemas.py --output-dir contracts/repository-work",
+      "result": "exported; byte equality tested against runtime"
+    },
+    {
+      "command": "Ruff structural rules and Lizard, changed modules",
+      "result": "no findings"
+    },
+    {
+      "command": "jscpd 5.0.12, repository CI arguments",
+      "result": "98 sources; 14,370 lines; 0 clones"
+    },
+    {
+      "command": "markdownlint-cli2 0.18.1, changed Markdown",
+      "result": "0 errors"
+    }
+  ],
+  "control_issue": 252,
+  "coverage": [
+    "ordinary WorkContract plus optional strict repository extension",
+    "exact source/task/environment/context JSON round-trip and reconstruction",
+    "Git submodule/generated/LFS identity mismatch",
+    "shared lexical/Python AST syntax/symbol lookup",
+    "explicit missing source/unavailable language or tokenizer",
+    "UTF-8 byte/item and serialized delivery budgets",
+    "event-derived omission digest with tiny text budget",
+    "traversal/symlink/non-file rejection",
+    "imperative source cannot grant scope/capabilities/acceptance",
+    "private and external admission separation",
+    "read permission cannot imply model augmentation",
+    "source/candidate/retrieval/policy/use/session mismatch",
+    "expired or revoked policy rejected at actual Pi delivery",
+    "no network fetch for unavailable Git objects"
+  ],
+  "environment": {
+    "packages": {
+      "PyYAML": "6.0.3",
+      "lizard": "1.24.0",
+      "pydantic": "2.14.3",
+      "pytest": "9.2.0",
+      "ruff": "0.16.9"
+    },
+    "python": "3.12.14"
+  },
+  "issue": 242,
+  "limitations": [
+    "Python AST support is explicit; LSP/SCIP/other syntax providers unavailable",
+    "LFS pointer identity is retained; payload is never downloaded",
+    "token limits without exact tokenizer decline explicitly",
+    "caller authenticates policy registry, current time, WorkContract and session; repository content cannot supply these",
+    "historical reconstruction does not grant current use; delivery rechecks current policy"
+  ],
+  "review": {
+    "independent_agent": "read-only policy review; confirmed original permission/expiry reproductions rejected after fixes",
+    "remaining_critical_findings": 0
+  },
+  "schema_version": 1,
+  "source_sha256": {
+    "contracts/repository-work/repository-context-v1.schema.json": "6b600e4572ba22c9e255e5c5e7a317b8e0b64a507d175674b30472e433bb9d2b",
+    "contracts/repository-work/repository-work-v1.schema.json": "99dcfb7334f57c05d2cc7ff7f16d467d63fac2e16ca06aa5d5d169a12b243002",
+    "scripts/export_repository_work_schemas.py": "7c97f8b1298d0bab9f5734643bd0402083fce8d257ab93547fea8297978c7391",
+    "src/long_haul/adapters/pi_rpc.py": "78da2b0d72d712672e411d8edfb467cc87deb0bb997a0f72b602266701baf48f",
+    "src/long_haul/events/store.py": "d4027311b0b13480a643cb8021553067fc2b00bd3d07c9fae34fa62ac5a9a0c4",
+    "src/long_haul/work/checkpoints.py": "19468f62bee4a7f5edc609de878c840566c9b77cea5817283e1157b41a434b2b",
+    "src/long_haul/work/contracts.py": "dbe96cb7bfd7f4e1d899b3fb4a2bdf6a2f398ded3d38f437b43b66117ab2d444",
+    "src/long_haul/work/repository_context.py": "c414c640a607da795404810e80aa266921e191f00ff5988dfed312f34c00a911",
+    "src/long_haul/work/repository_git.py": "07f97b6c0dd091cba8a0ce2c133b3a4cc4ac3beeddf51f7f06bda52066cbc7cf",
+    "src/long_haul/work/repository_models.py": "f8d8166a2280959af7cee9cb99bb61bd0ecbcbd17c2adaa02f15d58a84d09ed0",
+    "tests/test_repository_context.py": "078d0fbb2679905a4417fef76686651112f38efaaee461fdce126334ac2fda99"
+  },
+  "states": {
+    "Pi_payload_projection": "passed; no real model attempt claimed",
+    "context_fixture_conformance": "passed",
+    "deployment": "not performed",
+    "physical_device": "not performed",
+    "publication": "not performed",
+    "sandbox_security": "separate #245 gate",
+    "sealed_evaluator": "separate #243 gate"
+  }
+}

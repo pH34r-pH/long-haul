@@ -7,6 +7,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from .repository_models import RepositoryWorkExtensionV1
+
 WORK_CONTRACT_SCHEMA_VERSION = 1
 FLASH_EXECUTION_SCHEMA_VERSION = 1
 
@@ -114,6 +116,7 @@ class WorkContract(BaseModel):
     success_predicates: list[AcceptancePredicate] = Field(min_length=1)
     failure_predicates: list[FailurePredicate] = Field(default_factory=list)
     flash_execution: FlashExecutionExtensionV1 | None = None
+    repository_work: RepositoryWorkExtensionV1 | None = None
     schema_version: Literal[1] = WORK_CONTRACT_SCHEMA_VERSION
 
     @model_validator(mode="after")

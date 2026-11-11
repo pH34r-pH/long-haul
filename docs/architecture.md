@@ -90,6 +90,8 @@ When an admitted resource disappears, attempts bound to that lease become inconc
 
 ### Work checkpoints and session context
 
+Repository tasks use the optional [repository-work extension and bounded context manifest](repository-work.md). Exact source/task/environment/context identities supplement WorkContract without granting authority. Immutable Git reads, shared resource-policy admission, explicit omissions, and event-derived context summaries are implemented; sealed evaluator and sandbox qualification remain separate gates.
+
 The event log is authoritative history. A `WorkCheckpoint` is a deterministic compact materialization of contract-scoped facts, active constraints, subgoal state, unresolved failures, and the last externally verified artifact; it is disposable and rebuildable from events. A `TaskDigest` is a hard-bounded rendering of that checkpoint for a new harness/model session and explicitly reports omissions. A harness conversation is transient execution context, not durable memory. Resuming work creates a new session identity while retaining the work contract, crew identity, execution-plan linkage, and checkpoint provenance. Crew memory/continuity remains a separate institutional concern and must not be inferred from a model session transcript.
 
 ## Hardware boundary

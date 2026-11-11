@@ -1,0 +1,237 @@
+{
+  "$defs": {
+    "DigestReference": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "reference": {
+          "maxLength": 512,
+          "pattern": "^(urn|artifact|git):[A-Za-z0-9._:/+@-]+$",
+          "title": "Reference",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reference",
+        "digest"
+      ],
+      "title": "DigestReference",
+      "type": "object"
+    },
+    "RepositoryIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "commit": {
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
+          "title": "Commit",
+          "type": "string"
+        },
+        "data_class": {
+          "enum": [
+            "public",
+            "private",
+            "personal",
+            "sensitive",
+            "restricted"
+          ],
+          "title": "Data Class",
+          "type": "string"
+        },
+        "materials": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RepositoryMaterial"
+          },
+          "maxItems": 256,
+          "title": "Materials",
+          "type": "array"
+        },
+        "repository_id": {
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_.:/-]+$",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "tree": {
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
+          "title": "Tree",
+          "type": "string"
+        },
+        "visibility": {
+          "enum": [
+            "public",
+            "private"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "repository_id",
+        "visibility",
+        "data_class",
+        "commit",
+        "tree"
+      ],
+      "title": "RepositoryIdentity",
+      "type": "object"
+    },
+    "RepositoryMaterial": {
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "pattern": "^(sha256:)?[0-9a-f]{40}([0-9a-f]{24})?$",
+          "title": "Identity",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "submodule",
+            "lfs",
+            "generated"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "kind",
+        "identity"
+      ],
+      "title": "RepositoryMaterial",
+      "type": "object"
+    }
+  },
+  "$id": "https://ph34r.dev/ns/long-haul/repository-work-v1.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "cache_policy": {
+      "default": "disabled",
+      "enum": [
+        "disabled",
+        "content-addressed"
+      ],
+      "title": "Cache Policy",
+      "type": "string"
+    },
+    "candidate_form": {
+      "default": "tree",
+      "enum": [
+        "patch",
+        "commit",
+        "tree",
+        "artifact"
+      ],
+      "title": "Candidate Form",
+      "type": "string"
+    },
+    "context_manifest": {
+      "$ref": "#/$defs/DigestReference"
+    },
+    "dependency_cache": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DigestReference"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "dependency_policy": {
+      "default": "offline",
+      "enum": [
+        "offline",
+        "locked-artifacts"
+      ],
+      "title": "Dependency Policy",
+      "type": "string"
+    },
+    "environment": {
+      "$ref": "#/$defs/DigestReference"
+    },
+    "network_policy": {
+      "default": "none",
+      "enum": [
+        "none",
+        "admitted-profile"
+      ],
+      "title": "Network Policy",
+      "type": "string"
+    },
+    "network_profile": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DigestReference"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "partition_references": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/DigestReference"
+      },
+      "title": "Partition References",
+      "type": "array"
+    },
+    "profile": {
+      "const": "repository-work-v1",
+      "default": "repository-work-v1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "public_evaluation": {
+      "$ref": "#/$defs/DigestReference"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "sealed_evaluator": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DigestReference"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "source": {
+      "$ref": "#/$defs/RepositoryIdentity"
+    },
+    "task": {
+      "$ref": "#/$defs/DigestReference"
+    },
+    "toolchain": {
+      "$ref": "#/$defs/DigestReference"
+    }
+  },
+  "required": [
+    "source",
+    "task",
+    "environment",
+    "toolchain",
+    "context_manifest",
+    "public_evaluation"
+  ],
+  "title": "RepositoryWorkExtensionV1",
+  "type": "object"
+}
