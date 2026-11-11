@@ -114,6 +114,22 @@ def test_worker_projection_checks_all_files_before_copy_and_rejects_policy_drift
     assert list(projected.iterdir()) == []
 
 
+def test_worker_projection_copies_the_exact_checked_bytes(tmp_path):
+    _, _, normalizer, _root, registry, _ = setup_guard(tmp_path)
+
+    class ChangedAfterRead(dict):
+        def get(self, key, default=None):
+            value = super().get(key, default)
+            self[key] = b"unadmitted replacement"
+            return value
+
+    base = SimpleNamespace(contents=ChangedAfterRead({"fixture/code.py": b"before\n"}))
+    projected = tmp_path / "projected"
+    projected.mkdir()
+    DockerGVisorPiWorker._project(projected, base, registry, normalizer, NOW)
+    assert (projected / "fixture/code.py").read_bytes() == b"before\n"
+
+
 @pytest.mark.parametrize("change", ["attempt_id", "session_id", "toolCallId", "toolName", "args"])
 def test_guard_cannot_confirm_another_operation(tmp_path, change):
     _, attempt, _, root, _, guard = setup_guard(tmp_path)

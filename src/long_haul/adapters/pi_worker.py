@@ -211,6 +211,7 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
         guard._exact_contract()
         guard._check_roots()
         # Authorize the entire projection before writing any worker-visible bytes.
+        projected = {}
         for path, admission in registry.items():
             worker_path(path)
             if not contract.permits_path(path):
@@ -226,9 +227,9 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
                 parents = guard._parents(binding)
                 for action in (ResourceAction.READ, ResourceAction.AI_AUGMENT):
                     guard._policy(parents, action, now, request_class="projection")
+            projected[path] = data
         worker.chmod(0o777)
-        for path, admission in registry.items():
-            data = base.contents.get(path)
+        for path, data in projected.items():
             target = worker / path
             target.parent.mkdir(parents=True, exist_ok=True)
             if data is not None:
@@ -277,8 +278,7 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
         self.last_native_session_tag = normalizer.fingerprint("pi-native-session", harness._native_session)
         harness.guard._exact_contract()
         if harness.projector.state.terminal == "settled":
-            initial = {path: request.base.contents[path] for path in request.registry if path in request.base.contents}
-            harness.guard.validate_final(worker, initial, datetime.now(UTC))
+            self._validate_candidate(request, worker, harness.guard)
             snapshot = freeze_stopped_worker(request.source_root, request.base, worker, set(request.registry), normalizer.contract)
         candidate = DigestReference(reference="artifact:frozen-worker-candidate", digest=snapshot.candidate.fingerprint) if snapshot else None
         result = harness.finish(cleanup, candidate)
@@ -293,6 +293,11 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
             for derivation in harness.guard.derivations:
                 request.event_store.append(Event(event_type="observation", source="worker-derivation-v1", payload=derivation))
         return result, harness.projector.events, snapshot
+
+    @staticmethod
+    def _validate_candidate(request, worker, guard):
+        initial = {path: request.base.contents[path] for path in request.registry if path in request.base.contents}
+        guard.validate_final(worker, initial, datetime.now(UTC))
 
     def _remove_worker(self, container):
         try:
