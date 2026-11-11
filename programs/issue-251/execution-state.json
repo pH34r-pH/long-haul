@@ -6,20 +6,17 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-11T20:08:56.975892+00:00",
+    "updated_at": "2026-11-11T20:20:11.184023+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
-        "task": "lh-243-evaluator",
-        "state": "implementation",
-        "parallel_preparation": [
-          "lh-244-pi-trace"
-        ]
+        "task": "lh-244-pi-trace",
+        "state": "implementation_after_merged_evaluator"
       },
       {
         "repository": "pH34r-pH/experiment-compiler",
         "task": "compiler-150",
-        "state": "reconciled_waiting_for_dependency"
+        "state": "implementation"
       },
       {
         "repository": "pH34r-pH/long-haul-fleet",
@@ -118,7 +115,7 @@
           "id": "lh-243-evaluator",
           "repository": "pH34r-pH/long-haul",
           "issue": 243,
-          "status": "in_progress",
+          "status": "completed",
           "depends_on": [
             "lh-242-context"
           ],
@@ -126,21 +123,30 @@
           "baseline_commit": "5cab6749e65090b16d0b28970fe4edc81379d646",
           "implementation_pr": 255,
           "qualification": {
-            "status": "passed_before_final_cleanup_race_patch",
-            "checked_head": "ac0031809ca6cd627dfc91688cfa7bbaa8039c73",
-            "run": 43093288138,
-            "job": 130775587667,
+            "status": "passed",
+            "checked_head": "ae21e7611ad375be04c4d41f806aeb7a1f809321",
+            "run": 43093995692,
+            "job": 130778017488,
             "real_tests_passed": 6,
             "environment": "sha256:7fb8fd5a604c89ce062f15db235885f867b2a97f0c996f775b1cc802e929d163",
-            "packet": "sha256:87f1a81ab8207ce271752e79cd93e8f1c18bd282a035e2ab56c498fd2d3aec66",
+            "packet": "sha256:57f2377b54364a1e9aead73f117965ae621d22c5c187d7471a08ff9ad7d066fc",
             "failed_runs": [
               43085111636,
               43088457062,
               43088889747,
               43092685133
             ],
-            "remaining": "final_exact_head_checks_and_merge; no model competence claim"
-          }
+            "remaining": "default-branch CI separately pending; no full worker/model competence claim"
+          },
+          "checked_head": "ae21e7611ad375be04c4d41f806aeb7a1f809321",
+          "merge_commit": "458bc2f1ec669392963b7fe29e4c252e2e70776c",
+          "default_branch_checks": "in_progress",
+          "evidence": [
+            "programs/issue-251/evidence/issue-243-local.json",
+            "programs/issue-251/evidence/issue-243-review-fixes.json",
+            "programs/issue-251/evidence/issue-243-runtime-qualification.json",
+            "https://github.com/pH34r-pH/long-haul/issues/243#issuecomment-6806306703"
+          ]
         },
         {
           "id": "lh-244-pi-trace",
@@ -151,8 +157,8 @@
             "lh-242-context"
           ],
           "acceptance": "Pi emits replayable privacy-preserving semantic action events with exact harness identity.",
-          "baseline_commit": "5cab6749e65090b16d0b28970fe4edc81379d646",
-          "preparation_scope": "Disjoint harness/event normalization core only; no existing repository/evaluator contract mutations; integration and PR wait for merged/pinned #243"
+          "baseline_commit": "458bc2f1ec669392963b7fe29e4c252e2e70776c",
+          "preparation_scope": "Harness core independently reviewed; actual Pi/RPC worker integration now admitted after #243 merge"
         },
         {
           "id": "lh-245-security",
@@ -190,12 +196,14 @@
           "id": "compiler-150",
           "repository": "pH34r-pH/experiment-compiler",
           "issue": 150,
-          "status": "queued",
+          "status": "in_progress",
           "depends_on": [
             "lh-242-context",
             "lh-243-evaluator"
           ],
-          "acceptance": "Reusable lifecycle components and repository-task, evaluator, trajectory, and corpus profiles are implemented without changing evidence semantics."
+          "acceptance": "Reusable lifecycle components and repository-task, evaluator, trajectory, and corpus profiles are implemented without changing evidence semantics.",
+          "baseline_commit": "4b0816e6b10d7d92d8c69ae47f1910ff41a5bfdb",
+          "upstream_contract_commit": "458bc2f1ec669392963b7fe29e4c252e2e70776c"
         },
         {
           "id": "fleet-1612",
@@ -451,9 +459,9 @@
           "external_gate": "human_submission_approval",
           "acceptance": "Local validator, pinned Quarto/TeX environment, and exact multi-format candidate receipts pass.",
           "execution_prerequisites": {
-            "private_source_ci": "not_admitted_to_finite_fleet_controller",
+            "local_validation": "required by issue; no hosted/private CI admission prerequisite",
             "publication": "requires_human_author_approval",
-            "safe_work": "local_fixture_qualification_and_reviewed_admission_proposal"
+            "safe_work": "local_fixture_validation_repeat_builds_and_visual_qualification"
           }
         },
         {
@@ -2518,6 +2526,20 @@
       "real_tests_passed": 6,
       "merge_status": "not_merged_pending_final_head",
       "model_competence": "not_claimed"
+    },
+    {
+      "at": "2026-11-11T20:20:11.184023+00:00",
+      "task": "lh-243-evaluator",
+      "status": "completed",
+      "repository": "pH34r-pH/long-haul",
+      "pull_request": 255,
+      "checked_head": "ae21e7611ad375be04c4d41f806aeb7a1f809321",
+      "merge_commit": "458bc2f1ec669392963b7fe29e4c252e2e70776c",
+      "pre_merge_checks": "11passed4intentional_skips",
+      "default_branch_checks": "in_progress",
+      "runtime_run": 43093995692,
+      "closeout": "https://github.com/pH34r-pH/long-haul/issues/243#issuecomment-6806306703",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6806334980"
     }
   ]
 }

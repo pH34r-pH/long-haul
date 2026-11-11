@@ -1,0 +1,8 @@
+{
+  "name": "long-haul-pi-qualification-assets",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "1.5.2"
+  }
+}

@@ -1,0 +1,43 @@
+name: Pi worker qualification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    if: >-
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.3'
+      - run: python -m pip install -e '.[dev]'
+      - name: Acquire and verify exact Pi package without lifecycle scripts
+        run: python scripts/prepare_pi_runtime.py "$RUNNER_TEMP/pi-runtime"
+      - name: Qualify existing read-only evaluator containment prerequisite
+        run: bash scripts/qualify_repository_evaluator.sh
+      - name: Qualify actual Pi with public synthetic sandbox-local provider
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="$(python -c 'from long_haul.adapters.pi_worker import NODE_IMAGE;print(NODE_IMAGE)')"
+          docker pull --platform=linux/amd64 "$image"
+          export LONG_HAUL_RUNSC=/usr/local/lib/long-haul-gvisor/runsc
+          export LONG_HAUL_PI_RUNTIME="$RUNNER_TEMP/pi-runtime"
+          export LONG_HAUL_PI_RECEIPT="$RUNNER_TEMP/pi-acquisition-receipt.json"
+          export LONG_HAUL_REQUIRE_PI_GVISOR=1
+          python -m pytest -q -s tests/test_pi_gvisor.py
