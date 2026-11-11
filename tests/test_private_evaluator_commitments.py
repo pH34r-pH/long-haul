@@ -110,6 +110,13 @@ def test_private_evaluation_redacts_hidden_output_and_rejects_raw_public_event(t
     assert "[-5, 2]" not in public and content_digest(b"-3\n") not in public
     assert private.check_fingerprint(private.checks[1]) in public
 
+    def failed_private_sink(_packet):
+        raise RuntimeError("private storage unavailable")
+
+    with pytest.raises(RuntimeError, match="private storage unavailable"):
+        runner.evaluate_private(contract, snapshot, private, attempt_id="failed-storage",
+                                packet_id="not-published", private_sink=failed_private_sink)
+
 
 def test_private_evaluation_requires_explicit_sink():
     runner = RepositoryEvaluationRunner(FixtureSandbox(synthetic_profile(4).environment))
