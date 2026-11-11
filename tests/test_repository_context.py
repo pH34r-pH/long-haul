@@ -171,6 +171,28 @@ def test_repository_instructions_do_not_change_authority_or_acceptance(repositor
         RepositoryWorkExtensionV1.model_validate({**work.repository_work.model_dump(), "capabilities": ["deploy"]})
 
 
+def test_worker_prompt_does_not_disclose_evaluator_identity_commitments(repository):
+    source = provider(repository)
+    view, _ = context(source, selection(ContextLookup(path="code.py")))
+    work = contract(view)
+    extension = work.repository_work.model_copy(update={
+        "sealed_evaluator": DigestReference(reference="urn:fixture:sealed", digest="sha256:" + "1" * 64),
+        "public_evaluation": DigestReference(reference="urn:fixture:public", digest="sha256:" + "2" * 64),
+    })
+    work = work.model_copy(update={"repository_work": extension})
+    original = pi_prompt(work)
+    alternate_extension = work.repository_work.model_copy(update={
+        "sealed_evaluator": reference("another-sealed-check"),
+        "public_evaluation": reference("another-evaluator-projection"),
+    })
+    assert alternate_extension.fingerprint != work.repository_work.fingerprint
+    alternate = work.model_copy(update={"repository_work": alternate_extension})
+    assert pi_prompt(alternate) == original
+    assert work.repository_work.fingerprint not in original
+    assert work.repository_work.public_evaluation.digest not in original
+    assert work.repository_work.sealed_evaluator.digest not in original
+
+
 def test_truncation_omissions_checkpoint_and_hard_byte_bound(repository):
     source = provider(repository)
     view, _ = context(source, selection(ContextLookup(path="large.txt"), budget=ContextBudget(max_bytes=7)))
