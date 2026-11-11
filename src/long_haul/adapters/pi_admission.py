@@ -158,6 +158,11 @@ class PiToolAdmission:
         if tool in {"write", "edit"}:
             parents = self._derivation_parents(path, parents)
         policies = tuple(self._policy(parents, action, now) for action in actions)
+        contents = regular_contents(root)
+        current = content_digest(contents[path]) if path in contents else None
+        if current != binding.content_digest:
+            raise TraceAdmissionDenied("target changed during native admission")
+        expected_after = self._mutation_digest(tool, args, contents.get(path))
         receipt = ToolAdmissionReceipt(
             attempt_id=self.attempt.attempt_id, session_id=self.attempt.session_id,
             native_id=self.normalizer.native_id(request["toolCallId"])[0],
@@ -167,7 +172,8 @@ class PiToolAdmission:
         self.receipts.append(receipt)
         self._authorized = receipt
         self._target_path = path
-        self._before = {name: content_digest(data) for name, data in regular_contents(root).items()}
+        self._before = {name: content_digest(data) for name, data in contents.items()}
+        self._expected_after = expected_after
         self._operation_parents = parents
         if tool in {"read", "edit"}:
             self._inputs.update({parent.profile.identity.resource_id: parent for parent in parents})
@@ -255,6 +261,24 @@ class PiToolAdmission:
             raise TraceArgumentsInvalid("native mutation exceeds candidate file limit")
         return maximum
 
+    @staticmethod
+    def _mutation_digest(tool, args, previous):
+        if tool == "read":
+            return None
+        if tool == "write":
+            return content_digest(args["content"].encode("utf-8"))
+        try:
+            text = previous.decode("utf-8")
+            edits = args.get("edits", [{"oldText": args.get("oldText"), "newText": args.get("newText")}])
+            for edit in edits:
+                old, new = edit["oldText"], edit["newText"]
+                if "\r" in text or "\r" in old or "\r" in new or text.count(old) != 1:
+                    raise TraceArgumentsInvalid("edit requires unique exact LF-only replacements")
+                text = text.replace(old, new, 1)
+            return content_digest(text.encode("utf-8"))
+        except (UnicodeError, AttributeError, TypeError):
+            raise TraceArgumentsInvalid("edit requires exact UTF-8 replacement bytes") from None
+
     def end(self, record: dict, root: Path, now: datetime | None = None):
         if self._pending is None or (record["toolCallId"], record["toolName"]) != self._pending[:2]:
             raise TraceArgumentsInvalid("unmatched native tool end")
@@ -265,6 +289,8 @@ class PiToolAdmission:
         allowed = {self._target_path} if self._pending[1] in {"write", "edit"} else set()
         if not changed <= allowed:
             raise TraceAdmissionDenied("native call changed an unadmitted target")
+        if changed and after.get(self._target_path) != self._expected_after:
+            raise TraceAdmissionDenied("mutation differs from the authorized tool arguments")
         receipt = self._authorized
         result = DigestReference(reference="artifact:native-tool-admission", digest=receipt.fingerprint)
         if changed:

@@ -8,6 +8,8 @@ The work boundary turns a bounded objective into externally checkable evidence. 
 
 The Pi worker checks current READ and AI_AUGMENT policy for all existing files before projecting any bytes. After stopping the worker, changed candidate bytes require a completed, still-authorized derivation. These checks do not by themselves qualify the full adversarial security profile.
 
+Native write completions must match their authorized UTF-8 payload. Edits are limited to unique exact LF-only UTF-8 replacements; a changed target must match the resulting bytes before a derivation can be recorded.
+
 ## Invariants
 
 - A model or harness saying “done” is not acceptance evidence.

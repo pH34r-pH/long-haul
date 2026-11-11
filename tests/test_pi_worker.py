@@ -218,6 +218,31 @@ def test_unadmitted_native_mutation_invalidates_completion(tmp_path):
         guard.end(end(), root)
 
 
+@pytest.mark.parametrize("tool,args", [
+    ("write", {"path": "fixture/code.py", "content": "allowed\n"}),
+    ("edit", {"path": "fixture/code.py", "edits": [{"oldText": "before", "newText": "allowed"}]}),
+])
+def test_mutation_must_match_exact_authorized_tool_arguments(tmp_path, tool, args):
+    _, attempt, _, root, _, guard = setup_guard(tmp_path)
+    call = start("mutation", tool, args)
+    guard.start(call)
+    guard.authorize(request(attempt, call), root, NOW)
+    (root / "fixture/code.py").write_bytes(b"unauthorized\n")
+    with pytest.raises(TraceAdmissionDenied):
+        guard.end(end("mutation", tool), root, NOW)
+    assert not guard.derivations
+
+
+@pytest.mark.parametrize("content", [b"before\nbefore\n", b"before\r\n", b"before\xff"])
+def test_edit_rejects_ambiguous_or_noncanonical_input_before_authorization(tmp_path, content):
+    _, attempt, _, root, _, guard = setup_guard(tmp_path, content=content)
+    call = start("edit", "edit", {"path": "fixture/code.py", "edits": [{"oldText": "before", "newText": "after"}]})
+    guard.start(call)
+    with pytest.raises(TraceArgumentsInvalid):
+        guard.authorize(request(attempt, call), root, NOW)
+    assert not guard.receipts and (root / "fixture/code.py").read_bytes() == content
+
+
 def test_real_adapter_refuses_forged_success_without_interlock_receipt(tmp_path):
     _, attempt, normalizer, root, registry, _ = setup_guard(tmp_path)
     records = iter([start(), end(), {"type": "agent_settled", "aborted": False}])
