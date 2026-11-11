@@ -242,14 +242,7 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
                         harness.projector.eof(now, tick)
         finally:
             # Success here is mandatory; failures leave no candidate or resume receipt.
-            try:
-                self._control("rm", "--force", "--volumes", container)
-            except (OSError, ValueError, subprocess.SubprocessError):
-                self.recovery_path = retain_recovery(self._recovery)
-                raise PiWorkerCleanupRequired(self.recovery_path) from None
-            else:
-                self._cleanup_pending = False
-                self._recovery = None
+            self._remove_worker(container)
         cleanup = HarnessCleanup(
             attempt_id=normalizer.attempt.attempt_id, session_id=normalizer.attempt.session_id,
             boundary="sandbox", process_tree_stopped=True,
@@ -278,6 +271,16 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
             for derivation in harness.guard.derivations:
                 request.event_store.append(Event(event_type="observation", source="worker-derivation-v1", payload=derivation))
         return result, harness.projector.events, snapshot
+
+    def _remove_worker(self, container):
+        try:
+            self._control("rm", "--force", "--volumes", container)
+        except (OSError, ValueError, subprocess.SubprocessError):
+            self.recovery_path = retain_recovery(self._recovery)
+            raise PiWorkerCleanupRequired(self.recovery_path) from None
+        else:
+            self._cleanup_pending = False
+            self._recovery = None
 
     def _drive(self, process, normalizer, registry, worker, prompt, cancel_after):
         wire = _Wire(process, self.environment.limits.max_output_bytes)
