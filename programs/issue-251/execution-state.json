@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-11T19:51:40.888477+00:00",
+    "updated_at": "2026-11-11T20:08:56.975892+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -126,14 +126,20 @@
           "baseline_commit": "5cab6749e65090b16d0b28970fe4edc81379d646",
           "implementation_pr": 255,
           "qualification": {
-            "status": "in_progress",
+            "status": "passed_before_final_cleanup_race_patch",
+            "checked_head": "ac0031809ca6cd627dfc91688cfa7bbaa8039c73",
+            "run": 43093288138,
+            "job": 130775587667,
+            "real_tests_passed": 6,
+            "environment": "sha256:7fb8fd5a604c89ce062f15db235885f867b2a97f0c996f775b1cc802e929d163",
+            "packet": "sha256:87f1a81ab8207ce271752e79cd93e8f1c18bd282a035e2ab56c498fd2d3aec66",
             "failed_runs": [
               43085111636,
               43088457062,
-              43088889747
+              43088889747,
+              43092685133
             ],
-            "finding": "init_with_32_host_tasks_failed_startup;128_host_tasks_started_same_image_and_memory",
-            "certification": "not_yet_qualified; no_merge_until_exact_head_passes"
+            "remaining": "final_exact_head_checks_and_merge; no model competence claim"
           }
         },
         {
@@ -170,7 +176,15 @@
             "lh-244-pi-trace",
             "lh-245-security"
           ],
-          "acceptance": "P0 hermetic fixture and P1 real Pi repository task complete with frozen candidate and independent evidence."
+          "acceptance": "P0 hermetic fixture and P1 real Pi repository task complete with frozen candidate and independent evidence.",
+          "preparation": {
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/64#issuecomment-6806083619",
+            "kind": "read_only_static_preparation_no_experiment",
+            "task_candidate": "ProgressMonitor repeated successful verification boundary; known pilot/development material",
+            "historical_source": "ef9c8b219fd97b927d2df68e52b7d48a09146cd6",
+            "historical_tree": "dee53f815842515f94416e76ac5dfb82dce49829",
+            "additional_gate": "qualify offline library dependency/test-driver profile; initial standalone evaluator cannot certify Pydantic library"
+          }
         },
         {
           "id": "compiler-150",
@@ -2494,6 +2508,16 @@
       "dependencies": "merged #242",
       "active_pr_policy": "PR255 remains sole active Long-Haul implementation PR",
       "integration_gate": "merge and pin #243 before evaluator/worker integration or next PR"
+    },
+    {
+      "at": "2026-11-11T20:08:56.975892+00:00",
+      "task": "lh-243-evaluator",
+      "status": "real_isolation_qualification_passed_before_final_patch",
+      "checked_head": "ac0031809ca6cd627dfc91688cfa7bbaa8039c73",
+      "run": 43093288138,
+      "real_tests_passed": 6,
+      "merge_status": "not_merged_pending_final_head",
+      "model_competence": "not_claimed"
     }
   ]
 }

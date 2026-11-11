@@ -292,6 +292,34 @@ def test_output_flood_cannot_starve_startup_proof(tmp_path):
         process.communicate()
 
 
+@pytest.mark.parametrize("still_running,expected", [(False, "output_limit"), (True, "invalid")])
+def test_failed_kill_requires_observed_stopped_state(tmp_path, monkeypatch, still_running, expected):
+    from contextlib import contextmanager
+
+    from repository_evaluator_fixture import environment
+
+    from long_haul.work.repository_evaluation_models import CandidateCommand
+
+    adapter = DockerGVisorSandbox.__new__(DockerGVisorSandbox)
+    adapter.environment = environment()
+
+    @contextmanager
+    def attached(_):
+        yield None
+
+    def control(*args):
+        if args[0] == "kill":
+            raise subprocess.CalledProcessError(1, ["docker", "kill"])
+        return json.dumps([{"State": {"Running": still_running, "ExitCode": 0}}])
+
+    monkeypatch.setattr(adapter, "_attached_process", attached)
+    monkeypatch.setattr(adapter, "_control", control)
+    monkeypatch.setattr("long_haul.work.repository_sandbox._startup_receipt", lambda *args: START_MARKER)
+    monkeypatch.setattr("long_haul.work.repository_sandbox._bounded_output", lambda *args, **kw: ("output_limit", b"x", b""))
+    command = CandidateCommand(program="program.py", expected_stdout_digest=content_digest(b""))
+    assert adapter._execute("f" * 64, command).outcome == expected
+
+
 def test_docker_controls_ignore_ambient_credentials_and_proxy_config(tmp_path, monkeypatch):
     poisoned = tmp_path / "poisoned"
     poisoned.mkdir()

@@ -246,11 +246,14 @@ class DockerGVisorSandbox:
                 process, b"\0" + command.stdin.encode(), self.environment.limits, deadline=deadline,
             )
             if outcome != "completed":
-                self._control("kill", container)
+                try:
+                    self._control("kill", container)
+                except subprocess.CalledProcessError:
+                    pass  # It may have exited between the output cap and kill.
             state = json.loads(self._control("inspect", container))[0]["State"]
             if state.get("OOMKilled"):
                 outcome = "resource_exhausted"
-            if outcome == "completed" and (state.get("Running") or state.get("Error")):
+            if state.get("Running") or state.get("Error"):
                 outcome = "invalid"
             return SandboxResult(outcome, stdout, stderr, state.get("ExitCode"), startup_verified=True)
 
