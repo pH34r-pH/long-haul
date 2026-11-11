@@ -1,0 +1,421 @@
+{
+  "schema_version": 1,
+  "program": {
+    "name": "Modern repository stabilization",
+    "issue": "https://github.com/pH34r-pH/long-haul/issues/251",
+    "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
+    "handoff": "docs/programs/issue-251-work-mode-handoff.md",
+    "status": "ready_for_work_mode",
+    "updated_at": "2026-11-11T17:30:00-08:00"
+  },
+  "development_pause": {
+    "active": true,
+    "default_priority": "issue-251",
+    "exceptions": [
+      "active_security_vulnerability",
+      "service_outage",
+      "data_loss_risk",
+      "blocking_ci_or_infrastructure_failure",
+      "dependency_change_required_by_issue_251"
+    ],
+    "exception_journal": "https://github.com/pH34r-pH/long-haul/issues/252"
+  },
+  "execution_policy": {
+    "max_active_repositories": 4,
+    "max_active_pull_requests_per_repository": 1,
+    "merge_when_checks_green": true,
+    "documentation_only_does_not_close_implementation": true,
+    "p0_requires_executable_evidence": true,
+    "p1_default": "implement",
+    "external_gate_policy": "stage_exact_operator_procedure_and_continue",
+    "preserve_protected_human_and_physical_gates": true,
+    "avoid_new_central_platform": true
+  },
+  "phases": [
+    {
+      "id": "phase-0",
+      "name": "Program bootstrap",
+      "status": "queued",
+      "tasks": [
+        {
+          "id": "bootstrap-reconcile",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 252,
+          "status": "queued",
+          "depends_on": [],
+          "acceptance": "All child issues, open PRs, default-branch commits, governance pins, and CI states are reconciled into this execution state and the first checkpoint is posted."
+        }
+      ]
+    },
+    {
+      "id": "phase-1",
+      "name": "Shared platform gate",
+      "status": "queued",
+      "tasks": [
+        {
+          "id": "lh-242-context",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 242,
+          "status": "queued",
+          "depends_on": ["bootstrap-reconcile"],
+          "acceptance": "Exact repository, task, environment, and bounded context identities are implemented and reproducible."
+        },
+        {
+          "id": "lh-243-evaluator",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 243,
+          "status": "queued",
+          "depends_on": ["lh-242-context"],
+          "acceptance": "Public and sealed checks execute in a separate read-only evaluator bound to an exact candidate."
+        },
+        {
+          "id": "lh-244-pi-trace",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 244,
+          "status": "queued",
+          "depends_on": ["lh-242-context"],
+          "acceptance": "Pi emits replayable privacy-preserving semantic action events with exact harness identity."
+        },
+        {
+          "id": "lh-245-security",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 245,
+          "status": "queued",
+          "depends_on": ["lh-242-context", "lh-243-evaluator", "lh-244-pi-trace"],
+          "acceptance": "Repository worker profile fails safely under prompt injection, path, dependency, tool-shim, credential, network, and resource attacks."
+        },
+        {
+          "id": "lh-64-pilot",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 64,
+          "status": "queued",
+          "depends_on": ["lh-243-evaluator", "lh-244-pi-trace", "lh-245-security"],
+          "acceptance": "P0 hermetic fixture and P1 real Pi repository task complete with frozen candidate and independent evidence."
+        },
+        {
+          "id": "compiler-150",
+          "repository": "pH34r-pH/experiment-compiler",
+          "issue": 150,
+          "status": "queued",
+          "depends_on": ["lh-242-context", "lh-243-evaluator"],
+          "acceptance": "Reusable lifecycle components and repository-task, evaluator, trajectory, and corpus profiles are implemented without changing evidence semantics."
+        },
+        {
+          "id": "fleet-1612",
+          "repository": "pH34r-pH/long-haul-fleet",
+          "issue": 1612,
+          "status": "queued",
+          "depends_on": ["lh-243-evaluator", "lh-245-security"],
+          "acceptance": "Reusable privileged workflows and common candidate, deployment, probe, rollback, revocation, and cleanup receipts are implemented."
+        },
+        {
+          "id": "specified-13",
+          "repository": "pH34r-pH/specified-development",
+          "issue": 13,
+          "status": "queued",
+          "depends_on": ["lh-242-context"],
+          "acceptance": "Minimal bundle validator, compact review surface, and deterministic regeneration contract are executable."
+        },
+        {
+          "id": "compiled-7",
+          "repository": "pH34r-pH/compiled-experiments",
+          "issue": 7,
+          "status": "queued",
+          "depends_on": ["compiler-150"],
+          "acceptance": "Releases receive independent clean rebuild verification, attestations, and use-policy summaries."
+        }
+      ]
+    },
+    {
+      "id": "phase-2",
+      "name": "Research claims proofs and governed corpora",
+      "status": "queued",
+      "tasks": [
+        {
+          "id": "dsl-842",
+          "repository": "pH34r-pH/domain-scaling-lab",
+          "issue": 842,
+          "status": "queued",
+          "depends_on": ["compiler-150"],
+          "acceptance": "Experiment execution is profile-driven, learning corpora have rights and contamination receipts, and stale claim/evidence links block promotion."
+        },
+        {
+          "id": "knowledge-42",
+          "repository": "pH34r-pH/knowledge",
+          "issue": 42,
+          "status": "queued",
+          "depends_on": ["compiler-150"],
+          "acceptance": "Every admitted source has exact trust/use/freshness metadata and prompt-injection-safe ingestion with stale-source invalidation."
+        },
+        {
+          "id": "tone-18",
+          "repository": "pH34r-pH/tone",
+          "issue": 18,
+          "status": "queued",
+          "depends_on": ["compiler-150"],
+          "acceptance": "Immutable corpus releases enforce rights, consent, retention, deletion, partition ancestry, and contamination controls."
+        },
+        {
+          "id": "theorem-20",
+          "repository": "pH34r-pH/theorem-library",
+          "issue": 20,
+          "status": "queued",
+          "depends_on": ["dsl-842"],
+          "acceptance": "Each theorem links to exact claims and applicability evidence; clean proof builds and adversarial proof evidence are retained."
+        },
+        {
+          "id": "notes-31",
+          "repository": "pH34r-pH/research-notes",
+          "issue": 31,
+          "status": "queued",
+          "depends_on": ["compiler-150", "knowledge-42", "dsl-842"],
+          "acceptance": "Articles have machine-readable claim/evidence/correction graphs, exact Compiler links, and stale citation/backlink checks."
+        },
+        {
+          "id": "dae-37",
+          "repository": "pH34r-pH/discursive-affective-epistemology",
+          "issue": 37,
+          "status": "queued",
+          "depends_on": ["knowledge-42"],
+          "acceptance": "Evaluation corpus and independent evaluator are preregistered, and conceptual, implemented, experimental, and deployed states are machine-distinct."
+        }
+      ]
+    },
+    {
+      "id": "phase-3",
+      "name": "Private products and personal data",
+      "status": "queued",
+      "tasks": [
+        {
+          "id": "nacre-24",
+          "repository": "pH34r-pH/nacre-recall",
+          "issue": 24,
+          "status": "queued",
+          "depends_on": ["compiler-150", "lh-64-pilot"],
+          "acceptance": "Approved source admission and the Long-Haul memory scorecard pass without cross-scope, stale, poisoned, or policy leakage."
+        },
+        {
+          "id": "personal-92",
+          "repository": "pH34r-pH/the-personal-algorithm",
+          "issue": 92,
+          "status": "queued",
+          "depends_on": ["compiler-150"],
+          "acceptance": "Sources have exact use policy, policy changes replay offline, and learned candidates require explicit operator promotion."
+        },
+        {
+          "id": "family-44",
+          "repository": "pH34r-pH/family-tree",
+          "issue": 44,
+          "status": "queued",
+          "depends_on": ["compiler-150"],
+          "acceptance": "Private validation, person/source privacy policy, reversible merges, and privacy-filtered exports are executable."
+        },
+        {
+          "id": "jam-25",
+          "repository": "pH34r-pH/jam-day",
+          "issue": 25,
+          "status": "queued",
+          "depends_on": ["fleet-1612"],
+          "acceptance": "Disposable RSVP E2E, retention/deletion, and calendar/timezone behavior are reproducible without production data."
+        },
+        {
+          "id": "wardriver-548",
+          "repository": "pH34r-pH/blue-swallow-wardriver",
+          "issue": 548,
+          "status": "queued",
+          "depends_on": ["fleet-1612", "lh-243-evaluator"],
+          "external_gate": "physical_device_qualification",
+          "acceptance": "Android qualification stages are split, scan/outbox state is replayable, and exact emulator versus physical evidence is retained."
+        },
+        {
+          "id": "society-131",
+          "repository": "pH34r-pH/blue-swallow-society",
+          "issue": 131,
+          "status": "queued",
+          "depends_on": ["fleet-1612", "wardriver-548"],
+          "external_gate": "protected_private_deployment",
+          "acceptance": "Wardriver-owned cutover removes public mutation authority; auth/authz E2E, migration, live probes, and recovery evidence pass."
+        }
+      ]
+    },
+    {
+      "id": "phase-4",
+      "name": "Publication distribution and recovery",
+      "status": "queued",
+      "tasks": [
+        {
+          "id": "portfolio-141",
+          "repository": "pH34r-pH/Portfolio",
+          "issue": 141,
+          "status": "queued",
+          "depends_on": ["compiler-150"],
+          "external_gate": "protected_publication",
+          "acceptance": "One publication contract governs source, provenance, accessibility, performance, browser evidence, and promotion."
+        },
+        {
+          "id": "book-5",
+          "repository": "pH34r-pH/book-development",
+          "issue": 5,
+          "status": "queued",
+          "depends_on": ["specified-13"],
+          "external_gate": "human_submission_approval",
+          "acceptance": "Local validator, pinned Quarto/TeX environment, and exact multi-format candidate receipts pass."
+        },
+        {
+          "id": "socials-19",
+          "repository": "pH34r-pH/socials",
+          "issue": 19,
+          "status": "queued",
+          "depends_on": ["knowledge-42"],
+          "external_gate": "human_account_publication",
+          "acceptance": "Every outward claim resolves to an approved source, identity workspaces are isolated, and posting remains human-approved."
+        },
+        {
+          "id": "arcc-17",
+          "repository": "pH34r-pH/agent-readable-calling-card",
+          "issue": 17,
+          "status": "queued",
+          "depends_on": ["compiler-150"],
+          "acceptance": "Adversarial recipes fail safely and every published derivative has an exact source, recipe, transformation, freshness, and artifact manifest."
+        },
+        {
+          "id": "blackbox-6",
+          "repository": "pH34r-pH/blackbox",
+          "issue": 6,
+          "status": "queued",
+          "depends_on": ["compiler-150"],
+          "external_gate": "notion_source_access",
+          "acceptance": "Exports retain exact Notion provenance and use policy; automation cannot write back or enable training/public retrieval by default."
+        }
+      ]
+    },
+    {
+      "id": "phase-5",
+      "name": "Protocol and embodied systems",
+      "status": "queued",
+      "tasks": [
+        {
+          "id": "longband-76",
+          "repository": "pH34r-pH/longband",
+          "issue": 76,
+          "status": "queued",
+          "depends_on": ["compiler-150"],
+          "external_gate": "independent_security_review",
+          "acceptance": "Executable state machine and Python/Rust accepted/rejected vectors pass; adversarial review is staged or completed."
+        },
+        {
+          "id": "homebot-2",
+          "repository": "pH34r-pH/home-bot",
+          "issue": 2,
+          "status": "queued",
+          "depends_on": ["lh-243-evaluator", "fleet-1612"],
+          "external_gate": "hardware_in_loop_and_physical_safety",
+          "acceptance": "Exact simulation receipts, replay, simulation-to-real evidence, and independent safety interlocks are demonstrated."
+        }
+      ]
+    },
+    {
+      "id": "phase-6",
+      "name": "Full system qualification and closure",
+      "status": "queued",
+      "tasks": [
+        {
+          "id": "lh-64-full",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 64,
+          "status": "queued",
+          "depends_on": ["lh-64-pilot", "compiler-150", "fleet-1612", "specified-13"],
+          "acceptance": "Controlled task corpus, matched treatments, required ablations, failure taxonomy, and net-value analysis are complete."
+        },
+        {
+          "id": "lh-246-corpus",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 246,
+          "status": "queued",
+          "depends_on": ["lh-64-full", "tone-18", "dsl-842"],
+          "acceptance": "Only rights-compatible, decontaminated, externally evaluated trajectories enter the immutable specialization corpus."
+        },
+        {
+          "id": "lh-247-multimodal",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 247,
+          "status": "queued",
+          "depends_on": ["portfolio-141", "wardriver-548", "homebot-2"],
+          "acceptance": "Browser, Android, simulator, media, privacy, and model-assisted evidence retain exact identity and do not substitute for unavailable physical evidence."
+        },
+        {
+          "id": "lh-241-parent",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 241,
+          "status": "queued",
+          "depends_on": ["lh-64-full", "lh-246-corpus", "lh-247-multimodal"],
+          "acceptance": "All code-intelligence children, evidence paths, safety boundaries, and benchmark results are reconciled and the parent closes."
+        },
+        {
+          "id": "program-final-reconcile",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 252,
+          "status": "queued",
+          "depends_on": ["lh-241-parent", "compiled-7", "notes-31", "society-131", "blackbox-6", "longband-76", "homebot-2"],
+          "acceptance": "All repository issues are closed or externally gated with exact staged procedures; governance and default-branch CI pass everywhere; final evidence ledger is posted."
+        },
+        {
+          "id": "program-close-251",
+          "repository": "pH34r-pH/long-haul",
+          "issue": 251,
+          "status": "queued",
+          "depends_on": ["program-final-reconcile"],
+          "acceptance": "Every #251 exit criterion is evidenced and both #252 and #251 close."
+        }
+      ]
+    }
+  ],
+  "external_checkpoint_requirements": {
+    "physical_device_qualification": [
+      "ready_to_run_workflow_or_command",
+      "exact_source_and_artifact_identity",
+      "device_os_permissions_and_sensor_prerequisites",
+      "expected_observations_and_failure_criteria",
+      "evidence_collection_path",
+      "cleanup_and_rollback"
+    ],
+    "protected_private_deployment": [
+      "candidate_fingerprint",
+      "protected_environment_and_caller_identity",
+      "preflight_and_live_probes",
+      "rollback_or_revocation",
+      "no_secret_values_in_git"
+    ],
+    "human_account_publication": [
+      "exact_claim_source",
+      "audience_and_identity_approval",
+      "final_candidate_fingerprint",
+      "publication_and_correction_receipt"
+    ],
+    "independent_security_review": [
+      "frozen_protocol_and_implementation_identity",
+      "adversarial_test_package",
+      "reviewer_scope_and_rubric",
+      "retained_findings_and_disposition"
+    ],
+    "hardware_in_loop_and_physical_safety": [
+      "simulation_candidate_identity",
+      "hardware_and_firmware_identity",
+      "operator_and_interlock_authority",
+      "watchdog_and_emergency_stop_test",
+      "physical_evidence_and_cleanup"
+    ]
+  },
+  "final_checks": [
+    "all_governance_workflows_present_and_pinned",
+    "all_default_branch_ci_reconciled",
+    "no_open_unreconciled_alignment_prs",
+    "all_p0_items_executable",
+    "all_p1_items_implemented_or_evidence_dispositioned",
+    "personal_data_retention_and_deletion_enforced",
+    "corpus_rights_partitions_and_contamination_evidenced",
+    "deployment_publication_and_physical_states_separate",
+    "no_retired_repository_or_generated_content_is_current_authority",
+    "final_evidence_ledger_posted_to_issue_251"
+  ]
+}
