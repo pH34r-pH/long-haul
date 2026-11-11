@@ -1,0 +1,81 @@
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix lh: <https://ph34r.dev/ns/long-haul/> .
+@prefix odrl: <http://www.w3.org/ns/odrl/2/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+lh:GovernedResourceShape
+    a sh:NodeShape ;
+    sh:targetClass lh:GovernedResource ;
+    sh:class dcat:Resource ;
+    sh:class odrl:Asset ;
+    sh:class prov:Entity ;
+    sh:property [
+        sh:path dct:conformsTo ;
+        sh:hasValue <https://ph34r.dev/ns/long-haul/resource-policy/v1> ;
+        sh:minCount 1
+    ] ;
+    sh:property [
+        sh:path lh:schemaVersion ;
+        sh:datatype xsd:integer ;
+        sh:hasValue 1 ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path lh:resourceType ;
+        sh:datatype xsd:string ;
+        sh:minLength 1 ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path lh:authorityClass ;
+        sh:in (
+            "authoritative-control"
+            "reviewed-task"
+            "accepted-memory"
+            "repository-reference"
+            "external-source"
+            "generated-content"
+            "evaluator-evidence"
+            "unknown"
+        ) ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path lh:lifecycle ;
+        sh:in (
+            "active"
+            "stale"
+            "superseded"
+            "retracted"
+            "expired"
+            "deleted"
+            "unavailable"
+            "unknown"
+        ) ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path odrl:hasPolicy ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path lh:policyAssigner ;
+        sh:datatype xsd:string ;
+        sh:minLength 1 ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path lh:fingerprint ;
+        sh:pattern "^resource-policy-v1:[0-9a-f]{64}$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] .
