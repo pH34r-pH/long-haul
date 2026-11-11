@@ -24,7 +24,8 @@ START_MARKER = b"LONG_HAUL_SUT_STARTED_V1\n"
 PYTHON_BOOTSTRAP = (
     "import hashlib,os,runpy,sys; path=sys.argv[1]; expected=sys.argv[2]; "
     "assert hashlib.sha256(open(path,'rb').read()).hexdigest()==expected; "
-    "os.write(2,b'LONG_HAUL_SUT_STARTED_V1\\n'); sys.argv=[path,*sys.argv[3:]]; "
+    "os.write(2,b'LONG_HAUL_SUT_STARTED_V1\\n'); assert os.read(0,1)==b'\\0'; "
+    "sys.argv=[path,*sys.argv[3:]]; "
     "runpy.run_path(path,run_name='__main__')"
 )
 
@@ -54,8 +55,8 @@ def _control_environment() -> dict[str, str]:
     return {"PATH": os.defpath, "LANG": "C.UTF-8"}
 
 
-def _bounded_output(process, stdin, limits):
-    deadline = time.monotonic() + limits.wall_seconds
+def _bounded_output(process, stdin, limits, *, deadline=None):
+    deadline = deadline if deadline is not None else time.monotonic() + limits.wall_seconds
     stdout, stderr = bytearray(), bytearray()
     with selectors.DefaultSelector() as selector:
         for stream, target in ((process.stdout, stdout), (process.stderr, stderr)):
@@ -92,6 +93,20 @@ def _bounded_output(process, stdin, limits):
                         return "output_limit", retained_stdout, retained_stderr
     process.wait(timeout=max(0.01, deadline - time.monotonic()))
     return "completed", bytes(stdout), bytes(stderr)
+
+
+def _startup_receipt(process, deadline):
+    received = bytearray()
+    os.set_blocking(process.stderr.fileno(), False)
+    with selectors.DefaultSelector() as selector:
+        selector.register(process.stderr, selectors.EVENT_READ)
+        while len(received) < len(START_MARKER) and time.monotonic() < deadline:
+            for key, _ in selector.select(timeout=min(0.1, max(0, deadline - time.monotonic()))):
+                chunk = os.read(key.fileobj.fileno(), len(START_MARKER) - len(received))
+                if not chunk:
+                    return bytes(received)
+                received.extend(chunk)
+    return bytes(received)
 
 
 class DockerGVisorSandbox:
@@ -223,7 +238,13 @@ class DockerGVisorSandbox:
 
     def _execute(self, container, command):
         with self._attached_process(container) as process:
-            outcome, stdout, stderr = _bounded_output(process, command.stdin.encode(), self.environment.limits)
+            deadline = time.monotonic() + self.environment.limits.wall_seconds
+            startup = _startup_receipt(process, deadline)
+            if startup != START_MARKER:
+                return SandboxResult("invalid", stderr=startup, diagnostic="startup_unverified")
+            outcome, stdout, stderr = _bounded_output(
+                process, b"\0" + command.stdin.encode(), self.environment.limits, deadline=deadline,
+            )
             if outcome != "completed":
                 self._control("kill", container)
             state = json.loads(self._control("inspect", container))[0]["State"]
@@ -231,18 +252,7 @@ class DockerGVisorSandbox:
                 outcome = "resource_exhausted"
             if outcome == "completed" and (state.get("Running") or state.get("Error")):
                 outcome = "invalid"
-            if not stderr.startswith(START_MARKER):
-                try:
-                    stderr += os.read(process.stderr.fileno(), len(START_MARKER))
-                except BlockingIOError:
-                    pass
-            startup_verified = stderr.startswith(START_MARKER)
-            if startup_verified:
-                stderr = stderr[len(START_MARKER):]
-            else:
-                outcome = "invalid"
-            stderr = stderr[:max(0, self.environment.limits.max_output_bytes - len(stdout))]
-            return SandboxResult(outcome, stdout, stderr, state.get("ExitCode"), startup_verified=startup_verified)
+            return SandboxResult(outcome, stdout, stderr, state.get("ExitCode"), startup_verified=True)
 
     def _retained_result(self, container, result, removed):
         if container is None:

@@ -28,6 +28,7 @@ from long_haul.work.repository_sandbox import (
     DockerGVisorSandbox,
     SandboxResult,
     _bounded_output,
+    _startup_receipt,
 )
 
 
@@ -270,6 +271,25 @@ def test_unverified_candidate_cannot_spoof_trusted_startup_marker(tmp_path):
     process = subprocess.run([sys.executable, "-I", "-S", "-c", PYTHON_BOOTSTRAP, str(script), "0" * 64],
                              capture_output=True, check=False)
     assert process.returncode != 0 and process.stdout == b"" and not process.stderr.startswith(START_MARKER)
+
+
+def test_output_flood_cannot_starve_startup_proof(tmp_path):
+    import time
+
+    from long_haul.work.repository_evaluation_models import SandboxLimits
+
+    script = tmp_path / "program.py"
+    script.write_text("import sys;assert sys.stdin.read()=='input';sys.stdout.write('x'*1000000)")
+    digest = content_digest(script.read_bytes()).split(":", 1)[1]
+    process = subprocess.Popen([sys.executable, "-I", "-S", "-c", PYTHON_BOOTSTRAP, str(script), digest],
+                               stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        assert _startup_receipt(process, time.monotonic() + 5) == START_MARKER
+        outcome, stdout, stderr = _bounded_output(process, b"\0input", SandboxLimits(max_output_bytes=128))
+        assert outcome == "output_limit" and len(stdout) + len(stderr) <= 128
+    finally:
+        process.kill()
+        process.communicate()
 
 
 def test_docker_controls_ignore_ambient_credentials_and_proxy_config(tmp_path, monkeypatch):
