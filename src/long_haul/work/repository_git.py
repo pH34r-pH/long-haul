@@ -24,7 +24,7 @@ MAX_BLOB_BYTES = 1048576
 class _GitObjects:
     def __init__(self, root: Path):
         self.root = root.resolve(strict=True)
-        self.git = shutil.which("git")
+        self.git = shutil.which("git", path=os.defpath)
         if self.git is None:
             raise RuntimeError("Git context provider unavailable")
 

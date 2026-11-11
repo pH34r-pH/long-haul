@@ -115,11 +115,19 @@ class DockerGVisorSandbox:
     def __init__(self, environment: EvaluatorEnvironment, runsc_path: Path, docker_path=Path("/usr/bin/docker")):
         self.environment, self.runsc_path, self.docker_path = environment, runsc_path, docker_path
         self.identity = self.implementation_reference()
+        self._validate_profile()
+        if environment.limits.pids < 128 or environment.limits.memory_mib < 256:
+            raise ValueError("Docker/gVisor requires at least 128 host tasks and 256 MiB")
+        self._verify_runtime()
+
+    def _validate_profile(self):
+        environment = self.environment
         if (environment.runtime, environment.runtime_entrypoint, environment.toolchain) != (
                 "long-haul-gvisor", "runsc", "isolated-python3"):
             raise ValueError("unsupported Docker/gVisor execution profile")
-        if environment.limits.pids < 128 or environment.limits.memory_mib < 256:
-            raise ValueError("Docker/gVisor requires at least 128 host tasks and 256 MiB")
+
+    def _verify_runtime(self):
+        environment, runsc_path = self.environment, self.runsc_path
         if content_digest(runsc_path.read_bytes()) != environment.runtime_binary_digest:
             raise ValueError("gVisor runtime binary fingerprint mismatch")
         for name, expected in environment.runtime_files:
@@ -150,19 +158,24 @@ class DockerGVisorSandbox:
         return result.stdout.decode()
 
     def _create_arguments(self, candidate, command):
-        limits = self.environment.limits
         program_digest = hashlib.sha256((candidate / command.program).read_bytes()).hexdigest()
-        return ["create", "--interactive", "--attach=stdin", "--attach=stdout", "--attach=stderr",
+        return [*self._containment_arguments(),
+                "--mount=type=bind,src=" + str(candidate) + ",dst=/candidate,readonly",
+                "--workdir=/candidate", "--env=PYTHONDONTWRITEBYTECODE=1", "--env=PYTHONHASHSEED=0",
+                self.environment.image, "/usr/local/bin/python3", "-I", "-S", "-c", PYTHON_BOOTSTRAP,
+                "/candidate/" + command.program, program_digest, *command.arguments]
+
+    def _containment_arguments(self):
+        limits = self.environment.limits
+        arguments = ["create", "--interactive", "--attach=stdin", "--attach=stdout", "--attach=stderr",
                 "--pull=never", "--platform=linux/amd64", "--init",
                 "--runtime=" + self.environment.runtime, "--network=none", "--read-only",
                 "--user=65534:65534", "--cap-drop=ALL", "--security-opt=no-new-privileges",
                 "--cpus=" + str(limits.cpus), "--memory=" + str(limits.memory_mib) + "m",
                 "--memory-swap=" + str(limits.memory_mib) + "m", "--pids-limit=" + str(limits.pids),
-                "--tmpfs=/tmp:rw,nosuid,nodev,noexec,size=" + str(limits.scratch_mib) + "m,nr_inodes=1024",
-                "--log-driver=none", "--mount=type=bind,src=" + str(candidate) + ",dst=/candidate,readonly",
-                "--workdir=/candidate", "--env=PYTHONDONTWRITEBYTECODE=1", "--env=PYTHONHASHSEED=0",
-                self.environment.image, "/usr/local/bin/python3", "-I", "-S", "-c", PYTHON_BOOTSTRAP,
-                "/candidate/" + command.program, program_digest, *command.arguments]
+                "--log-driver=none"]
+        arguments.extend("--tmpfs=" + path + ":" + options for path, options in self._expected_tmpfs().items())
+        return arguments
 
     def _verify_configuration(self, container, candidate):
         info = json.loads(self._control("inspect", container))[0]
@@ -177,13 +190,15 @@ class DockerGVisorSandbox:
                   info["Config"]["AttachStdout"], info["Config"]["AttachStderr"], info["Config"]["OpenStdin"])
         expected = (self.environment.runtime, "none", True, "65534:65534", limits.memory_mib * 1048576,
                     limits.memory_mib * 1048576, limits.pids, int(limits.cpus * 1000000000), self.image_id,
-                    True, True, {"/tmp": "rw,nosuid,nodev,noexec,size=" + str(limits.scratch_mib)
-                                 + "m,nr_inodes=1024"}, False, "", True, True, True)
+                    True, True, self._expected_tmpfs(), False, "", True, True, True)
         if actual != expected:
             raise ValueError("candidate containment configuration mismatch")
         self._verify_environment(info["Config"].get("Env", []))
         self._verify_mounts(mounts, candidate)
         return info
+
+    def _expected_tmpfs(self):
+        return {"/tmp": "rw,nosuid,nodev,noexec,size=" + str(self.environment.limits.scratch_mib) + "m,nr_inodes=1024"}
 
     def _verify_environment(self, observed_environment):
         environment = dict(self.image_environment)

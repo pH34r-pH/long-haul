@@ -1,0 +1,32 @@
+{
+  "verification_command": "npm audit signatures --registry=https://registry.npmjs.org/",
+  "npm_version": "11.9.0",
+  "exit_code": 0,
+  "verified_registry_signatures": 123,
+  "verified_attestations": 38,
+  "retained_bundle_sha256": "de9be91345260574f4cd19fa52f55840a0afa3800c859bd974ddb83c39511dc0",
+  "package_subject": {
+    "name": "pkg:npm/%40earendil-works/pi-coding-agent@1.5.2",
+    "digest": {
+      "sha512": "994588d38aea17555dfe6d6af8fb355de5ac4d7115bd1527b2645af372370f3b9ad13c796d84bdde299eaad21fad77fb3e491a47a111cfe02e4212099689b9c8"
+    }
+  },
+  "workflow": {
+    "ref": "refs/tags/v1.5.2",
+    "repository": "https://github.com/earendil-works/pi",
+    "path": ".github/workflows/build-binaries.yml"
+  },
+  "resolved_dependencies": [
+    {
+      "uri": "git+https://github.com/earendil-works/pi@refs/tags/v1.5.2",
+      "digest": {
+        "gitCommit": "b4afdddf44e059c67ccf5097e5317d913521b470"
+      }
+    }
+  ],
+  "build_invocation": "https://github.com/earendil-works/pi/actions/runs/42812302065/attempts/1",
+  "limitations": [
+    "Verification authenticates registry signatures/provenance; it does not prove package safety or task competence.",
+    "Bundled attestation JSON is retained; verification was performed by maintained npm, not a custom signature checker."
+  ]
+}

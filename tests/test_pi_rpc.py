@@ -1,3 +1,5 @@
+import pytest
+
 from long_haul.adapters.pi_rpc import (
     PI_PACKAGE_NAME,
     PI_PACKAGE_VERSION,
@@ -52,12 +54,10 @@ def test_pi_pin_is_explicit():
 def test_capabilities_map_to_native_pi_allowlist():
     assert pi_tools_for_contract(contract([])) == []
     assert pi_tools_for_contract(contract(["read"])) == ["read"]
-    assert pi_tools_for_contract(contract(["read", "edit", "test"])) == [
-        "read",
-        "bash",
-        "edit",
-        "write",
-    ]
+    assert pi_tools_for_contract(contract(["read", "edit"])) == ["edit", "write", "read"]
+    for capability in ("test", "shell"):
+        with pytest.raises(ValueError):
+            pi_tools_for_contract(contract(["read", capability]))
 
 
 def test_prompt_uses_contract_and_bounded_digest():
