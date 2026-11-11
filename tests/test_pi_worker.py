@@ -6,6 +6,7 @@ import sys
 import time
 from dataclasses import replace
 from datetime import timedelta
+from types import SimpleNamespace
 
 import pytest
 from test_harness_trajectory import NOW, core, end, start
@@ -18,7 +19,7 @@ from long_haul.adapters.pi_admission import (
     regular_contents,
 )
 from long_haul.adapters.pi_harness import PiCodingHarness
-from long_haul.adapters.pi_worker import _Wire
+from long_haul.adapters.pi_worker import DockerGVisorPiWorker, _Wire
 from long_haul.resource_policy import (
     PolicyRule,
     ResourceAction,
@@ -197,3 +198,22 @@ def test_wire_splits_only_lf_and_caps_both_streams():
         process.kill()
         process.communicate(timeout=2)
         wire.selector.close()
+
+
+@pytest.mark.parametrize("program,maximum,expected", [
+    ("import sys,time;print('malformed-json',flush=True);time.sleep(30)", 4096, "protocol_error"),
+    ("import sys,time;print('x'*4096,flush=True);time.sleep(30)", 64, "resource_exhausted"),
+    ("import time;time.sleep(30)", 4096, "timed_out"),
+])
+def test_executor_classifies_malformed_output_limits_and_nonreader_deadline(tmp_path, program, maximum, expected):
+    _, _, normalizer, root, registry, _ = setup_guard(tmp_path)
+    worker = object.__new__(DockerGVisorPiWorker)
+    worker.environment = SimpleNamespace(limits=SimpleNamespace(max_output_bytes=maximum, wall_seconds=.2))
+    process = subprocess.Popen([sys.executable, "-I", "-c", program],
+                               stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        harness = worker._drive(process, normalizer, registry, root, lambda _: "public fixture", None)
+        assert harness.projector.state.terminal == expected
+    finally:
+        process.kill()
+        process.communicate(timeout=2)

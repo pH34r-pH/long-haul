@@ -240,14 +240,23 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
                 try:
                     wire.read()
                     harness.poll(datetime.now(UTC), time.monotonic_ns())
-                except (OSError, ValueError, TypeError):
+                except _WireOutputLimit:
                     if harness.projector.state.terminal is None:
                         harness.projector.interrupt("resource_exhausted", now, tick)
+                except OSError:
+                    harness.projector.eof(datetime.now(UTC), time.monotonic_ns())
+                except (ValueError, TypeError):
+                    if harness.projector.state.terminal is None:
+                        harness.projector._terminate("protocol_error", datetime.now(UTC), time.monotonic_ns())
                 if process.poll() is not None and not wire.records:
                     break  # Executor inspects the container for OOM before classifying exit.
         finally:
             wire.selector.close()
         return harness
+
+
+class _WireOutputLimit(ValueError):
+    pass
 
 
 class _Wire:
@@ -288,7 +297,7 @@ class _Wire:
                 continue
             self.total += len(data)
             if self.total > self.maximum:
-                raise ValueError("Pi output limit exceeded")
+                raise _WireOutputLimit("Pi output limit exceeded")
             if key.fileobj is self.process.stdout:
                 self.buffer.extend(data)
                 self._lines()
