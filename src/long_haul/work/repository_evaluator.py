@@ -8,12 +8,20 @@ from ..events.store import Event
 from ..resource_policy_models import canonical_json
 from .contracts import EvidenceState, WorkContract
 from .evaluator import CandidateArtifact, CheckRecord, EvaluatorIdentity, EvidencePacket
+from .private_evaluator import (
+    PRIVATE_PROFILE_REFERENCE,
+    PrivateEvaluatorProfile,
+    PrivateEvidenceCheck,
+    PrivateEvidenceSummary,
+)
 from .repository_candidate import CandidateSnapshot
 from .repository_evaluation_models import (
     RepositoryCheckEvidence,
     RepositoryEvaluationProfileV1,
     RepositoryEvidencePacketV1,
+    _packet_binding_matches,
     evaluate_repository_packet,
+    evaluator_check_fingerprint,
     evaluator_implementation_reference,
     work_contract_fingerprint,
 )
@@ -30,6 +38,8 @@ def _validate_binding(contract, snapshot, profile, sandbox):
     extension = contract.repository_work
     if extension is None or extension.sealed_evaluator is None:
         raise ValueError("repository evaluator requires an exact evaluator profile reference")
+    if isinstance(profile, PrivateEvaluatorProfile) and extension.sealed_evaluator.reference != PRIVATE_PROFILE_REFERENCE:
+        raise ValueError("private evaluator requires the versioned private profile reference")
     actual = (extension.task, extension.public_evaluation, extension.sealed_evaluator.digest,
               snapshot.candidate.base, snapshot.candidate.contract_fingerprint,
               sandbox.environment, sandbox.identity, profile.implementation)
@@ -43,10 +53,12 @@ def _validate_binding(contract, snapshot, profile, sandbox):
         raise ValueError("evaluator requirements differ from work contract")
     for check in profile.checks:
         requirement = check.requirement
+        description = (profile.public_requirement(check)["description"] if isinstance(profile, PrivateEvaluatorProfile)
+                       else requirement.description)
         reference = DigestReference(reference="urn:long-haul:evaluator-requirement:" + requirement.predicate_id,
-                                    digest=check.fingerprint)
+                                    digest=evaluator_check_fingerprint(profile, check))
         if (predicates[requirement.predicate_id].evaluator_reference != reference
-                or predicates[requirement.predicate_id].description != requirement.description):
+                or predicates[requirement.predicate_id].description != description):
             raise ValueError("repository predicates must use exact evaluator requirement references")
     if not any(check.kind == "scope" for check in profile.checks):
         raise ValueError("repository evaluator requires trusted scope evidence")
@@ -74,7 +86,7 @@ def _sandbox_observation(result):
             "sandbox_execution": result.execution_receipt, "diagnostic": result.diagnostic}
 
 
-def _observe_check(check, snapshot, target, sandbox, scope_valid):
+def _observe_check(check, snapshot, target, sandbox, scope_valid, profile):
     started = datetime.now(UTC)
     result = None
     if check.kind == "scope":
@@ -94,7 +106,7 @@ def _observe_check(check, snapshot, target, sandbox, scope_valid):
     ended = datetime.now(UTC)
     return RepositoryCheckEvidence(
         predicate_id=check.requirement.predicate_id, classification=check.requirement.classification,
-        check_fingerprint=check.fingerprint, state=state, outcome=outcome,
+        check_fingerprint=evaluator_check_fingerprint(profile, check), state=state, outcome=outcome,
         **_sandbox_observation(result),
         started_at=started, ended_at=ended, duration_seconds=(ended - started).total_seconds(),
     )
@@ -122,11 +134,16 @@ class RepositoryEvaluationRunner:
 
     def evaluate(self, contract: WorkContract, snapshot: CandidateSnapshot,
                  profile: RepositoryEvaluationProfileV1, *, attempt_id: str, packet_id: str):
+        if isinstance(profile, PrivateEvaluatorProfile):
+            raise TypeError("private profiles require evaluate_private and an explicit private evidence sink")
+        return self._evaluate(contract, snapshot, profile, attempt_id=attempt_id, packet_id=packet_id)
+
+    def _evaluate(self, contract, snapshot, profile, *, attempt_id, packet_id):
         _validate_binding(contract, snapshot, profile, self.sandbox)
         started = time.monotonic()
         scope_valid = all(contract.permits_path(path) for path in snapshot.candidate.changed_paths)
         with snapshot.materialize() as target:
-            observations = tuple(_observe_check(check, snapshot, target, self.sandbox, scope_valid)
+            observations = tuple(_observe_check(check, snapshot, target, self.sandbox, scope_valid, profile)
                                  for check in profile.checks)
         invalid = tuple(check.predicate_id + ":" + check.outcome + (":" + check.diagnostic if check.diagnostic else "") for check in observations
                         if check.outcome not in {"pass", "fail"})
@@ -138,7 +155,8 @@ class RepositoryEvaluationRunner:
         packet = RepositoryEvidencePacketV1(
             evidence=evidence, candidate=snapshot.candidate, task=profile.task,
             context_manifest=contract.repository_work.context_manifest,
-            evaluator_profile=DigestReference(reference="urn:long-haul:evaluator:sealed", digest=profile.fingerprint),
+            evaluator_profile=DigestReference(reference=PRIVATE_PROFILE_REFERENCE if isinstance(profile, PrivateEvaluatorProfile)
+                                              else "urn:long-haul:evaluator:sealed", digest=profile.fingerprint),
             evaluator_environment=DigestReference(reference="urn:long-haul:evaluator:environment",
                                                   digest=profile.environment.fingerprint),
             sandbox_implementation=self.sandbox.identity, contract_fingerprint=work_contract_fingerprint(contract),
@@ -146,11 +164,57 @@ class RepositoryEvaluationRunner:
         )
         return packet, evaluate_repository_packet(contract, packet, snapshot.candidate, profile)
 
+    def evaluate_private(self, contract, snapshot, profile, *, attempt_id, packet_id, private_sink):
+        """Keep raw observations in an explicit private sink; return only keyed summaries."""
+        if not isinstance(profile, PrivateEvaluatorProfile) or not callable(private_sink):
+            raise TypeError("private evaluation requires a keyed profile and a private evidence sink")
+        packet, evaluation = self._evaluate(contract, snapshot, profile, attempt_id=attempt_id, packet_id=packet_id)
+        private_sink(packet)
+        return _private_summary(packet, profile), evaluation
+
+
+def _private_summary(packet, profile):
+    definitions = {check.requirement.predicate_id: check for check in profile.checks}
+    checks = tuple(PrivateEvidenceCheck(
+        predicate_id=observed.predicate_id, classification=observed.classification,
+        check_commitment=observed.check_fingerprint, state=observed.state.value, outcome=observed.outcome,
+        observation_commitment=(profile.observation_commitment(definitions[observed.predicate_id], observed)
+                                if observed.classification == "SEALED" else None),
+    ) for observed in packet.checks)
+    return PrivateEvidenceSummary(
+        contract_id=packet.evidence.contract_id, attempt_id=packet.evidence.attempt_id,
+        candidate_fingerprint=packet.candidate.fingerprint, task_fingerprint=profile.task.digest,
+        evaluator_fingerprint=profile.fingerprint, contract_fingerprint=packet.contract_fingerprint,
+        environment_fingerprint=packet.evaluator_environment.digest,
+        sandbox_fingerprint=packet.sandbox_implementation.digest, checks=checks, validity=packet.validity,
+    )
+
 
 def repository_evidence_event(packet: RepositoryEvidencePacketV1) -> Event:
     """Append to the existing event history; no separate evidence store."""
+    if isinstance(packet, PrivateEvidenceSummary):
+        raise TypeError("private summaries require a verified private evidence event")
+    if packet.evaluator_profile.reference == PRIVATE_PROFILE_REFERENCE:
+        raise ValueError("private raw evaluator evidence cannot enter the public event stream")
     checked = RepositoryEvidencePacketV1.model_validate(packet.model_dump())
     return Event(event_type="work_evidence", source="repository-evaluator-v1", payload={
         "contract_id": checked.evidence.contract_id, "attempt_id": checked.evidence.attempt_id,
         "repository_evidence": checked.model_dump(mode="json"),
+    })
+
+
+def private_repository_evidence_event(summary, *, contract, packet, candidate, profile):
+    """Verify private evidence against exact inputs before emitting its redacted event."""
+    if not isinstance(profile, PrivateEvaluatorProfile) or not isinstance(summary, PrivateEvidenceSummary):
+        raise TypeError("private evidence requires a keyed profile and summary")
+    if packet.evaluator_profile.reference != PRIVATE_PROFILE_REFERENCE:
+        raise ValueError("private evidence packet has the wrong profile")
+    packet = RepositoryEvidencePacketV1.model_validate(packet.model_dump())
+    if not _packet_binding_matches(contract, packet, candidate, profile) or _private_summary(packet, profile) != summary:
+        raise ValueError("private evidence does not match its verified summary")
+    if packet.validity == "valid":
+        evaluate_repository_packet(contract, packet, candidate, profile)
+    return Event(event_type="work_evidence", source="repository-evaluator-private-v2", payload={
+        "contract_id": summary.contract_id, "attempt_id": summary.attempt_id,
+        "repository_evidence": summary.model_dump(mode="json"),
     })
