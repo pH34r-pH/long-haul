@@ -87,6 +87,7 @@ class PiToolAdmission:
         self.receipts: list[ToolAdmissionReceipt] = []
         self.derived = {path: binding.derived for path, binding in registry.items() if binding.derived is not None}
         self.derivations: list[dict] = []
+        self._completed_derivations: dict[str, DerivedResourceBinding] = {}
         self._inputs: dict[str, WorkerPolicyBinding] = {}
         self._roots = {path: (binding.expected_policy_fingerprint, binding.content_digest,
                               binding.output_policy.expected_policy_fingerprint if binding.output_policy else None)
@@ -282,6 +283,7 @@ class PiToolAdmission:
             (self.attempt.fingerprint + operation.digest + digest).encode(),
         ).removeprefix("sha256:"), resource_type="derived-repository-file", content_digest=digest)
         self.derived[self._target_path] = DerivedResourceBinding(identity, self._operation_parents, operation)
+        self._completed_derivations[self._target_path] = self.derived[self._target_path]
         projection = {"attempt_id": self.attempt.attempt_id, "session_id": self.attempt.session_id,
                       "operation": operation.model_dump(), "decision": decision.model_dump(),
                       "input_resource_fingerprint": self._authorized.resource_fingerprint,
@@ -291,3 +293,20 @@ class PiToolAdmission:
         return DigestReference(reference="artifact:worker-derivation", digest=content_digest(
             json.dumps(projection, sort_keys=True).encode(),
         ))
+
+    def validate_final(self, root: Path, initial: dict[str, bytes], now: datetime):
+        """Recheck stopped workspace bytes against authenticated completed mutations."""
+        self._exact_contract()
+        self._check_roots()
+        if self._pending is not None:
+            raise TraceAdmissionDenied("unfinished native operation cannot produce a candidate")
+        current = regular_contents(root)
+        if not set(current) <= set(self.registry):
+            raise TraceAdmissionDenied("worker introduced an unadmitted target")
+        for path in set(current) | set(initial):
+            if current.get(path) == initial.get(path):
+                continue
+            binding = self._completed_derivations.get(path)
+            if path not in current or binding is None or binding.content_digest != content_digest(current[path]):
+                raise TraceAdmissionDenied("candidate bytes lack a completed authenticated derivation")
+            self._policy(binding.parents, ResourceAction.DERIVE, now, request_class="finalization")

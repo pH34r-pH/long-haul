@@ -6,12 +6,12 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-11T21:36:54.427134+00:00",
+    "updated_at": "2026-11-11T22:40:15.182933+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
-        "task": "lh-244-pi-trace",
-        "state": "previous_head_actual_runtime_passed_review_corrections_in_progress",
+        "task": "lh-245-security",
+        "state": "local_projection_and_finalization_security_slice_in_progress",
         "parallel_preparation": {
           "task": "lh-248-interchange",
           "implementation_pr": "none_until_current_pr_and_security_order_permit",
@@ -152,7 +152,7 @@
           "id": "lh-244-pi-trace",
           "repository": "pH34r-pH/long-haul",
           "issue": 244,
-          "status": "in_progress",
+          "status": "completed",
           "depends_on": [
             "lh-242-context"
           ],
@@ -161,34 +161,30 @@
           "preparation_scope": "Harness core independently reviewed; actual Pi/RPC worker integration now admitted after #243 merge",
           "implementation_pr": 256,
           "qualification": {
-            "status": "previous_head_passed_review_fixes_pending",
-            "checked_head": "a6cce652bdc2ef78a09f78b3ea63530243ede104",
-            "tree": "dc2bfac442167105f64ea53192f9e92f989d465f",
-            "run": 43099422919,
-            "job": 130785792189,
-            "actual_pi_tests_passed": 8,
+            "status": "producer_merged_and_qualified",
+            "main_run": 43106497993,
+            "main_runtime_receipt_sha256": "4bc264ad666aad9b9a32f33a614bf81a588eed4b2a58f744f2193b7ad368ecf5",
             "provider": "synthetic_loopback_not_a_model",
             "model_competence": false,
-            "receipt_sha256": "3376b1288c9daa95492d5f84b666ef0b72c90212bc42c47e6bc3980952052a1e",
-            "remaining": [
-              "derived edited-file policy and lifecycle qualification",
-              "failed-cleanup recovery preservation",
-              "actual delivered-prompt keyed identity",
-              "requalify final source on actual Pi and gVisor"
-            ]
-          }
+            "issue_244": "open_for_qualified_downstream_consumption"
+          },
+          "checked_head": "dabdf17c447116fbca06464c23e696dd8f667ee4",
+          "merge_commit": "6de4e4be835c92e5bdad35e284b81e9f51f92662",
+          "default_branch_checks": "passed"
         },
         {
           "id": "lh-245-security",
           "repository": "pH34r-pH/long-haul",
           "issue": 245,
-          "status": "queued",
+          "status": "in_progress",
           "depends_on": [
             "lh-242-context",
             "lh-243-evaluator",
             "lh-244-pi-trace"
           ],
-          "acceptance": "Repository worker profile fails safely under prompt injection, path, dependency, tool-shim, credential, network, and resource attacks."
+          "acceptance": "Repository worker profile fails safely under prompt injection, path, dependency, tool-shim, credential, network, and resource attacks.",
+          "baseline_commit": "6de4e4be835c92e5bdad35e284b81e9f51f92662",
+          "local_scope": "projection admission and final candidate derivation; full security issue remains open"
         },
         {
           "id": "lh-64-pilot",
@@ -2653,6 +2649,24 @@
       "shared_compiler_commit": "a471d390a81193324098abb1fc85324c7f0f894c",
       "active_pr_policy": "PR256 stays sole active Long-Haul implementation PR; #245 follows #244. Standards branch remains isolated until integration is admitted.",
       "reproduced_gap": "Current example emits no ODRL permission edges despite two authoring permissions; shallow shape conformance cannot certify native policy semantics."
+    },
+    {
+      "at": "2026-11-11T22:40:15.182933+00:00",
+      "task": "lh-244-pi-trace",
+      "status": "producer_merged_and_main_qualified",
+      "pull_request": 256,
+      "merge_commit": "6de4e4be835c92e5bdad35e284b81e9f51f92662",
+      "main_run": 43106497993,
+      "issue_244": "open_for_downstream_consumption",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6808050368"
+    },
+    {
+      "at": "2026-11-11T22:40:15.182933+00:00",
+      "task": "book-5",
+      "status": "ci_force_cancel_rejected_no_rerun",
+      "run": 43096302292,
+      "result": "HTTP 409 Cannot cancel a workflow run that has not been queued yet",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6808797420"
     }
   ]
 }

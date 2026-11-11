@@ -41,6 +41,38 @@ def test_write_read_edit_uses_new_identity_and_retains_exact_parent_policies(tmp
     assert len(guard.derivations) == 2 and registry["fixture/code.py"].profile.model_dump_json() == original
 
 
+def test_final_projection_rejects_direct_mutation_and_revoked_derivation(tmp_path):
+    _, attempt, _, root, registry, guard = setup_guard(tmp_path)
+    original = {"fixture/code.py": b"before\n"}
+    (root / "fixture/code.py").write_text("forged\n")
+    with pytest.raises(TraceAdmissionDenied):
+        guard.validate_final(root, original, NOW)
+    (root / "fixture/code.py").write_bytes(original["fixture/code.py"])
+    mutate(guard, attempt, root)
+    guard.validate_final(root, original, NOW)
+    (root / "fixture/code.py").write_text("forged again\n")
+    with pytest.raises(TraceAdmissionDenied):
+        guard.validate_final(root, original, NOW)
+    (root / "fixture/code.py").write_text("after\n")
+    registry["fixture/code.py"].output_policy.profile.lifecycle = ResourceLifecycle.RETRACTED
+    with pytest.raises(TraceAdmissionDenied):
+        guard.validate_final(root, original, NOW)
+
+
+@pytest.mark.parametrize("change", ["new", "delete", "pending"])
+def test_final_projection_rejects_unadmitted_changes_and_incomplete_calls(tmp_path, change):
+    _, _, _, root, _, guard = setup_guard(tmp_path)
+    initial = {"fixture/code.py": b"before\n"}
+    if change == "new":
+        (root / "fixture/other.py").write_text("injected")
+    elif change == "delete":
+        (root / "fixture/code.py").unlink()
+    else:
+        guard.start(start())
+    with pytest.raises(TraceAdmissionDenied):
+        guard.validate_final(root, initial, NOW)
+
+
 @pytest.mark.parametrize("which", ["source", "output"])
 def test_mid_call_revocation_cannot_mint_a_derived_binding(tmp_path, which):
     _, attempt, _, root, registry, guard = setup_guard(tmp_path)

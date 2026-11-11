@@ -19,6 +19,7 @@ from typing import Literal
 import pydantic
 
 from ..events.store import Event, EventStore
+from ..resource_policy import ResourceAction
 from ..work.harness import HarnessCleanup
 from ..work.repository_candidate import CandidateSnapshot
 from ..work.repository_evaluation_models import EvaluatorEnvironment
@@ -26,7 +27,12 @@ from ..work.repository_models import DigestReference, content_digest
 from ..work.repository_sandbox import DockerGVisorSandbox
 from ..work.worker_candidate import freeze_stopped_worker
 from .harness_trace import TraceNormalizer, _canonical
-from .pi_admission import WorkerPromptAdmission, WorkerResourceAdmission, worker_path
+from .pi_admission import (
+    PiToolAdmission,
+    WorkerPromptAdmission,
+    WorkerResourceAdmission,
+    worker_path,
+)
 from .pi_assets import CONTROL, PiRuntimeAssets
 from .pi_harness import PiCodingHarness, PiPrompt
 from .pi_recovery import (
@@ -169,7 +175,7 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
         self._control_root = control
         try:
             _prepare_control(control, attempt, normalizer.tools, request.synthetic)
-            self._project(worker, request.base, registry, contract)
+            self._project(worker, request.base, registry, normalizer, datetime.now(UTC))
             return self._run(request, worker)
         finally:
             if not self._cleanup_pending:
@@ -199,8 +205,12 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
         return self._recovery
 
     @staticmethod
-    def _project(worker, base, registry, contract):
-        worker.chmod(0o777)
+    def _project(worker, base, registry, normalizer, now):
+        contract = normalizer.contract
+        guard = PiToolAdmission(normalizer, registry)
+        guard._exact_contract()
+        guard._check_roots()
+        # Authorize the entire projection before writing any worker-visible bytes.
         for path, admission in registry.items():
             worker_path(path)
             if not contract.permits_path(path):
@@ -209,6 +219,16 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
             expected = admission.derived.content_digest if admission.derived else admission.content_digest
             if (content_digest(data) if data is not None else None) != expected:
                 raise ValueError("worker projection source identity mismatch")
+            if data is not None:
+                binding = admission.derived or admission
+                if not admission.derived and admission.profile.identity.content_digest != expected:
+                    raise ValueError("worker projection resource identity mismatch")
+                parents = guard._parents(binding)
+                for action in (ResourceAction.READ, ResourceAction.AI_AUGMENT):
+                    guard._policy(parents, action, now, request_class="projection")
+        worker.chmod(0o777)
+        for path, admission in registry.items():
+            data = base.contents.get(path)
             target = worker / path
             target.parent.mkdir(parents=True, exist_ok=True)
             if data is not None:
@@ -257,6 +277,8 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
         self.last_native_session_tag = normalizer.fingerprint("pi-native-session", harness._native_session)
         harness.guard._exact_contract()
         if harness.projector.state.terminal == "settled":
+            initial = {path: request.base.contents[path] for path in request.registry if path in request.base.contents}
+            harness.guard.validate_final(worker, initial, datetime.now(UTC))
             snapshot = freeze_stopped_worker(request.source_root, request.base, worker, set(request.registry), normalizer.contract)
         candidate = DigestReference(reference="artifact:frozen-worker-candidate", digest=snapshot.candidate.fingerprint) if snapshot else None
         result = harness.finish(cleanup, candidate)

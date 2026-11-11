@@ -75,6 +75,45 @@ def test_native_allow_binds_operation_and_policy_and_never_discloses_arguments(t
     assert guard.end(end(call="EXTERNAL_SECRET_CARRIER"), root).digest == receipt.fingerprint
 
 
+@pytest.mark.parametrize("actions", [[ResourceAction.DERIVE], [ResourceAction.READ], [ResourceAction.AI_AUGMENT]])
+def test_worker_projection_never_copies_existing_bytes_without_read_and_model_admission(tmp_path, actions):
+    _, _, normalizer, root, registry, _ = setup_guard(tmp_path, actions=actions)
+    projected = tmp_path / "projected"
+    projected.mkdir()
+    base = SimpleNamespace(contents={"fixture/code.py": (root / "fixture/code.py").read_bytes()})
+    with pytest.raises(TraceAdmissionDenied):
+        DockerGVisorPiWorker._project(projected, base, registry, normalizer, NOW)
+    assert not (projected / "fixture/code.py").exists()
+
+
+def test_worker_projection_admits_current_read_and_model_policy(tmp_path):
+    _, _, normalizer, root, registry, _ = setup_guard(tmp_path)
+    projected = tmp_path / "projected"
+    projected.mkdir()
+    base = SimpleNamespace(contents={"fixture/code.py": (root / "fixture/code.py").read_bytes()})
+    DockerGVisorPiWorker._project(projected, base, registry, normalizer, NOW)
+    assert (projected / "fixture/code.py").read_bytes() == b"before\n"
+
+
+def test_worker_projection_checks_all_files_before_copy_and_rejects_policy_drift(tmp_path):
+    _, _, normalizer, _root, registry, _ = setup_guard(tmp_path)
+    first = registry["fixture/code.py"]
+    denied = first.profile.model_copy(deep=True)
+    denied.permissions[0].actions = [ResourceAction.DERIVE]
+    registry["fixture/denied.py"] = replace(first, profile=denied, expected_policy_fingerprint=denied.fingerprint)
+    base = SimpleNamespace(contents={"fixture/code.py": b"before\n", "fixture/denied.py": b"before\n"})
+    projected = tmp_path / "projected"
+    projected.mkdir()
+    with pytest.raises(TraceAdmissionDenied):
+        DockerGVisorPiWorker._project(projected, base, registry, normalizer, NOW)
+    assert list(projected.iterdir()) == []
+    del registry["fixture/denied.py"]
+    first.profile.lifecycle = ResourceLifecycle.RETRACTED
+    with pytest.raises(TraceAdmissionDenied):
+        DockerGVisorPiWorker._project(projected, base, registry, normalizer, NOW)
+    assert list(projected.iterdir()) == []
+
+
 @pytest.mark.parametrize("change", ["attempt_id", "session_id", "toolCallId", "toolName", "args"])
 def test_guard_cannot_confirm_another_operation(tmp_path, change):
     _, attempt, _, root, _, guard = setup_guard(tmp_path)
