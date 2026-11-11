@@ -2,6 +2,8 @@
 
 The work boundary turns a bounded objective into externally checkable evidence. [`contracts.py`](contracts.py) defines scope, budgets, capabilities, and success/failure predicates; [`checkpoints.py`](checkpoints.py) reduces authoritative events into rebuildable resumable state; [`progress.py`](progress.py) classifies steps and bounded recovery; [`evaluator.py`](evaluator.py) evaluates a candidate through a read-only target and emits predicate evidence. [`../adapters/pi_rpc.py`](../adapters/pi_rpc.py) is only an execution adapter.
 
+[`repository_models.py`](repository_models.py) owns optional repository/context identities; [`repository_git.py`](repository_git.py) reads frozen objects; [`repository_context.py`](repository_context.py) applies caller-admitted policy, selects bounded evidence, and shares the worker projection. Registry admission is authenticated caller input, never repository text. Run `tests/test_repository_context.py` with the work tests for this boundary.
+
 ## Invariants
 
 - A model or harness saying “done” is not acceptance evidence.

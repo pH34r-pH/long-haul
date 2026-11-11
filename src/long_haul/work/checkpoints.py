@@ -7,6 +7,7 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from ..events.store import Event
+from .repository_models import DigestReference, RepositoryContextSummary
 
 CHECKPOINT_SCHEMA_VERSION = 1
 
@@ -31,6 +32,7 @@ class WorkCheckpoint(BaseModel):
     unresolved_failures: list[str] = Field(default_factory=list)
     artifact: ArtifactState | None = None
     through_event_id: str | None = None
+    repository_context: RepositoryContextSummary | None = None
     schema_version: Literal[1] = CHECKPOINT_SCHEMA_VERSION
 
 
@@ -40,6 +42,8 @@ class TaskDigest(BaseModel):
     max_chars: int = Field(ge=1)
     truncated: bool = False
     omitted_items: int = Field(default=0, ge=0)
+    context_manifest: DigestReference | None = None
+    context_omissions: int = Field(default=0, ge=0)
 
 
 class WorkSession(BaseModel):
@@ -135,6 +139,8 @@ def _apply_event(checkpoint: WorkCheckpoint, event: Event, fact_keys: set[str]) 
         _apply_failure_resolution(checkpoint, event)
     elif event.event_type == "work_artifact_verified":
         _apply_artifact(checkpoint, event)
+    elif event.event_type == "work_repository_context":
+        checkpoint.repository_context = RepositoryContextSummary.model_validate(event.payload["repository_context"])
 
 
 def materialize_checkpoint(contract_id: str, events: list[Event]) -> WorkCheckpoint:
@@ -155,6 +161,10 @@ def render_digest(checkpoint: WorkCheckpoint, max_chars: int = 4000) -> TaskDige
     sections: list[tuple[str, list[str]]] = [
         ("Verified artifact", [f"{checkpoint.artifact.fingerprint} — {checkpoint.artifact.description}".rstrip(" —")] if checkpoint.artifact else []),
         ("Active constraints", checkpoint.active_constraints),
+        ("Repository context", [
+            (f"{checkpoint.repository_context.manifest.digest}; omissions={checkpoint.repository_context.omissions}; "
+             f"truncated items={checkpoint.repository_context.truncated_items}")
+        ] if checkpoint.repository_context else []),
         ("Unresolved failures", checkpoint.unresolved_failures),
         ("Remaining subgoals", checkpoint.remaining_subgoals),
         ("Completed subgoals", checkpoint.completed_subgoals),
@@ -179,4 +189,9 @@ def render_digest(checkpoint: WorkCheckpoint, max_chars: int = 4000) -> TaskDige
     text = "\n".join(lines)
     if len(text) > max_chars:
         text = text[:max_chars]
-    return TaskDigest(contract_id=checkpoint.contract_id, text=text, max_chars=max_chars, truncated=omitted > 0, omitted_items=omitted)
+    return TaskDigest(
+        contract_id=checkpoint.contract_id, text=text, max_chars=max_chars,
+        truncated=omitted > 0, omitted_items=omitted,
+        context_manifest=checkpoint.repository_context.manifest if checkpoint.repository_context else None,
+        context_omissions=checkpoint.repository_context.omissions if checkpoint.repository_context else 0,
+    )

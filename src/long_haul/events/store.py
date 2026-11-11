@@ -26,7 +26,7 @@ EventType = Literal[
     "work_contract_created", "work_attempt_started", "work_attempt_completed",
     "work_attempt_interrupted", "work_attempt_timed_out", "work_evidence",
     "work_disposition", "work_fact", "work_constraint", "work_subgoal",
-    "work_failure", "work_failure_resolved", "work_artifact_verified",
+    "work_failure", "work_failure_resolved", "work_artifact_verified", "work_repository_context",
     "evaluation_started", "evaluation_evidence", "evaluation_regression",
     "work_progress_intervention", "work_attempt_handed_back",
 ]

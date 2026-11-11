@@ -1,9 +1,24 @@
 """Minimal translation between Long-Haul work semantics and Pi events."""
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
-from ..work import AttemptStep, ProgressKind, StepOutcome, TaskDigest, WorkContract
+from ..work import (
+    AttemptStep,
+    ProgressKind,
+    StepOutcome,
+    TaskDigest,
+    WorkContract,
+    WorkSession,
+)
+from ..work.repository_context import (
+    ContextAdmission,
+    authorize_repository_context_delivery,
+    render_repository_context,
+    render_repository_work,
+)
+from ..work.repository_models import RepositoryContextView
 
 PI_PACKAGE_NAME = "@earendil-works/pi-coding-agent"
 PI_PACKAGE_VERSION = "1.5.2"
@@ -27,14 +42,33 @@ def pi_tools_for_contract(contract: WorkContract) -> list[str]:
     return tools
 
 
-def pi_prompt(contract: WorkContract, digest: TaskDigest | None = None) -> str:
+def pi_prompt(contract: WorkContract, digest: TaskDigest | None = None,
+              repository_context: RepositoryContextView | None = None,
+              session: WorkSession | None = None,
+              context_admissions: dict[str, ContextAdmission] | None = None,
+              evaluation_time: datetime | None = None) -> str:
     parts = [contract.objective.strip()]
     if contract.context.strip():
         parts.append(contract.context.strip())
+    if contract.repository_work is not None:
+        parts.append(render_repository_work(contract.repository_work))
     if digest is not None:
         if digest.contract_id != contract.contract_id:
             raise ValueError("digest belongs to a different work contract")
         parts.append(digest.text)
+    if repository_context is not None:
+        if contract.repository_work is None:
+            raise ValueError("repository context requires a repository work extension")
+        repository_context.manifest.assert_bound(contract.repository_work)
+        use = repository_context.manifest.selection.use
+        if (session is None or session.session_id != use.caller_id or session.crew_id != use.crew_id
+                or session.contract_id != contract.contract_id or use.contract_id != contract.contract_id
+                or use.mission_id != contract.mission_id):
+            raise ValueError("repository context use is not bound to this contract/session")
+        if context_admissions is None or evaluation_time is None:
+            raise ValueError("repository context delivery requires fresh policy admission")
+        authorize_repository_context_delivery(repository_context, context_admissions, evaluation_time)
+        parts.append(render_repository_context(repository_context))
     return "\n\n".join(parts)
 
 

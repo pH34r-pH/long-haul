@@ -6,7 +6,24 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-11T17:50:05.495Z"
+    "updated_at": "2026-11-11T18:15:50.857938+00:00",
+    "active_lanes": [
+      {
+        "repository": "pH34r-pH/long-haul",
+        "task": "lh-242-context",
+        "state": "implementation"
+      },
+      {
+        "repository": "pH34r-pH/specified-development",
+        "task": "specified-13",
+        "state": "reconciled_waiting_for_dependency"
+      },
+      {
+        "repository": "pH34r-pH/experiment-compiler",
+        "task": "compiler-150",
+        "state": "reconciled_waiting_for_dependency"
+      }
+    ]
   },
   "development_pause": {
     "active": true,
@@ -60,24 +77,29 @@
           "id": "lh-248-policy-substrate",
           "repository": "pH34r-pH/long-haul",
           "issue": 248,
-          "status": "in_progress",
+          "status": "completed",
           "depends_on": [
             "bootstrap-reconcile"
           ],
           "implementation_pr": 249,
-          "acceptance": "Restore the existing in-process policy substrate and qualify safe context-consumer decisions on main. #248 remains open for complete standards/interchange acceptance."
+          "acceptance": "Restore the existing in-process policy substrate and qualify safe context-consumer decisions on main. #248 remains open for complete standards/interchange acceptance.",
+          "merge_commit": "f5dd3ff13f5a1b7e03c4374e63d74de33fce8a74",
+          "evidence": [
+            "programs/issue-251/evidence/pr-249-policy-substrate.json",
+            "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6803347997"
+          ]
         },
         {
           "id": "lh-242-context",
           "repository": "pH34r-pH/long-haul",
           "issue": 242,
-          "status": "blocked",
+          "status": "in_progress",
           "depends_on": [
             "bootstrap-reconcile",
             "lh-248-policy-substrate"
           ],
           "acceptance": "Exact repository, task, environment, and bounded context identities are implemented and reproducible.",
-          "blocked_reason": "Existing #249 policy implementation is absent on main; reconcile prerequisite first."
+          "baseline_commit": "f5dd3ff13f5a1b7e03c4374e63d74de33fce8a74"
         },
         {
           "id": "lh-243-evaluator",
@@ -2327,5 +2349,19 @@
         "detail": "Default-branch failures: research-notes, Portfolio, Society, Longband. Fleet, DSL, Tone, DAE, Wardriver have queued checks; Compiler lifecycle is cancelled. Repair in dependency order, without treating governance success as full acceptance."
       }
     ]
-  }
+  },
+  "transitions": [
+    {
+      "at": "2026-11-11T18:15:50.857949+00:00",
+      "task": "lh-248-policy-substrate",
+      "status": "completed",
+      "pull_request": 249,
+      "checked_head": "88143d6dc77b24af08db17d0814782018d00c8ba",
+      "merge_commit": "f5dd3ff13f5a1b7e03c4374e63d74de33fce8a74",
+      "pre_merge_checks": "all passed; native CPU and runtime OCI included",
+      "default_branch_checks": "passed; Python, governance, requirements, Azure, native CPU and offline package",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6803347997",
+      "remaining_issue": "#248 open for full standards acceptance"
+    }
+  ]
 }

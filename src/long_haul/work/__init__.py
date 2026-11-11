@@ -52,6 +52,7 @@ from .progress import (
     failure_pair_signature,
     stable_signature,
 )
+from .repository_models import RepositoryContextManifestV1, RepositoryWorkExtensionV1
 
 __all__ = [
     "AcceptancePredicate",
@@ -81,6 +82,8 @@ __all__ = [
     "ProgressMonitor",
     "ProgressPolicy",
     "ProgressState",
+    "RepositoryContextManifestV1",
+    "RepositoryWorkExtensionV1",
     "StepOutcome",
     "TaskDigest",
     "VerificationError",
