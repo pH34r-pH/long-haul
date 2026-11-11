@@ -1,16 +1,21 @@
-"""Minimal translation between Long Haul work semantics and upstream Pi RPC events."""
+"""Minimal translation between Long-Haul work semantics and Pi events."""
 from __future__ import annotations
 
 from typing import Any
 
 from ..work import AttemptStep, ProgressKind, StepOutcome, TaskDigest, WorkContract
 
-PI_PACKAGE_VERSION = "0.87.0"
-PI_UPSTREAM_REVISION = "e40126f578ccc0a4a21f8d30cd8e96c8ecfe1722"
+PI_PACKAGE_NAME = "@earendil-works/pi-coding-agent"
+PI_PACKAGE_VERSION = "1.5.2"
+PI_UPSTREAM_REPOSITORY = "https://github.com/earendil-works/pi"
+PI_UPSTREAM_REVISION = "b4afdddf44e059c67ccf5097e5317d913521b470"
+PI_SOURCE_ARCHIVE_SHA256 = (
+    "da14b72e5d674959b64fc541e4a9241ac9fcdfa243431479119d3edb598b2231"
+)
 
 
 def pi_tools_for_contract(contract: WorkContract) -> list[str]:
-    """Map Long Haul capabilities onto Pi's native tool allowlist."""
+    """Map Long-Haul capabilities onto Pi's native tool allowlist."""
     capabilities = set(contract.capabilities)
     tools: list[str] = []
     if "read" in capabilities:
