@@ -7,7 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from .repository_models import RepositoryWorkExtensionV1
+from .repository_models import DigestReference, RepositoryWorkExtensionV1
 
 WORK_CONTRACT_SCHEMA_VERSION = 1
 FLASH_EXECUTION_SCHEMA_VERSION = 1
@@ -85,9 +85,14 @@ class AcceptancePredicate(BaseModel):
     description: str = Field(min_length=1)
     command: list[str] = Field(default_factory=list)
     artifact_path: str | None = None
+    evaluator_reference: DigestReference | None = None
 
     @model_validator(mode="after")
     def executable_or_artifact(self) -> AcceptancePredicate:
+        if self.evaluator_reference is not None:
+            if self.command or self.artifact_path:
+                raise ValueError("referenced evaluator predicates cannot contain executable/artifact definitions")
+            return self
         if self.kind is PredicateKind.ARTIFACT:
             if not self.artifact_path:
                 raise ValueError("artifact predicates require artifact_path")

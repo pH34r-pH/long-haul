@@ -4,6 +4,8 @@ The work boundary turns a bounded objective into externally checkable evidence. 
 
 [`repository_models.py`](repository_models.py) owns optional repository/context identities; [`repository_git.py`](repository_git.py) reads frozen objects; [`repository_context.py`](repository_context.py) applies caller-admitted policy, selects bounded evidence, and shares the worker projection. Registry admission is authenticated caller input, never repository text. Run `tests/test_repository_context.py` with the work tests for this boundary.
 
+[`repository_evaluation_models.py`](repository_evaluation_models.py), [`repository_candidate.py`](repository_candidate.py), [`repository_evaluator.py`](repository_evaluator.py), and [`repository_sandbox.py`](repository_sandbox.py) compose exact-candidate evaluation and maintained isolation. Run `tests/test_repository_evaluator.py` for hermetic semantics; `tests/test_repository_gvisor.py` qualifies real isolation only under the strict hosted job. Sealed profiles and expected outputs remain control-plane input and must not enter worker payloads.
+
 ## Invariants
 
 - A model or harness saying “done” is not acceptance evidence.

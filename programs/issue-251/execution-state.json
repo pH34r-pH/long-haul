@@ -6,22 +6,27 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-11T18:15:50.857938+00:00",
+    "updated_at": "2026-11-11T19:05:25.681247+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
-        "task": "lh-242-context",
+        "task": "lh-243-evaluator",
         "state": "implementation"
-      },
-      {
-        "repository": "pH34r-pH/specified-development",
-        "task": "specified-13",
-        "state": "reconciled_waiting_for_dependency"
       },
       {
         "repository": "pH34r-pH/experiment-compiler",
         "task": "compiler-150",
         "state": "reconciled_waiting_for_dependency"
+      },
+      {
+        "repository": "pH34r-pH/long-haul-fleet",
+        "task": "fleet-1612",
+        "state": "reconciled_waiting_for_dependency_and_runner"
+      },
+      {
+        "repository": "pH34r-pH/book-development",
+        "task": "book-5",
+        "state": "reconciling_after_specified_gate"
       }
     ]
   },
@@ -93,23 +98,29 @@
           "id": "lh-242-context",
           "repository": "pH34r-pH/long-haul",
           "issue": 242,
-          "status": "in_progress",
+          "status": "completed",
           "depends_on": [
             "bootstrap-reconcile",
             "lh-248-policy-substrate"
           ],
           "acceptance": "Exact repository, task, environment, and bounded context identities are implemented and reproducible.",
-          "baseline_commit": "f5dd3ff13f5a1b7e03c4374e63d74de33fce8a74"
+          "baseline_commit": "f5dd3ff13f5a1b7e03c4374e63d74de33fce8a74",
+          "implementation_pr": 254,
+          "merge_commit": "5cab6749e65090b16d0b28970fe4edc81379d646",
+          "evidence": [
+            "programs/issue-251/evidence/issue-242-context.json"
+          ]
         },
         {
           "id": "lh-243-evaluator",
           "repository": "pH34r-pH/long-haul",
           "issue": 243,
-          "status": "queued",
+          "status": "in_progress",
           "depends_on": [
             "lh-242-context"
           ],
-          "acceptance": "Public and sealed checks execute in a separate read-only evaluator bound to an exact candidate."
+          "acceptance": "Public and sealed checks execute in a separate read-only evaluator bound to an exact candidate.",
+          "baseline_commit": "5cab6749e65090b16d0b28970fe4edc81379d646"
         },
         {
           "id": "lh-244-pi-trace",
@@ -165,17 +176,32 @@
             "lh-243-evaluator",
             "lh-245-security"
           ],
-          "acceptance": "Reusable privileged workflows and common candidate, deployment, probe, rollback, revocation, and cleanup receipts are implemented."
+          "acceptance": "Reusable privileged workflows and common candidate, deployment, probe, rollback, revocation, and cleanup receipts are implemented.",
+          "execution_prerequisites": {
+            "ci_status": "blocked_unassigned_x64_runner",
+            "baseline_commit": "b175250083f41c2bd39f2f2600b60986ba7ffed1",
+            "preserve_policy": "Private CI remains on admitted Fleet-managed self-hosted workers; no hosted fallback",
+            "known_checks": "Kestrel ARM64 smoke and hosted governance passed; x64 source jobs queued",
+            "recovery": "read-only diagnosis and exact existing guarded operator procedure being staged",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6804182211"
+          }
         },
         {
           "id": "specified-13",
           "repository": "pH34r-pH/specified-development",
           "issue": 13,
-          "status": "queued",
+          "status": "completed",
           "depends_on": [
             "lh-242-context"
           ],
-          "acceptance": "Minimal bundle validator, compact review surface, and deterministic regeneration contract are executable."
+          "acceptance": "Minimal bundle validator, compact review surface, and deterministic regeneration contract are executable.",
+          "implementation_pr": 14,
+          "merge_commit": "7515ac42569274228b59e79e7b243d184ee72e09",
+          "evidence": [
+            "https://github.com/pH34r-pH/specified-development/issues/13#issuecomment-6804713011"
+          ],
+          "receipt_sha256": "e722941fd76c1ceb401b57d716e6ffe3ae6ebbe56b6377fb7bbbbf91b2d0e441",
+          "default_branch_checks": "passed"
         },
         {
           "id": "compiled-7",
@@ -343,7 +369,7 @@
     {
       "id": "phase-4",
       "name": "Publication distribution and recovery",
-      "status": "queued",
+      "status": "in_progress",
       "tasks": [
         {
           "id": "portfolio-141",
@@ -360,7 +386,7 @@
           "id": "book-5",
           "repository": "pH34r-pH/book-development",
           "issue": 5,
-          "status": "queued",
+          "status": "in_progress",
           "depends_on": [
             "specified-13"
           ],
@@ -2362,6 +2388,30 @@
       "default_branch_checks": "passed; Python, governance, requirements, Azure, native CPU and offline package",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6803347997",
       "remaining_issue": "#248 open for full standards acceptance"
+    },
+    {
+      "at": "2026-11-11T18:30:59.443259+00:00",
+      "task": "lh-242-context",
+      "status": "completed",
+      "pull_request": 254,
+      "checked_head": "d6ddc2f90010bdef5c1b88f0bc3c8c6625973443",
+      "merge_commit": "5cab6749e65090b16d0b28970fe4edc81379d646",
+      "pre_merge_checks": "all passed; native CPU and runtime OCI included",
+      "evidence": "programs/issue-251/evidence/issue-242-context.json",
+      "default_branch_checks": "passed: Python, governance, requirements, Azure, native CPU and offline package at merge commit"
+    },
+    {
+      "at": "2026-11-11T19:05:25.681262+00:00",
+      "task": "specified-13",
+      "status": "completed",
+      "repository": "pH34r-pH/specified-development",
+      "pull_request": 14,
+      "checked_head": "55794a48ed230c69373f17fe844555baaf00ccb4",
+      "merge_commit": "7515ac42569274228b59e79e7b243d184ee72e09",
+      "pre_merge_checks": "passed",
+      "default_branch_checks": "passed",
+      "receipt_sha256": "e722941fd76c1ceb401b57d716e6ffe3ae6ebbe56b6377fb7bbbbf91b2d0e441",
+      "closeout": "https://github.com/pH34r-pH/specified-development/issues/13#issuecomment-6804713011"
     }
   ]
 }

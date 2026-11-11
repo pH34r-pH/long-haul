@@ -72,6 +72,8 @@ Long Haul owns task objective, scope, authority, budgets, success/failure predic
 
 ## Independent acceptance evaluation
 
+Repository tasks add the explicit [frozen evaluator projection](repository-evaluation.md): evaluator-owned public/sealed checks resolve exact predicate references, execute an immutable read-only candidate, and retain typed invalid outcomes separately from negative task results. Docker/OCI plus pinned gVisor provides the replaceable sandbox adapter; its strict hosted qualification remains distinct from ordinary fixture tests.
+
 Implementation-time checks are worker feedback, not acceptance evidence. Independent evaluators receive a candidate through a read-only target interface, execute or inspect the WorkContract predicates, and emit an `EvidencePacket` bound to the exact candidate fingerprint plus evaluator/runtime identity. Evidence for an older fingerprint is stale and cannot certify a changed candidate. A later packet may record regressions against prior verified predicates without rewriting the historical packet. Mutation authority is absent from the evaluator interface rather than prohibited only by prompt text.
 
 ## Progress and recovery

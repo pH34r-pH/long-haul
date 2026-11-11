@@ -1,0 +1,215 @@
+"""Replaceable sandbox seam using maintained Docker/OCI plus pinned gVisor."""
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import selectors
+import subprocess
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Protocol
+
+from .repository_evaluation_models import (
+    CandidateCommand,
+    EvaluatorEnvironment,
+    SandboxExecutionReceipt,
+)
+from .repository_models import DigestReference, content_digest
+
+
+@dataclass(frozen=True)
+class SandboxResult:
+    outcome: str
+    stdout: bytes = b""
+    stderr: bytes = b""
+    exit_code: int | None = None
+    receipt: DigestReference | None = None
+    execution_receipt: SandboxExecutionReceipt | None = None
+    diagnostic: str | None = None
+    outputs_observed: bool = True
+
+
+class SandboxAdapter(Protocol):
+    environment: EvaluatorEnvironment
+    identity: DigestReference
+
+    def execute(self, candidate: Path, command: CandidateCommand) -> SandboxResult: ...
+
+
+def _control_environment() -> dict[str, str]:
+    # Do not forward credentials, caller environment, proxies, or Docker endpoints.
+    return {"PATH": os.defpath, "LANG": "C.UTF-8"}
+
+
+def _bounded_output(process, stdin, limits):
+    deadline = time.monotonic() + limits.wall_seconds
+    stdout, stderr = bytearray(), bytearray()
+    with selectors.DefaultSelector() as selector:
+        for stream, target in ((process.stdout, stdout), (process.stderr, stderr)):
+            os.set_blocking(stream.fileno(), False)
+            selector.register(stream, selectors.EVENT_READ, target)
+        os.set_blocking(process.stdin.fileno(), False)
+        selector.register(process.stdin, selectors.EVENT_WRITE, memoryview(stdin))
+        while selector.get_map():
+            if time.monotonic() >= deadline:
+                return "timeout", bytes(stdout), bytes(stderr)
+            for key, _ in selector.select(timeout=min(0.1, max(0, deadline - time.monotonic()))):
+                if key.events == selectors.EVENT_WRITE:
+                    if not key.data:
+                        selector.unregister(key.fileobj)
+                        key.fileobj.close()
+                        process.stdin = None
+                    else:
+                        try:
+                            written = os.write(key.fileobj.fileno(), key.data)
+                            selector.modify(key.fileobj, selectors.EVENT_WRITE, key.data[written:])
+                        except BrokenPipeError:
+                            selector.unregister(key.fileobj)
+                            key.fileobj.close()
+                            process.stdin = None
+                    continue
+                chunk = os.read(key.fileobj.fileno(), 4096)
+                if not chunk:
+                    selector.unregister(key.fileobj)
+                else:
+                    key.data.extend(chunk)
+                    if len(stdout) + len(stderr) > limits.max_output_bytes:
+                        retained_stdout = bytes(stdout[:limits.max_output_bytes])
+                        retained_stderr = bytes(stderr[:limits.max_output_bytes - len(retained_stdout)])
+                        return "output_limit", retained_stdout, retained_stderr
+    process.wait(timeout=max(0.01, deadline - time.monotonic()))
+    return "completed", bytes(stdout), bytes(stderr)
+
+
+class DockerGVisorSandbox:
+    """Trusted executor owns Docker; candidate never receives its socket or secrets."""
+
+    def __init__(self, environment: EvaluatorEnvironment, runsc_path: Path, docker_path=Path("/usr/bin/docker")):
+        self.environment, self.runsc_path, self.docker_path = environment, runsc_path, docker_path
+        self.identity = self.implementation_reference()
+        if content_digest(runsc_path.read_bytes()) != environment.runtime_binary_digest:
+            raise ValueError("gVisor runtime binary fingerprint mismatch")
+        for name, expected in environment.runtime_files:
+            with (runsc_path.parent / name).open("rb") as stream:
+                actual = "sha256:" + hashlib.file_digest(stream, "sha256").hexdigest()
+            if actual != expected:
+                raise ValueError("gVisor tool bundle fingerprint mismatch")
+        runtime = self._control("info", "--format", "{{json .Runtimes}}")
+        runtimes = json.loads(runtime)
+        actual = runtimes.get(environment.runtime, {})
+        if (Path(actual.get("path", "")).resolve() != runsc_path.resolve()
+                or "--network=none" not in actual.get("runtimeArgs", [])):
+            raise ValueError("required gVisor runtime/network configuration is unavailable")
+        image = json.loads(self._control("image", "inspect", environment.image))[0]
+        self.image_id = image["Id"]  # Acquisition is a separate trusted step.
+
+    @staticmethod
+    def implementation_reference() -> DigestReference:
+        return DigestReference(reference="urn:long-haul:docker-gvisor-v1", digest=content_digest(Path(__file__).read_bytes()))
+
+    def _control(self, *arguments):
+        result = subprocess.run([str(self.docker_path), *arguments], env=_control_environment(),
+                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=15, check=True)
+        if len(result.stdout) > 1048576:
+            raise ValueError("sandbox control output exceeds limit")
+        return result.stdout.decode()
+
+    def _create_arguments(self, candidate, command):
+        limits = self.environment.limits
+        return ["create", "--interactive", "--pull=never", "--platform=linux/amd64", "--init",
+                "--runtime=" + self.environment.runtime, "--network=none", "--read-only",
+                "--user=65534:65534", "--cap-drop=ALL", "--security-opt=no-new-privileges",
+                "--cpus=" + str(limits.cpus), "--memory=" + str(limits.memory_mib) + "m",
+                "--memory-swap=" + str(limits.memory_mib) + "m", "--pids-limit=" + str(limits.pids),
+                "--tmpfs=/tmp:rw,nosuid,nodev,noexec,size=" + str(limits.scratch_mib) + "m,nr_inodes=1024",
+                "--log-driver=none", "--mount=type=bind,src=" + str(candidate) + ",dst=/candidate,readonly",
+                "--workdir=/candidate", "--env=PYTHONDONTWRITEBYTECODE=1", "--env=PYTHONHASHSEED=0",
+                self.environment.image, "/usr/local/bin/python3", "-I", "-S",
+                "/candidate/" + command.program, *command.arguments]
+
+    def _verify_configuration(self, container, candidate):
+        info = json.loads(self._control("inspect", container))[0]
+        host = info["HostConfig"]
+        mounts = info["Mounts"]
+        binds = [mount for mount in mounts if mount["Type"] == "bind"]
+        limits = self.environment.limits
+        actual = (host["Runtime"], host["NetworkMode"], host["ReadonlyRootfs"], info["Config"]["User"],
+                  host["Memory"], host["MemorySwap"], host["PidsLimit"], host["NanoCpus"], info["Image"],
+                  "ALL" in [cap.upper() for cap in host.get("CapDrop", [])],
+                  any(s.startswith("no-new-privileges") for s in host.get("SecurityOpt", [])),
+                  host.get("Tmpfs", {}), host.get("Privileged", False), host.get("PidMode", ""))
+        expected = (self.environment.runtime, "none", True, "65534:65534", limits.memory_mib * 1048576,
+                    limits.memory_mib * 1048576, limits.pids, int(limits.cpus * 1000000000), self.image_id,
+                    True, True, {"/tmp": "rw,nosuid,nodev,noexec,size=" + str(limits.scratch_mib)
+                                 + "m,nr_inodes=1024"}, False, "")
+        if actual != expected:
+            raise ValueError("candidate containment configuration mismatch")
+        if (len(binds) != 1 or binds[0]["Destination"] != "/candidate" or binds[0]["RW"]
+                or Path(binds[0]["Source"]).resolve() != candidate.resolve()
+                or any(m["Type"] not in {"bind", "tmpfs"} for m in mounts)
+                or any(m["Destination"] != "/tmp" for m in mounts if m["Type"] == "tmpfs")):
+            raise ValueError("candidate containment configuration mismatch")
+        return info
+
+    def execute(self, candidate, command):
+        container = None
+        result = SandboxResult("invalid", diagnostic="sandbox_invalid", outputs_observed=False)
+        removed = False
+        try:
+            candidate_id = self._control(*self._create_arguments(candidate, command)).strip()
+            if len(candidate_id) != 64 or any(c not in "0123456789abcdef" for c in candidate_id):
+                raise ValueError("malformed sandbox container identity")
+            container = candidate_id
+            self._verify_configuration(container, candidate)
+            result = self._execute(container, command)
+        except (OSError, ValueError, KeyError, subprocess.SubprocessError):
+            pass
+        finally:
+            if container is not None:
+                try:
+                    self._control("rm", "--force", "--volumes", container)
+                    removed = True
+                except (OSError, ValueError, subprocess.SubprocessError):
+                    pass
+        return self._retained_result(container, result, removed)
+
+    def _execute(self, container, command):
+        process = None
+        try:
+            process = subprocess.Popen([str(self.docker_path), "start", "--attach", "--interactive", container],
+                                       env=_control_environment(), stdin=subprocess.PIPE,
+                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            outcome, stdout, stderr = _bounded_output(process, command.stdin.encode(), self.environment.limits)
+            if outcome != "completed":
+                subprocess.run([str(self.docker_path), "kill", container], env=_control_environment(),
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10, check=False)
+            state = json.loads(self._control("inspect", container))[0]["State"]
+            if state.get("OOMKilled"):
+                outcome = "resource_exhausted"
+            if outcome == "completed" and (state.get("Running") or state.get("Error")):
+                outcome = "invalid"
+            return SandboxResult(outcome, stdout, stderr, state.get("ExitCode"))
+        finally:
+            if process is not None:
+                if process.poll() is None:
+                    process.kill()
+                process.communicate(timeout=5)
+
+    def _retained_result(self, container, result, removed):
+        if container is None:
+            return result
+        outcome = result.outcome if removed else "invalid"
+        diagnostic = result.diagnostic if removed else "cleanup_failed"
+        facts = SandboxExecutionReceipt(
+            container_id=container, environment_fingerprint=self.environment.fingerprint,
+            resolved_image_id=self.image_id if result.outputs_observed else None,
+            outcome=outcome, cleanup="removed" if removed else "failed",
+            process_stopped=True if removed else None,
+            stdout_digest=content_digest(result.stdout) if result.outputs_observed else None,
+            stderr_digest=content_digest(result.stderr) if result.outputs_observed else None, exit_code=result.exit_code,
+        )
+        return SandboxResult(outcome, result.stdout, result.stderr, result.exit_code,
+                             DigestReference(reference="urn:long-haul:sandbox:" + container, digest=facts.fingerprint),
+                             facts, diagnostic, result.outputs_observed)
