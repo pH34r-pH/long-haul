@@ -1,0 +1,53 @@
+schema_version: 1
+profile_id: https://ph34r.dev/ns/long-haul/resource-policy/v1
+identity:
+  resource_id: urn:nacre:memory:example-1
+  resource_type: accepted-memory
+  title: Example accepted procedural memory
+  version: "1"
+  content_digest: sha256:0f4e7b2e6d682f394f47c30438cdfcb596e2f2ca5527f5c335006a31ab75a1c4
+  media_type: application/json
+authority_class: accepted-memory
+lifecycle: active
+policy_id: urn:nacre:policy:example-1
+policy_assigner: urn:long-haul:reviewer:operator
+permissions:
+  - rule_id: allow-local-index
+    actions: [index, search]
+    crew_ids: [crew-1]
+  - rule_id: allow-mission-augmentation
+    actions: [ai-augment]
+    purposes: [mission-assistance]
+    crew_ids: [crew-1]
+    mission_ids: [mission-1]
+    duties:
+      - duty_id: current-consent
+        action: obtain-consent
+        description: Confirm the memory may be used for this mission.
+        requires_consent: true
+prohibitions:
+  - rule_id: prohibit-training
+    actions: [ai-training, generative-ai-training]
+    purposes: [research-training]
+privacy:
+  data_categories: [dpv:Preference]
+  data_subjects: [urn:user:operator]
+  purposes: [mission-assistance]
+  processing_operations: [dpv:Retrieve, dpv:Use]
+  legal_basis: [dpv:Consent]
+  consent_references: [urn:consent:example-1]
+  recipients: [crew-1]
+  storage_locations: [urn:device:local]
+  deletion_required: true
+provenance:
+  - activity_id: urn:nacre:activity:review-example-1
+    activity_type: review-and-promotion
+    agent_id: urn:long-haul:reviewer:operator
+    used: [urn:nacre:proposal:example-1]
+    generated: [urn:nacre:memory:example-1]
+quality:
+  - metric: review-status
+    value: accepted
+    evaluator_reference: urn:nacre:review:example-1
+rights_references: [urn:rights:private-local-use]
+attestation_references: [urn:attestation:example-1]
