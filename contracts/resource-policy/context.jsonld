@@ -22,7 +22,7 @@
       "@type": "@id"
     },
     "id": "@id",
-    "invalidationAt": {
+    "invalidatedAt": {
       "@id": "prov:invalidatedAtTime",
       "@type": "http://www.w3.org/2001/XMLSchema#dateTime"
     },
