@@ -1,0 +1,314 @@
+{
+  "schema_version": 1,
+  "issue": 243,
+  "source_head": "ac0031809ca6cd627dfc91688cfa7bbaa8039c73",
+  "workflow_run": 43093288138,
+  "job": 130775587667,
+  "url": "https://github.com/pH34r-pH/long-haul/actions/runs/43093288138/job/130775587667",
+  "conclusion": "success",
+  "result": "6 passed in 12.96s",
+  "states": {
+    "deployment": "not performed",
+    "publication": "not performed",
+    "real_pi_attempt": "not performed",
+    "worker_lifecycle": "separate #244/#245 gate"
+  },
+  "observations": [
+    {
+      "qualification": "real-gvisor",
+      "candidate": "sha256:cdee322aa075d058ff9d220a7cb8380b25d73b99c609348d1bfb021b86069f08",
+      "profile": "sha256:5143f9dcd03f3af1c260185842ce5b398e5f7de33cdfb7a3df3091bf9a3baa5b",
+      "environment": "sha256:7fb8fd5a604c89ce062f15db235885f867b2a97f0c996f775b1cc802e929d163",
+      "packet_fingerprint": "sha256:87f1a81ab8207ce271752e79cd93e8f1c18bd282a035e2ab56c498fd2d3aec66",
+      "packet": {
+        "schema_version": 1,
+        "profile": "repository-evidence-v1",
+        "evidence": {
+          "packet_id": "real-1",
+          "contract_id": "fixture-contract",
+          "attempt_id": "real-1",
+          "candidate": {
+            "fingerprint": "sha256:cdee322aa075d058ff9d220a7cb8380b25d73b99c609348d1bfb021b86069f08",
+            "reference": "git:204acdad584afcfb57d203b6e4454eeb89aa9cc3"
+          },
+          "evaluator": {
+            "evaluator_id": "fixture-arithmetic",
+            "version": "1",
+            "runtime": "sha256:7fb8fd5a604c89ce062f15db235885f867b2a97f0c996f775b1cc802e929d163"
+          },
+          "authority": "read_only",
+          "checks": [
+            {
+              "predicate_id": "public",
+              "command": [],
+              "state": "PASS",
+              "detail": "repository check pass"
+            },
+            {
+              "predicate_id": "sealed",
+              "command": [],
+              "state": "PASS",
+              "detail": "repository check pass"
+            },
+            {
+              "predicate_id": "scope",
+              "command": [],
+              "state": "PASS",
+              "detail": "repository check pass"
+            },
+            {
+              "predicate_id": "inspect",
+              "command": [],
+              "state": "PASS",
+              "detail": "repository check pass"
+            }
+          ],
+          "verified": [
+            "public",
+            "sealed",
+            "scope",
+            "inspect"
+          ],
+          "unresolved": [],
+          "regressions": [],
+          "schema_version": 1
+        },
+        "candidate": {
+          "schema_version": 1,
+          "profile": "frozen-repository-candidate-v1",
+          "base": {
+            "repository_id": "fixture/repository",
+            "visibility": "public",
+            "data_class": "public",
+            "commit": "ccc6437168972f6a72a3883cd2d402ee15996cf8",
+            "tree": "8f8793525a275fa0050d8225b698c779b73ff2d6",
+            "materials": []
+          },
+          "source": {
+            "repository_id": "fixture/repository",
+            "visibility": "public",
+            "data_class": "public",
+            "commit": "204acdad584afcfb57d203b6e4454eeb89aa9cc3",
+            "tree": "99c6674258dfd175f645033583bef4cc1cec2cdc",
+            "materials": []
+          },
+          "files": [
+            {
+              "path": "README.md",
+              "digest": "sha256:32d9bddaeb188e6a9a1775e4716c375eded2c1bfba9f8f9c932b69c0f09843e6",
+              "size_bytes": 54,
+              "executable": false
+            },
+            {
+              "path": "program.py",
+              "digest": "sha256:bbcb7c27f1b70103b404d3bc1a17f2c8ef27066f555f55d33a0e7b0854d07d8f",
+              "size_bytes": 58,
+              "executable": false
+            }
+          ],
+          "changed_paths": [
+            "program.py"
+          ],
+          "contract_fingerprint": "sha256:5f558cbff6104cb5ab5857369a31e0c69cc01f24f1580b0bd67a8f72549e5fd2"
+        },
+        "task": {
+          "reference": "urn:fixture:task",
+          "digest": "sha256:f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+        },
+        "context_manifest": {
+          "reference": "urn:fixture:context",
+          "digest": "sha256:f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+        },
+        "evaluator_profile": {
+          "reference": "urn:long-haul:evaluator:sealed",
+          "digest": "sha256:5143f9dcd03f3af1c260185842ce5b398e5f7de33cdfb7a3df3091bf9a3baa5b"
+        },
+        "evaluator_environment": {
+          "reference": "urn:long-haul:evaluator:environment",
+          "digest": "sha256:7fb8fd5a604c89ce062f15db235885f867b2a97f0c996f775b1cc802e929d163"
+        },
+        "sandbox_implementation": {
+          "reference": "urn:long-haul:docker-gvisor-v1",
+          "digest": "sha256:201d1c497cc740b6d7d3c9a3b27df781b7b70f59ea9c23d7fdf24f6ba1c5bc7c"
+        },
+        "contract_fingerprint": "sha256:5f558cbff6104cb5ab5857369a31e0c69cc01f24f1580b0bd67a8f72549e5fd2",
+        "checks": [
+          {
+            "predicate_id": "public",
+            "classification": "PUBLIC",
+            "check_fingerprint": "sha256:e8f231786468a869c0cd4ca3557f464497afc9c9e3323cf271c2719edc0d5daa",
+            "state": "PASS",
+            "outcome": "pass",
+            "stdout_digest": "sha256:1121cfccd5913f0a63fec40a6ffd44ea64f9dc135c66634ba001d10bcf4302a2",
+            "stderr_digest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "exit_code": 0,
+            "started_at": "2026-11-11T20:06:45.111818Z",
+            "ended_at": "2026-11-11T20:06:45.509191Z",
+            "duration_seconds": 0.397373,
+            "sandbox_receipt": {
+              "reference": "urn:long-haul:sandbox:52507628d5b2ec5579ce62b2f345a6bbe227a41d33d676d9c9d2a53139c23f71",
+              "digest": "sha256:066bb75865e53a0a7138dcb827fbfc3c0d7bfd29f6eb418ff894c159dd0341cb"
+            },
+            "sandbox_execution": {
+              "container_id": "52507628d5b2ec5579ce62b2f345a6bbe227a41d33d676d9c9d2a53139c23f71",
+              "environment_fingerprint": "sha256:7fb8fd5a604c89ce062f15db235885f867b2a97f0c996f775b1cc802e929d163",
+              "resolved_image_id": "sha256:22653983114e747bb621877ab73b2454ff4e302743bdc0af019acf0a64ab51de",
+              "outcome": "completed",
+              "cleanup": "removed",
+              "process_stopped": true,
+              "startup_verified": true,
+              "stdout_digest": "sha256:1121cfccd5913f0a63fec40a6ffd44ea64f9dc135c66634ba001d10bcf4302a2",
+              "stderr_digest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "exit_code": 0,
+              "provenance": "runtime-observation"
+            },
+            "diagnostic": null
+          },
+          {
+            "predicate_id": "sealed",
+            "classification": "SEALED",
+            "check_fingerprint": "sha256:abeeef908e5860cbcc62bd35d47a41181ee496405c24ddbe790d76d7d37f3c75",
+            "state": "PASS",
+            "outcome": "pass",
+            "stdout_digest": "sha256:0f90e0b3538d04df294950dcec75952d7e07f1bb044e73e795c410d677b3c268",
+            "stderr_digest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "exit_code": 0,
+            "started_at": "2026-11-11T20:06:45.509298Z",
+            "ended_at": "2026-11-11T20:06:45.888938Z",
+            "duration_seconds": 0.37964,
+            "sandbox_receipt": {
+              "reference": "urn:long-haul:sandbox:45c9723a4b09661bfc31919e8bd083fa11801a62ccd82363be75c4e9fa47391d",
+              "digest": "sha256:47efab1f4d83db7fbfb8714aaa0bede92d3bf22550855e17acc26d40c08e1e4a"
+            },
+            "sandbox_execution": {
+              "container_id": "45c9723a4b09661bfc31919e8bd083fa11801a62ccd82363be75c4e9fa47391d",
+              "environment_fingerprint": "sha256:7fb8fd5a604c89ce062f15db235885f867b2a97f0c996f775b1cc802e929d163",
+              "resolved_image_id": "sha256:22653983114e747bb621877ab73b2454ff4e302743bdc0af019acf0a64ab51de",
+              "outcome": "completed",
+              "cleanup": "removed",
+              "process_stopped": true,
+              "startup_verified": true,
+              "stdout_digest": "sha256:0f90e0b3538d04df294950dcec75952d7e07f1bb044e73e795c410d677b3c268",
+              "stderr_digest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "exit_code": 0,
+              "provenance": "runtime-observation"
+            },
+            "diagnostic": null
+          },
+          {
+            "predicate_id": "scope",
+            "classification": "POLICY",
+            "check_fingerprint": "sha256:761dc4edb427ba2376d797f62e49c5b2032b99ac5164d4fb0c6527c114862e48",
+            "state": "PASS",
+            "outcome": "pass",
+            "stdout_digest": null,
+            "stderr_digest": null,
+            "exit_code": null,
+            "started_at": "2026-11-11T20:06:45.889037Z",
+            "ended_at": "2026-11-11T20:06:45.889038Z",
+            "duration_seconds": 1e-06,
+            "sandbox_receipt": null,
+            "sandbox_execution": null,
+            "diagnostic": null
+          },
+          {
+            "predicate_id": "inspect",
+            "classification": "INSPECTION",
+            "check_fingerprint": "sha256:e45cb4fa75afde8513dcf679cd7f3ba625bd8817f79044c5ace12d19ffb0d914",
+            "state": "PASS",
+            "outcome": "pass",
+            "stdout_digest": null,
+            "stderr_digest": null,
+            "exit_code": null,
+            "started_at": "2026-11-11T20:06:45.889062Z",
+            "ended_at": "2026-11-11T20:06:45.889071Z",
+            "duration_seconds": 9e-06,
+            "sandbox_receipt": null,
+            "sandbox_execution": null,
+            "diagnostic": null
+          }
+        ],
+        "validity": "valid",
+        "invalid_reasons": [],
+        "producing_attempt_references": []
+      },
+      "disposition": "ACCEPTED"
+    },
+    {
+      "qualification": "readonly-network-secrets",
+      "receipt": {
+        "container_id": "de86c89dd424ca0da6c26071218d80f56e393cdfd218d1a20428080e357b91ad",
+        "environment_fingerprint": "sha256:7fb8fd5a604c89ce062f15db235885f867b2a97f0c996f775b1cc802e929d163",
+        "resolved_image_id": "sha256:22653983114e747bb621877ab73b2454ff4e302743bdc0af019acf0a64ab51de",
+        "outcome": "completed",
+        "cleanup": "removed",
+        "process_stopped": true,
+        "startup_verified": true,
+        "stdout_digest": "sha256:9b8d77949b6e468746790cc1ada9432ca9984c51533a086544c8d0c01f18cc66",
+        "stderr_digest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "exit_code": 0,
+        "provenance": "runtime-observation"
+      }
+    },
+    {
+      "qualification": "timeout-cleanup",
+      "receipt": {
+        "container_id": "0e4ea5061d9c0c474024e9a5a618286ea0717aa0e50e53c0a5e50fb6980de098",
+        "environment_fingerprint": "sha256:7fb8fd5a604c89ce062f15db235885f867b2a97f0c996f775b1cc802e929d163",
+        "resolved_image_id": "sha256:22653983114e747bb621877ab73b2454ff4e302743bdc0af019acf0a64ab51de",
+        "outcome": "timeout",
+        "cleanup": "removed",
+        "process_stopped": true,
+        "startup_verified": true,
+        "stdout_digest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_digest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "exit_code": 137,
+        "provenance": "runtime-observation"
+      }
+    },
+    {
+      "qualification": "output_limit-cleanup",
+      "receipt": {
+        "container_id": "5d71a2af0f5c105c4768a4776a9ef49222577f77cf1ce00fac23824dd7eeb770",
+        "environment_fingerprint": "sha256:7fb8fd5a604c89ce062f15db235885f867b2a97f0c996f775b1cc802e929d163",
+        "resolved_image_id": "sha256:22653983114e747bb621877ab73b2454ff4e302743bdc0af019acf0a64ab51de",
+        "outcome": "output_limit",
+        "cleanup": "removed",
+        "process_stopped": true,
+        "startup_verified": true,
+        "stdout_digest": "sha256:1536c422c31cc98834759d7085cda394a3510a03d78188248986a6b1a7207d03",
+        "stderr_digest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "exit_code": 0,
+        "provenance": "runtime-observation"
+      }
+    },
+    {
+      "qualification": "resource_exhausted-cleanup",
+      "receipt": {
+        "container_id": "e7aaa944c69eb5910154d7fcbf9fd774a413ea3baef9dc908950274df883ccc0",
+        "environment_fingerprint": "sha256:7fb8fd5a604c89ce062f15db235885f867b2a97f0c996f775b1cc802e929d163",
+        "resolved_image_id": "sha256:22653983114e747bb621877ab73b2454ff4e302743bdc0af019acf0a64ab51de",
+        "outcome": "resource_exhausted",
+        "cleanup": "removed",
+        "process_stopped": true,
+        "startup_verified": true,
+        "stdout_digest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_digest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "exit_code": 137,
+        "provenance": "runtime-observation"
+      }
+    },
+    {
+      "qualification": "marker-and-tool-shadow-rejection",
+      "packet": "sha256:69d6b5dc90bfc27fd747b2c32ec3f25797aa85387c8ef04ce81eb28985691735"
+    }
+  ],
+  "followup_local_validation": {
+    "focused": "26 passed",
+    "full": "433 passed,33 skipped in11.42s",
+    "prior_full_retry_trigger": "432 passed,1 failed,33 skipped: pre-existing test_llama_preflight.py::test_child_holding_output_is_killed_with_its_group /proc exists-to-read race; no unrelated source edits",
+    "ruff": "passed",
+    "lizard_changed_source": "no findings",
+    "final_head_gate": "real qualification and all checks required again after stopped-state race guard"
+  }
+}

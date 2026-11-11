@@ -1,0 +1,699 @@
+{
+  "$defs": {
+    "CandidateArtifact": {
+      "properties": {
+        "fingerprint": {
+          "minLength": 1,
+          "title": "Fingerprint",
+          "type": "string"
+        },
+        "reference": {
+          "minLength": 1,
+          "title": "Reference",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fingerprint",
+        "reference"
+      ],
+      "title": "CandidateArtifact",
+      "type": "object"
+    },
+    "CandidateFile": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "executable": {
+          "default": false,
+          "title": "Executable",
+          "type": "boolean"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "size_bytes": {
+          "maximum": 1048576,
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "digest",
+        "size_bytes"
+      ],
+      "title": "CandidateFile",
+      "type": "object"
+    },
+    "CheckRecord": {
+      "properties": {
+        "command": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Command",
+          "type": "array"
+        },
+        "detail": {
+          "default": "",
+          "title": "Detail",
+          "type": "string"
+        },
+        "predicate_id": {
+          "minLength": 1,
+          "title": "Predicate Id",
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/EvidenceState"
+        }
+      },
+      "required": [
+        "predicate_id",
+        "state"
+      ],
+      "title": "CheckRecord",
+      "type": "object"
+    },
+    "DigestReference": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "reference": {
+          "maxLength": 512,
+          "pattern": "^(urn|artifact|git):[A-Za-z0-9._:/+@-]+$",
+          "title": "Reference",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reference",
+        "digest"
+      ],
+      "title": "DigestReference",
+      "type": "object"
+    },
+    "EvaluatorIdentity": {
+      "properties": {
+        "evaluator_id": {
+          "minLength": 1,
+          "title": "Evaluator Id",
+          "type": "string"
+        },
+        "runtime": {
+          "minLength": 1,
+          "title": "Runtime",
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evaluator_id",
+        "version",
+        "runtime"
+      ],
+      "title": "EvaluatorIdentity",
+      "type": "object"
+    },
+    "EvidencePacket": {
+      "properties": {
+        "attempt_id": {
+          "minLength": 1,
+          "title": "Attempt Id",
+          "type": "string"
+        },
+        "authority": {
+          "const": "read_only",
+          "default": "read_only",
+          "title": "Authority",
+          "type": "string"
+        },
+        "candidate": {
+          "$ref": "#/$defs/CandidateArtifact"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/CheckRecord"
+          },
+          "title": "Checks",
+          "type": "array"
+        },
+        "contract_id": {
+          "minLength": 1,
+          "title": "Contract Id",
+          "type": "string"
+        },
+        "evaluator": {
+          "$ref": "#/$defs/EvaluatorIdentity"
+        },
+        "packet_id": {
+          "minLength": 1,
+          "title": "Packet Id",
+          "type": "string"
+        },
+        "regressions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Regressions",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "unresolved": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Unresolved",
+          "type": "array"
+        },
+        "verified": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Verified",
+          "type": "array"
+        }
+      },
+      "required": [
+        "packet_id",
+        "contract_id",
+        "attempt_id",
+        "candidate",
+        "evaluator"
+      ],
+      "title": "EvidencePacket",
+      "type": "object"
+    },
+    "EvidenceState": {
+      "enum": [
+        "PASS",
+        "FAIL",
+        "UNKNOWN"
+      ],
+      "title": "EvidenceState",
+      "type": "string"
+    },
+    "FrozenRepositoryCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "$ref": "#/$defs/RepositoryIdentity"
+        },
+        "changed_paths": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 512,
+          "title": "Changed Paths",
+          "type": "array"
+        },
+        "contract_fingerprint": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Contract Fingerprint",
+          "type": "string"
+        },
+        "files": {
+          "items": {
+            "$ref": "#/$defs/CandidateFile"
+          },
+          "maxItems": 256,
+          "title": "Files",
+          "type": "array"
+        },
+        "profile": {
+          "const": "frozen-repository-candidate-v1",
+          "default": "frozen-repository-candidate-v1",
+          "title": "Profile",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "default": 1,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source": {
+          "$ref": "#/$defs/RepositoryIdentity"
+        }
+      },
+      "required": [
+        "base",
+        "source",
+        "files",
+        "changed_paths",
+        "contract_fingerprint"
+      ],
+      "title": "FrozenRepositoryCandidate",
+      "type": "object"
+    },
+    "RepositoryCheckEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "check_fingerprint": {
+          "title": "Check Fingerprint",
+          "type": "string"
+        },
+        "classification": {
+          "enum": [
+            "PUBLIC",
+            "SEALED",
+            "POLICY",
+            "INSPECTION"
+          ],
+          "title": "Classification",
+          "type": "string"
+        },
+        "diagnostic": {
+          "anyOf": [
+            {
+              "enum": [
+                "sandbox_invalid",
+                "cleanup_failed"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Diagnostic"
+        },
+        "duration_seconds": {
+          "minimum": 0,
+          "title": "Duration Seconds",
+          "type": "number"
+        },
+        "ended_at": {
+          "format": "date-time",
+          "title": "Ended At",
+          "type": "string"
+        },
+        "exit_code": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exit Code"
+        },
+        "outcome": {
+          "enum": [
+            "pass",
+            "fail",
+            "invalid",
+            "timeout",
+            "output_limit",
+            "resource_exhausted"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "predicate_id": {
+          "title": "Predicate Id",
+          "type": "string"
+        },
+        "sandbox_execution": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SandboxExecutionReceipt"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "sandbox_receipt": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DigestReference"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "started_at": {
+          "format": "date-time",
+          "title": "Started At",
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/EvidenceState"
+        },
+        "stderr_digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stderr Digest"
+        },
+        "stdout_digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stdout Digest"
+        }
+      },
+      "required": [
+        "predicate_id",
+        "classification",
+        "check_fingerprint",
+        "state",
+        "outcome",
+        "started_at",
+        "ended_at",
+        "duration_seconds"
+      ],
+      "title": "RepositoryCheckEvidence",
+      "type": "object"
+    },
+    "RepositoryIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "commit": {
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
+          "title": "Commit",
+          "type": "string"
+        },
+        "data_class": {
+          "enum": [
+            "public",
+            "private",
+            "personal",
+            "sensitive",
+            "restricted"
+          ],
+          "title": "Data Class",
+          "type": "string"
+        },
+        "materials": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RepositoryMaterial"
+          },
+          "maxItems": 256,
+          "title": "Materials",
+          "type": "array"
+        },
+        "repository_id": {
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_.:/-]+$",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "tree": {
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
+          "title": "Tree",
+          "type": "string"
+        },
+        "visibility": {
+          "enum": [
+            "public",
+            "private"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "repository_id",
+        "visibility",
+        "data_class",
+        "commit",
+        "tree"
+      ],
+      "title": "RepositoryIdentity",
+      "type": "object"
+    },
+    "RepositoryMaterial": {
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "pattern": "^(sha256:)?[0-9a-f]{40}([0-9a-f]{24})?$",
+          "title": "Identity",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "submodule",
+            "lfs",
+            "generated"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "kind",
+        "identity"
+      ],
+      "title": "RepositoryMaterial",
+      "type": "object"
+    },
+    "SandboxExecutionReceipt": {
+      "additionalProperties": false,
+      "properties": {
+        "cleanup": {
+          "enum": [
+            "removed",
+            "failed"
+          ],
+          "title": "Cleanup",
+          "type": "string"
+        },
+        "container_id": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Container Id",
+          "type": "string"
+        },
+        "environment_fingerprint": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Environment Fingerprint",
+          "type": "string"
+        },
+        "exit_code": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exit Code"
+        },
+        "outcome": {
+          "enum": [
+            "completed",
+            "invalid",
+            "timeout",
+            "output_limit",
+            "resource_exhausted"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "process_stopped": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Process Stopped"
+        },
+        "provenance": {
+          "default": "runtime-observation",
+          "enum": [
+            "runtime-observation",
+            "synthetic-fixture"
+          ],
+          "title": "Provenance",
+          "type": "string"
+        },
+        "resolved_image_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resolved Image Id"
+        },
+        "startup_verified": {
+          "default": false,
+          "title": "Startup Verified",
+          "type": "boolean"
+        },
+        "stderr_digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stderr Digest"
+        },
+        "stdout_digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Stdout Digest"
+        }
+      },
+      "required": [
+        "container_id",
+        "environment_fingerprint",
+        "outcome",
+        "cleanup"
+      ],
+      "title": "SandboxExecutionReceipt",
+      "type": "object"
+    }
+  },
+  "$id": "https://ph34r.dev/ns/long-haul/repository-evidence-v1.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "candidate": {
+      "$ref": "#/$defs/FrozenRepositoryCandidate"
+    },
+    "checks": {
+      "items": {
+        "$ref": "#/$defs/RepositoryCheckEvidence"
+      },
+      "title": "Checks",
+      "type": "array"
+    },
+    "context_manifest": {
+      "$ref": "#/$defs/DigestReference"
+    },
+    "contract_fingerprint": {
+      "title": "Contract Fingerprint",
+      "type": "string"
+    },
+    "evaluator_environment": {
+      "$ref": "#/$defs/DigestReference"
+    },
+    "evaluator_profile": {
+      "$ref": "#/$defs/DigestReference"
+    },
+    "evidence": {
+      "$ref": "#/$defs/EvidencePacket"
+    },
+    "invalid_reasons": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Invalid Reasons",
+      "type": "array"
+    },
+    "producing_attempt_references": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/DigestReference"
+      },
+      "title": "Producing Attempt References",
+      "type": "array"
+    },
+    "profile": {
+      "const": "repository-evidence-v1",
+      "default": "repository-evidence-v1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "sandbox_implementation": {
+      "$ref": "#/$defs/DigestReference"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "task": {
+      "$ref": "#/$defs/DigestReference"
+    },
+    "validity": {
+      "enum": [
+        "valid",
+        "invalid"
+      ],
+      "title": "Validity",
+      "type": "string"
+    }
+  },
+  "required": [
+    "evidence",
+    "candidate",
+    "task",
+    "context_manifest",
+    "evaluator_profile",
+    "evaluator_environment",
+    "sandbox_implementation",
+    "contract_fingerprint",
+    "checks",
+    "validity"
+  ],
+  "title": "RepositoryEvidencePacketV1",
+  "type": "object"
+}

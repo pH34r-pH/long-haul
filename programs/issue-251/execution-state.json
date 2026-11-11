@@ -6,22 +6,30 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-11T18:15:50.857938+00:00",
+    "updated_at": "2026-11-11T20:08:56.975892+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
-        "task": "lh-242-context",
-        "state": "implementation"
-      },
-      {
-        "repository": "pH34r-pH/specified-development",
-        "task": "specified-13",
-        "state": "reconciled_waiting_for_dependency"
+        "task": "lh-243-evaluator",
+        "state": "implementation",
+        "parallel_preparation": [
+          "lh-244-pi-trace"
+        ]
       },
       {
         "repository": "pH34r-pH/experiment-compiler",
         "task": "compiler-150",
         "state": "reconciled_waiting_for_dependency"
+      },
+      {
+        "repository": "pH34r-pH/long-haul-fleet",
+        "task": "fleet-1612",
+        "state": "reconciled_waiting_for_dependency_and_runner"
+      },
+      {
+        "repository": "pH34r-pH/book-development",
+        "task": "book-5",
+        "state": "reconciling_after_specified_gate"
       }
     ]
   },
@@ -93,33 +101,58 @@
           "id": "lh-242-context",
           "repository": "pH34r-pH/long-haul",
           "issue": 242,
-          "status": "in_progress",
+          "status": "completed",
           "depends_on": [
             "bootstrap-reconcile",
             "lh-248-policy-substrate"
           ],
           "acceptance": "Exact repository, task, environment, and bounded context identities are implemented and reproducible.",
-          "baseline_commit": "f5dd3ff13f5a1b7e03c4374e63d74de33fce8a74"
+          "baseline_commit": "f5dd3ff13f5a1b7e03c4374e63d74de33fce8a74",
+          "implementation_pr": 254,
+          "merge_commit": "5cab6749e65090b16d0b28970fe4edc81379d646",
+          "evidence": [
+            "programs/issue-251/evidence/issue-242-context.json"
+          ]
         },
         {
           "id": "lh-243-evaluator",
           "repository": "pH34r-pH/long-haul",
           "issue": 243,
-          "status": "queued",
+          "status": "in_progress",
           "depends_on": [
             "lh-242-context"
           ],
-          "acceptance": "Public and sealed checks execute in a separate read-only evaluator bound to an exact candidate."
+          "acceptance": "Public and sealed checks execute in a separate read-only evaluator bound to an exact candidate.",
+          "baseline_commit": "5cab6749e65090b16d0b28970fe4edc81379d646",
+          "implementation_pr": 255,
+          "qualification": {
+            "status": "passed_before_final_cleanup_race_patch",
+            "checked_head": "ac0031809ca6cd627dfc91688cfa7bbaa8039c73",
+            "run": 43093288138,
+            "job": 130775587667,
+            "real_tests_passed": 6,
+            "environment": "sha256:7fb8fd5a604c89ce062f15db235885f867b2a97f0c996f775b1cc802e929d163",
+            "packet": "sha256:87f1a81ab8207ce271752e79cd93e8f1c18bd282a035e2ab56c498fd2d3aec66",
+            "failed_runs": [
+              43085111636,
+              43088457062,
+              43088889747,
+              43092685133
+            ],
+            "remaining": "final_exact_head_checks_and_merge; no model competence claim"
+          }
         },
         {
           "id": "lh-244-pi-trace",
           "repository": "pH34r-pH/long-haul",
           "issue": 244,
-          "status": "queued",
+          "status": "in_progress",
           "depends_on": [
             "lh-242-context"
           ],
-          "acceptance": "Pi emits replayable privacy-preserving semantic action events with exact harness identity."
+          "acceptance": "Pi emits replayable privacy-preserving semantic action events with exact harness identity.",
+          "baseline_commit": "5cab6749e65090b16d0b28970fe4edc81379d646",
+          "preparation_scope": "Disjoint harness/event normalization core only; no existing repository/evaluator contract mutations; integration and PR wait for merged/pinned #243"
         },
         {
           "id": "lh-245-security",
@@ -143,7 +176,15 @@
             "lh-244-pi-trace",
             "lh-245-security"
           ],
-          "acceptance": "P0 hermetic fixture and P1 real Pi repository task complete with frozen candidate and independent evidence."
+          "acceptance": "P0 hermetic fixture and P1 real Pi repository task complete with frozen candidate and independent evidence.",
+          "preparation": {
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/64#issuecomment-6806083619",
+            "kind": "read_only_static_preparation_no_experiment",
+            "task_candidate": "ProgressMonitor repeated successful verification boundary; known pilot/development material",
+            "historical_source": "ef9c8b219fd97b927d2df68e52b7d48a09146cd6",
+            "historical_tree": "dee53f815842515f94416e76ac5dfb82dce49829",
+            "additional_gate": "qualify offline library dependency/test-driver profile; initial standalone evaluator cannot certify Pydantic library"
+          }
         },
         {
           "id": "compiler-150",
@@ -165,17 +206,60 @@
             "lh-243-evaluator",
             "lh-245-security"
           ],
-          "acceptance": "Reusable privileged workflows and common candidate, deployment, probe, rollback, revocation, and cleanup receipts are implemented."
+          "acceptance": "Reusable privileged workflows and common candidate, deployment, probe, rollback, revocation, and cleanup receipts are implemented.",
+          "execution_prerequisites": {
+            "ci_status": "blocked_unassigned_x64_runner",
+            "baseline_commit": "b175250083f41c2bd39f2f2600b60986ba7ffed1",
+            "preserve_policy": "Private CI remains on admitted Fleet-managed self-hosted workers; no hosted fallback",
+            "known_checks": "Kestrel ARM64 smoke and hosted governance passed; x64 source jobs queued",
+            "recovery": "read-only diagnosis and exact existing guarded operator procedure being staged",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6804182211",
+            "read_only_diagnosis": {
+              "preview_run": 43082523747,
+              "preview_status": "passed_shape_only",
+              "verify_run": 43084234839,
+              "verify_status": "failed_current_state_before_health_or_queue_census",
+              "verify_archive": "passed",
+              "manifest_sha256": "e42efad094d2c2c2dc4f7df973bc551f71ac549848541115eafc8891b8fd39ed",
+              "bundle_sha256": "48944a943d3fdf39889fc5b97180da44ca067510c8817a9377db18d344cefdd0",
+              "task_comparison_run": 43085401688,
+              "task_comparison_status": "passed_read_only_stopped_supervisor",
+              "host_mutation": false,
+              "existing_prerequisite_issues": [
+                1533,
+                1579,
+                1609
+              ],
+              "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6805046679",
+              "task_state": {
+                "enabled": true,
+                "state": "Ready",
+                "instance_count": 0,
+                "task_identity_and_checkpoint_acl_comparisons": "passed"
+              },
+              "task_comparison_archive": "passed",
+              "task_comparison_manifest_sha256": "a0fd83025d3c204b586d15705e7793572398e06e0c99ca0935b5e21fc0442df4",
+              "task_comparison_bundle_sha256": "57f12487e284481f0288a3b68e4dd0f7d9cf3699d541f5478f1d2937eabdf78c",
+              "recovery_owner": "https://github.com/pH34r-pH/long-haul-fleet/issues/1533#issuecomment-6805162809"
+            }
+          }
         },
         {
           "id": "specified-13",
           "repository": "pH34r-pH/specified-development",
           "issue": 13,
-          "status": "queued",
+          "status": "completed",
           "depends_on": [
             "lh-242-context"
           ],
-          "acceptance": "Minimal bundle validator, compact review surface, and deterministic regeneration contract are executable."
+          "acceptance": "Minimal bundle validator, compact review surface, and deterministic regeneration contract are executable.",
+          "implementation_pr": 14,
+          "merge_commit": "7515ac42569274228b59e79e7b243d184ee72e09",
+          "evidence": [
+            "https://github.com/pH34r-pH/specified-development/issues/13#issuecomment-6804713011"
+          ],
+          "receipt_sha256": "e722941fd76c1ceb401b57d716e6ffe3ae6ebbe56b6377fb7bbbbf91b2d0e441",
+          "default_branch_checks": "passed"
         },
         {
           "id": "compiled-7",
@@ -343,7 +427,7 @@
     {
       "id": "phase-4",
       "name": "Publication distribution and recovery",
-      "status": "queued",
+      "status": "in_progress",
       "tasks": [
         {
           "id": "portfolio-141",
@@ -360,12 +444,17 @@
           "id": "book-5",
           "repository": "pH34r-pH/book-development",
           "issue": 5,
-          "status": "queued",
+          "status": "in_progress",
           "depends_on": [
             "specified-13"
           ],
           "external_gate": "human_submission_approval",
-          "acceptance": "Local validator, pinned Quarto/TeX environment, and exact multi-format candidate receipts pass."
+          "acceptance": "Local validator, pinned Quarto/TeX environment, and exact multi-format candidate receipts pass.",
+          "execution_prerequisites": {
+            "private_source_ci": "not_admitted_to_finite_fleet_controller",
+            "publication": "requires_human_author_approval",
+            "safe_work": "local_fixture_qualification_and_reviewed_admission_proposal"
+          }
         },
         {
           "id": "socials-19",
@@ -2362,6 +2451,73 @@
       "default_branch_checks": "passed; Python, governance, requirements, Azure, native CPU and offline package",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6803347997",
       "remaining_issue": "#248 open for full standards acceptance"
+    },
+    {
+      "at": "2026-11-11T18:30:59.443259+00:00",
+      "task": "lh-242-context",
+      "status": "completed",
+      "pull_request": 254,
+      "checked_head": "d6ddc2f90010bdef5c1b88f0bc3c8c6625973443",
+      "merge_commit": "5cab6749e65090b16d0b28970fe4edc81379d646",
+      "pre_merge_checks": "all passed; native CPU and runtime OCI included",
+      "evidence": "programs/issue-251/evidence/issue-242-context.json",
+      "default_branch_checks": "passed: Python, governance, requirements, Azure, native CPU and offline package at merge commit"
+    },
+    {
+      "at": "2026-11-11T19:05:25.681262+00:00",
+      "task": "specified-13",
+      "status": "completed",
+      "repository": "pH34r-pH/specified-development",
+      "pull_request": 14,
+      "checked_head": "55794a48ed230c69373f17fe844555baaf00ccb4",
+      "merge_commit": "7515ac42569274228b59e79e7b243d184ee72e09",
+      "pre_merge_checks": "passed",
+      "default_branch_checks": "passed",
+      "receipt_sha256": "e722941fd76c1ceb401b57d716e6ffe3ae6ebbe56b6377fb7bbbbf91b2d0e441",
+      "closeout": "https://github.com/pH34r-pH/specified-development/issues/13#issuecomment-6804713011"
+    },
+    {
+      "at": "2026-11-11T19:15:22.753798+00:00",
+      "task": "fleet-1612",
+      "status": "dependency_diagnosis",
+      "repository": "pH34r-pH/long-haul-fleet",
+      "source": "b175250083f41c2bd39f2f2600b60986ba7ffed1",
+      "run": 43084234839,
+      "result": "current_state_predicate_failed_before_fresh_queue_owner_snapshot",
+      "archive": "success",
+      "host_mutation": false,
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6804972261"
+    },
+    {
+      "at": "2026-11-11T19:40:07.976159+00:00",
+      "task": "fleet-1612",
+      "status": "blocked_source_ci_supervisor_not_running",
+      "run": 43085401688,
+      "source": "b175250083f41c2bd39f2f2600b60986ba7ffed1",
+      "observation": "enabled Ready zero_instances; historical_checkpoint_identity_and_acl_matches",
+      "fresh_queue_owner_census": "not_established",
+      "host_mutation": false,
+      "archive": "passed",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6805046679"
+    },
+    {
+      "at": "2026-11-11T19:51:40.888477+00:00",
+      "task": "lh-244-pi-trace",
+      "status": "disjoint_core_preparation",
+      "baseline_commit": "5cab6749e65090b16d0b28970fe4edc81379d646",
+      "dependencies": "merged #242",
+      "active_pr_policy": "PR255 remains sole active Long-Haul implementation PR",
+      "integration_gate": "merge and pin #243 before evaluator/worker integration or next PR"
+    },
+    {
+      "at": "2026-11-11T20:08:56.975892+00:00",
+      "task": "lh-243-evaluator",
+      "status": "real_isolation_qualification_passed_before_final_patch",
+      "checked_head": "ac0031809ca6cd627dfc91688cfa7bbaa8039c73",
+      "run": 43093288138,
+      "real_tests_passed": 6,
+      "merge_status": "not_merged_pending_final_head",
+      "model_competence": "not_claimed"
     }
   ]
 }

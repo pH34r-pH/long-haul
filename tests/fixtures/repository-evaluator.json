@@ -1,0 +1,48 @@
+{
+  "scope": "Repository evaluator fixture isolation, not agent benchmark or Fleet deployment",
+  "gvisor_url": "https://github.com/google/gvisor/releases/download/release-20261102.0/gvisor-x86_64.tar.bz2",
+  "environment": {
+    "image": "docker.io/library/python:3.12-trixie@sha256:cd7c412d000912f29075a1b8803e43cb2f38bb67f104019df526df5ceaf30569",
+    "runtime_version": "release-20261102.0",
+    "runtime_archive_digest": "sha256:6f6b1a8f0f4665a403238135167d0d990bfaeaff5544abf68f5e0d822b35484a",
+    "runtime_binary_digest": "sha256:c5a5a7ba1209b605d08874fdd4429035f95afcb2d482bc95ed3fb13d31a25098",
+    "limits": {
+      "wall_seconds": 5,
+      "memory_mib": 256,
+      "cpus": 1,
+      "pids": 128,
+      "scratch_mib": 16,
+      "max_output_bytes": 16384
+    },
+    "runtime_files": [
+      [
+        "runsc",
+        "sha256:c5a5a7ba1209b605d08874fdd4429035f95afcb2d482bc95ed3fb13d31a25098"
+      ],
+      [
+        "gvisor-bin/checkpointgofer",
+        "sha256:37e6e92d6dcb3296e10dc2f21b0ef6156f1373ff0668d27a4fccc8ded2b51f94"
+      ],
+      [
+        "gvisor-bin/gvisor-proc-umounter",
+        "sha256:b3bbbaef5ddc62084e5febd19d3acca14f3d42b2a25d8552fb40def699467019"
+      ],
+      [
+        "gvisor-bin/gvisor-sentry-prewarmer",
+        "sha256:046e3ec1de3aa7b7ec7ce53b4f0d1e08db15987847606a8e361133d5c5bd3d73"
+      ],
+      [
+        "gvisor-bin/gvisor_sentry",
+        "sha256:6dfd3af65e664663f332d0e4b9fb82452496e34ebc6cb568ae49f5b1ac9d8166"
+      ],
+      [
+        "gvisor-bin/runsc-fd-parking",
+        "sha256:03af90d07ea466c10ecc3e3ba839b2a59540959dd3286aea3886917cba850c11"
+      ],
+      [
+        "gvisor-bin/runsc-metric-server",
+        "sha256:b9857ebe290c403fda7ff014368df3a0f45e5428dc1eb6efe413cfe0e5a940f4"
+      ]
+    ]
+  }
+}

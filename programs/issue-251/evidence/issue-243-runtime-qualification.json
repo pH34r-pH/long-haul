@@ -1,0 +1,53 @@
+{
+  "failed_attempts": [
+    {
+      "head": "d66eca15ba9cee400cb37988ce2c6c5e2f738869",
+      "result": "launcher failed; initial negative probe was insufficient",
+      "run": 43085111636
+    },
+    {
+      "head": "0d68bc4e5d41c7fb9132e16d923512e9fb822c08",
+      "result": "five startup failures correctly INCOMPLETE",
+      "run": 43088457062
+    },
+    {
+      "head": "7badc86e822ef0456958837411ae5162ae432d5f",
+      "result": "paired init/pids32 ENOMEM versus init/pids128 success, memory256 unchanged",
+      "run": 43088889747
+    },
+    {
+      "head": "b2c92ca6ed6f21475a605c839df1142307e6f075",
+      "result": "5 passed: exact public/sealed ACCEPTED, isolation, timeout, real OOM, adversarial rejection; output-limit probe invalid because startup marker could be starved",
+      "run": 43092685133
+    }
+  ],
+  "fix": "Trusted digest-verifying bootstrap waits for executor stdin acknowledgement after its distinct stderr marker; candidate cannot flood output before proof is observed. Shared wall deadline and combined output cap remain enforced.",
+  "issue": 243,
+  "limitations": [
+    "Python CLI byte predicates only",
+    "256 files,4 MiB total,1 MiB per blob; unsupported candidates decline",
+    "Synthetic conformance is not agent competence or a private scientific benchmark",
+    "No deployment, publication, real Pi attempt or worker lifecycle completion"
+  ],
+  "local_checks": {
+    "focused": "24 passed",
+    "full_before_acknowledgement_fix": "430 passed,33 skipped",
+    "governance": "passed",
+    "lizard_changed_source": "no findings",
+    "requirements": "21 tests,OK,5 skipped",
+    "ruff": "passed"
+  },
+  "qualification": "pending exact-head mandatory CI after startup acknowledgement fix",
+  "runtime_minimum": {
+    "host_tasks": 128,
+    "memory_mib": 256,
+    "network": "none"
+  },
+  "schema_version": 1,
+  "source_sha256": {
+    "src/long_haul/work/repository_sandbox.py": "201d1c497cc740b6d7d3c9a3b27df781b7b70f59ea9c23d7fdf24f6ba1c5bc7c",
+    "tests/fixtures/repository-evaluator.json": "8aa3da160c49373d66b05981996ca09a06c29f6c576f36584b0048a8dd603c2d",
+    "tests/test_repository_evaluator.py": "6c710c14ed941f05f97722982ae94c8ccef236cbe0c23617abed0f4172cd5c48",
+    "tests/test_repository_gvisor.py": "9c0673789b0ace7f7bd83a1365ce0c5c0adbd63af4ef44fb59e1a60ac8c4d30f"
+  }
+}

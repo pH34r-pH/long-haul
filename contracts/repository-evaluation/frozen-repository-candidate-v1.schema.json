@@ -1,0 +1,176 @@
+{
+  "$defs": {
+    "CandidateFile": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "executable": {
+          "default": false,
+          "title": "Executable",
+          "type": "boolean"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "size_bytes": {
+          "maximum": 1048576,
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "digest",
+        "size_bytes"
+      ],
+      "title": "CandidateFile",
+      "type": "object"
+    },
+    "RepositoryIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "commit": {
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
+          "title": "Commit",
+          "type": "string"
+        },
+        "data_class": {
+          "enum": [
+            "public",
+            "private",
+            "personal",
+            "sensitive",
+            "restricted"
+          ],
+          "title": "Data Class",
+          "type": "string"
+        },
+        "materials": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RepositoryMaterial"
+          },
+          "maxItems": 256,
+          "title": "Materials",
+          "type": "array"
+        },
+        "repository_id": {
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9_.:/-]+$",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "tree": {
+          "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
+          "title": "Tree",
+          "type": "string"
+        },
+        "visibility": {
+          "enum": [
+            "public",
+            "private"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "repository_id",
+        "visibility",
+        "data_class",
+        "commit",
+        "tree"
+      ],
+      "title": "RepositoryIdentity",
+      "type": "object"
+    },
+    "RepositoryMaterial": {
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "pattern": "^(sha256:)?[0-9a-f]{40}([0-9a-f]{24})?$",
+          "title": "Identity",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "submodule",
+            "lfs",
+            "generated"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "kind",
+        "identity"
+      ],
+      "title": "RepositoryMaterial",
+      "type": "object"
+    }
+  },
+  "$id": "https://ph34r.dev/ns/long-haul/frozen-repository-candidate-v1.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "base": {
+      "$ref": "#/$defs/RepositoryIdentity"
+    },
+    "changed_paths": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 512,
+      "title": "Changed Paths",
+      "type": "array"
+    },
+    "contract_fingerprint": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Contract Fingerprint",
+      "type": "string"
+    },
+    "files": {
+      "items": {
+        "$ref": "#/$defs/CandidateFile"
+      },
+      "maxItems": 256,
+      "title": "Files",
+      "type": "array"
+    },
+    "profile": {
+      "const": "frozen-repository-candidate-v1",
+      "default": "frozen-repository-candidate-v1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source": {
+      "$ref": "#/$defs/RepositoryIdentity"
+    }
+  },
+  "required": [
+    "base",
+    "source",
+    "files",
+    "changed_paths",
+    "contract_fingerprint"
+  ],
+  "title": "FrozenRepositoryCandidate",
+  "type": "object"
+}

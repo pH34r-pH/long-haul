@@ -97,7 +97,9 @@ class EvaluationRunner:
         fingerprint = self.target.fingerprint
         checks: list[CheckRecord] = []
         for predicate in contract.success_predicates:
-            if predicate.command:
+            if predicate.evaluator_reference is not None:
+                state, detail = EvidenceState.UNKNOWN, "predicate requires the admitted repository evaluator"
+            elif predicate.command:
                 state, detail = self.target.run_check(predicate.command)
             elif predicate.artifact_path:
                 try:

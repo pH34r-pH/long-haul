@@ -1,0 +1,381 @@
+{
+  "$defs": {
+    "AcceptanceRequirement": {
+      "additionalProperties": false,
+      "properties": {
+        "classification": {
+          "enum": [
+            "PUBLIC",
+            "SEALED",
+            "POLICY",
+            "INSPECTION"
+          ],
+          "title": "Classification",
+          "type": "string"
+        },
+        "description": {
+          "maxLength": 512,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "predicate_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Predicate Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "predicate_id",
+        "description",
+        "classification"
+      ],
+      "title": "AcceptanceRequirement",
+      "type": "object"
+    },
+    "CandidateCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "arguments": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Arguments",
+          "type": "array"
+        },
+        "expected_exit_code": {
+          "default": 0,
+          "maximum": 255,
+          "minimum": 0,
+          "title": "Expected Exit Code",
+          "type": "integer"
+        },
+        "expected_stdout_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Expected Stdout Digest",
+          "type": "string"
+        },
+        "program": {
+          "title": "Program",
+          "type": "string"
+        },
+        "result_schema": {
+          "const": "bounded-bytes-v1",
+          "default": "bounded-bytes-v1",
+          "title": "Result Schema",
+          "type": "string"
+        },
+        "stdin": {
+          "default": "",
+          "maxLength": 16384,
+          "title": "Stdin",
+          "type": "string"
+        }
+      },
+      "required": [
+        "program",
+        "expected_stdout_digest"
+      ],
+      "title": "CandidateCommand",
+      "type": "object"
+    },
+    "DigestReference": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "reference": {
+          "maxLength": 512,
+          "pattern": "^(urn|artifact|git):[A-Za-z0-9._:/+@-]+$",
+          "title": "Reference",
+          "type": "string"
+        }
+      },
+      "required": [
+        "reference",
+        "digest"
+      ],
+      "title": "DigestReference",
+      "type": "object"
+    },
+    "EvaluatorEnvironment": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_access": {
+          "const": "read-only",
+          "default": "read-only",
+          "title": "Candidate Access",
+          "type": "string"
+        },
+        "image": {
+          "pattern": "^[a-z0-9./:_-]+@sha256:[0-9a-f]{64}$",
+          "title": "Image",
+          "type": "string"
+        },
+        "limits": {
+          "$ref": "#/$defs/SandboxLimits"
+        },
+        "network": {
+          "const": "none",
+          "default": "none",
+          "title": "Network",
+          "type": "string"
+        },
+        "runtime": {
+          "default": "long-haul-gvisor",
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$",
+          "title": "Runtime",
+          "type": "string"
+        },
+        "runtime_archive_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Runtime Archive Digest",
+          "type": "string"
+        },
+        "runtime_binary_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Runtime Binary Digest",
+          "type": "string"
+        },
+        "runtime_entrypoint": {
+          "default": "runsc",
+          "title": "Runtime Entrypoint",
+          "type": "string"
+        },
+        "runtime_files": {
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "type": "array"
+          },
+          "maxItems": 32,
+          "minItems": 1,
+          "title": "Runtime Files",
+          "type": "array"
+        },
+        "runtime_version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Runtime Version",
+          "type": "string"
+        },
+        "toolchain": {
+          "default": "isolated-python3",
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Toolchain",
+          "type": "string"
+        }
+      },
+      "required": [
+        "image",
+        "runtime_version",
+        "runtime_archive_digest",
+        "runtime_binary_digest",
+        "runtime_files"
+      ],
+      "title": "EvaluatorEnvironment",
+      "type": "object"
+    },
+    "RepositoryCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Digest"
+        },
+        "artifact_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact Path"
+        },
+        "command": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CandidateCommand"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "kind": {
+          "enum": [
+            "command",
+            "scope",
+            "artifact"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "requirement": {
+          "$ref": "#/$defs/AcceptanceRequirement"
+        }
+      },
+      "required": [
+        "requirement",
+        "kind"
+      ],
+      "title": "RepositoryCheck",
+      "type": "object"
+    },
+    "SandboxLimits": {
+      "additionalProperties": false,
+      "properties": {
+        "cpus": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "maximum": 4,
+          "title": "Cpus",
+          "type": "number"
+        },
+        "max_output_bytes": {
+          "default": 16384,
+          "maximum": 1048576,
+          "minimum": 1,
+          "title": "Max Output Bytes",
+          "type": "integer"
+        },
+        "memory_mib": {
+          "default": 256,
+          "maximum": 4096,
+          "minimum": 64,
+          "title": "Memory Mib",
+          "type": "integer"
+        },
+        "pids": {
+          "default": 32,
+          "maximum": 128,
+          "minimum": 8,
+          "title": "Pids",
+          "type": "integer"
+        },
+        "scratch_mib": {
+          "default": 16,
+          "maximum": 256,
+          "minimum": 1,
+          "title": "Scratch Mib",
+          "type": "integer"
+        },
+        "wall_seconds": {
+          "default": 10,
+          "exclusiveMinimum": 0,
+          "maximum": 300,
+          "title": "Wall Seconds",
+          "type": "number"
+        }
+      },
+      "title": "SandboxLimits",
+      "type": "object"
+    }
+  },
+  "$id": "https://ph34r.dev/ns/long-haul/repository-evaluation-v1.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "checks": {
+      "items": {
+        "$ref": "#/$defs/RepositoryCheck"
+      },
+      "maxItems": 128,
+      "minItems": 1,
+      "title": "Checks",
+      "type": "array"
+    },
+    "deterministic": {
+      "const": true,
+      "default": true,
+      "title": "Deterministic",
+      "type": "boolean"
+    },
+    "environment": {
+      "$ref": "#/$defs/EvaluatorEnvironment"
+    },
+    "evaluator_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Evaluator Id",
+      "type": "string"
+    },
+    "evaluator_version": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Evaluator Version",
+      "type": "string"
+    },
+    "implementation": {
+      "$ref": "#/$defs/DigestReference"
+    },
+    "profile": {
+      "const": "repository-evaluation-v1",
+      "default": "repository-evaluation-v1",
+      "title": "Profile",
+      "type": "string"
+    },
+    "publication_policy": {
+      "const": "requirements-and-hashed-outcomes",
+      "default": "requirements-and-hashed-outcomes",
+      "title": "Publication Policy",
+      "type": "string"
+    },
+    "sandbox": {
+      "$ref": "#/$defs/DigestReference"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "seed": {
+      "const": 0,
+      "default": 0,
+      "title": "Seed",
+      "type": "integer"
+    },
+    "task": {
+      "$ref": "#/$defs/DigestReference"
+    }
+  },
+  "required": [
+    "evaluator_id",
+    "evaluator_version",
+    "task",
+    "environment",
+    "implementation",
+    "sandbox",
+    "checks"
+  ],
+  "title": "RepositoryEvaluationProfileV1",
+  "type": "object"
+}

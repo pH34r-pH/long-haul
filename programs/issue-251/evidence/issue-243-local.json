@@ -1,0 +1,102 @@
+{
+  "baseline_commit": "5cab6749e65090b16d0b28970fe4edc81379d646",
+  "control_issue": 252,
+  "environment": {
+    "packages": {
+      "PyYAML": "6.0.3",
+      "lizard": "1.24.0",
+      "pydantic": "2.14.3",
+      "pytest": "9.2.0",
+      "ruff": "0.16.9"
+    },
+    "python": "3.12.14"
+  },
+  "issue": 243,
+  "limitations": [
+    "initial candidate limits: 256 files,4 MiB total,1 MiB per blob; unsupported candidates decline",
+    "CLI Python-byte predicates are the first qualified target, not arbitrary builds",
+    "evaluator detection cannot be universally prevented; no scientific benchmark superiority claimed",
+    "caller authenticates contracts/profiles/permissions; repository/model self-assertion grants no authority"
+  ],
+  "local_checks": [
+    {
+      "command": "python -m pytest -q",
+      "result": "424 passed, 32 skipped",
+      "seconds": 10.82
+    },
+    {
+      "command": "python -m pytest -q tests/test_repository_evaluator.py tests/test_evaluator.py tests/test_work_contracts.py",
+      "result": "42 passed before final schema-parity test was added"
+    },
+    {
+      "command": "python -m ruff check src tests",
+      "result": "passed"
+    },
+    {
+      "command": "python -m unittest tools.test_requirements tools.test_requirements_boundaries",
+      "result": "21 tests; OK; 5 skipped"
+    },
+    {
+      "command": "python .github/actions/repository-governance/validate.py governance/repository-profile.json",
+      "result": "passed"
+    },
+    {
+      "command": "python scripts/export_repository_evaluation_schemas.py --output-dir contracts/repository-evaluation",
+      "result": "exported; parity tested"
+    },
+    {
+      "command": "Ruff structural rules and Lizard, changed modules",
+      "result": "no findings"
+    },
+    {
+      "command": "markdownlint-cli2 0.18.1, changed Markdown",
+      "result": "passed"
+    }
+  ],
+  "negative_coverage": [
+    "wrong stdout/self-report rejected",
+    "timeout/output/resource/invalid remain inconclusive",
+    "scope/test/configuration tampering blocks execution",
+    "stale candidate/profile/contract invalidates old evidence",
+    "duplicate/contradictory evidence rejected",
+    "missing evaluator definition and unsafe symlink declined",
+    "combined output cap and nonreading stdin deadline",
+    "exact runtime bundle and containment inspection",
+    "cleanup failure is invalid and retained"
+  ],
+  "qualification": {
+    "command": "bash scripts/qualify_repository_evaluator.sh",
+    "expected": "real public/sealed, read-only, no private/sealed mounts or credentials, denied network, timeout/output caps and forced teardown pass; job fails if runtime missing",
+    "image_and_runtime": "tests/fixtures/repository-evaluator.json",
+    "real_gvisor": "pending mandatory hosted CI; 5 local skips are not qualification",
+    "workflow": ".github/workflows/repository-evaluator.yml"
+  },
+  "schema_version": 1,
+  "source_sha256": {
+    ".github/workflows/repository-evaluator.yml": "f6bc0b50b300a4f1cba93b7e18437a135b83feb90fa7527e22ef59efd3b9f4ac",
+    "contracts/repository-evaluation/frozen-repository-candidate-v1.schema.json": "3a36417fda73f7283e203859c1dd1b5bdce3de0a2c29b9464df38046b581650d",
+    "contracts/repository-evaluation/repository-evaluation-v1.schema.json": "50b95d8d09f34c155f3d2332cf7448a2a26ee0828cd1d297cfad2ae057d848fa",
+    "contracts/repository-evaluation/repository-evidence-v1.schema.json": "5617d6f6e918480829c3e472d703c76e32621879f9507cf6074391eb9d8cb851",
+    "scripts/export_repository_evaluation_schemas.py": "622dc2033ba3d1b8a6029d66b062a0ddfb0a0b47137af01f5f8a09893946681e",
+    "scripts/qualify_repository_evaluator.sh": "c7105b2ac8ed7945ef46d3c6e66f45e6a3b5dcce3a8f1f622062a389dbbb0c80",
+    "src/long_haul/work/contracts.py": "ad10dbe250b05831ebcdd5cd178ef2569e15156854ceb7a21e5bc4c1fb735f46",
+    "src/long_haul/work/evaluator.py": "e0c68930a3cbe8437a30c225803a7f795b50ccd9d316b1a60356bfe745ea44e6",
+    "src/long_haul/work/repository_candidate.py": "ee1b7d8b3615ba3d99ffe22394660d1c46287005488bf81bf0dd1c5c301d0347",
+    "src/long_haul/work/repository_evaluation_models.py": "20e294e2e56e39dc87dc8daaedc060f1181aa8edc5e9398170e1e72d9939c813",
+    "src/long_haul/work/repository_evaluator.py": "c961ad9fcaf939f93cbaaafff7d3f3f5fd0a34d22c5b0169024e27b09623614a",
+    "src/long_haul/work/repository_sandbox.py": "0e792feac04ad253184b5eca0e2352aa2dfc33ecaa03acc12138ff0de5f036cb",
+    "tests/fixtures/repository-evaluator.json": "c999da74c9399561069247500c998df859cf713b64ff2823436cc8d316e6b2e0",
+    "tests/repository_evaluator_fixture.py": "af65da1d7baae312e7a92c4d6e164641da358ecf3c9032b563af80d607117e95",
+    "tests/test_repository_evaluator.py": "a17ac60b43baeb103cd4c32babe5f2d5825987d0606f1b477f20740db5385d4d",
+    "tests/test_repository_gvisor.py": "f633d64e6f4e4d97656dae1b283d5d70976f69b824412fb3869e30995bf35420"
+  },
+  "states": {
+    "adversarial_worker_profile": "separate #245 gate",
+    "deployment": "not performed",
+    "local_fixture_semantics": "passed",
+    "physical_device": "not performed",
+    "publication": "not performed",
+    "real_Pi_attempt": "not performed; #244/#64",
+    "real_isolation": "pending hosted CI"
+  }
+}
