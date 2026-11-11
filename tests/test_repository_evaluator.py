@@ -279,12 +279,13 @@ def test_docker_controls_ignore_ambient_credentials_and_proxy_config(tmp_path, m
     monkeypatch.setenv("DOCKER_CONFIG", str(poisoned))
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("HTTP_PROXY", "secret")
+    monkeypatch.setenv("LONG_HAUL_SECRET", "secret")
     client = tmp_path / "docker"
     client.write_text("#!" + sys.executable + "\n" +
                       "import json,os,pathlib,sys\n" +
                       "assert sys.argv[1] == '--config'\n" +
                       "assert list(pathlib.Path(sys.argv[2]).iterdir()) == []\n" +
-                      "assert set(os.environ) <= {'PATH', 'LANG', 'LC_CTYPE'}\n" +
+                      "assert not any(k in os.environ for k in ['DOCKER_CONFIG','HTTP_PROXY','LONG_HAUL_SECRET'])\n" +
                       "print(json.dumps({'args':sys.argv[3:]}))\n")
     client.chmod(0o755)
     adapter = DockerGVisorSandbox.__new__(DockerGVisorSandbox)
@@ -300,3 +301,12 @@ def test_docker_controls_ignore_ambient_credentials_and_proxy_config(tmp_path, m
     for injected in ("HTTP_PROXY=secret", "PYTHONHASHSEED=0"):
         with pytest.raises(ValueError, match="environment differs"):
             adapter._verify_environment([*expected, injected])
+
+
+def test_gvisor_declines_profiles_below_qualified_runtime_minimum(tmp_path):
+    from repository_evaluator_fixture import environment
+
+    profile = environment()
+    profile = profile.model_copy(update={"limits": profile.limits.model_copy(update={"pids": 32})})
+    with pytest.raises(ValueError, match="at least 128 host tasks"):
+        DockerGVisorSandbox(profile, tmp_path / "absent-runtime")

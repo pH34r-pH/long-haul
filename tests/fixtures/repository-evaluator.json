@@ -10,7 +10,7 @@
       "wall_seconds": 5,
       "memory_mib": 256,
       "cpus": 1,
-      "pids": 32,
+      "pids": 128,
       "scratch_mib": 16,
       "max_output_bytes": 16384
     },

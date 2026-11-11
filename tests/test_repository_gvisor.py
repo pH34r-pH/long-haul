@@ -76,6 +76,7 @@ def test_worker_workspace_and_candidate_cannot_see_sealed_or_control_material(tm
 @pytest.mark.parametrize("program,outcome", [
     ("import time;time.sleep(60)\n", "timeout"),
     ("import sys;sys.stdout.write('x'*1000000)\n", "output_limit"),
+    ("x=bytearray(2*1024*1024*1024)\n", "resource_exhausted"),
 ])
 def test_timeout_output_limit_and_forced_teardown(tmp_path, sandbox, program, outcome):
     root, work, _, _ = setup(tmp_path, sandbox.identity)

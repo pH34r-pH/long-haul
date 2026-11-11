@@ -6,12 +6,15 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-11T19:15:22.753798+00:00",
+    "updated_at": "2026-11-11T19:51:40.888477+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
         "task": "lh-243-evaluator",
-        "state": "implementation"
+        "state": "implementation",
+        "parallel_preparation": [
+          "lh-244-pi-trace"
+        ]
       },
       {
         "repository": "pH34r-pH/experiment-compiler",
@@ -121,17 +124,29 @@
           ],
           "acceptance": "Public and sealed checks execute in a separate read-only evaluator bound to an exact candidate.",
           "baseline_commit": "5cab6749e65090b16d0b28970fe4edc81379d646",
-          "implementation_pr": 255
+          "implementation_pr": 255,
+          "qualification": {
+            "status": "in_progress",
+            "failed_runs": [
+              43085111636,
+              43088457062,
+              43088889747
+            ],
+            "finding": "init_with_32_host_tasks_failed_startup;128_host_tasks_started_same_image_and_memory",
+            "certification": "not_yet_qualified; no_merge_until_exact_head_passes"
+          }
         },
         {
           "id": "lh-244-pi-trace",
           "repository": "pH34r-pH/long-haul",
           "issue": 244,
-          "status": "queued",
+          "status": "in_progress",
           "depends_on": [
             "lh-242-context"
           ],
-          "acceptance": "Pi emits replayable privacy-preserving semantic action events with exact harness identity."
+          "acceptance": "Pi emits replayable privacy-preserving semantic action events with exact harness identity.",
+          "baseline_commit": "5cab6749e65090b16d0b28970fe4edc81379d646",
+          "preparation_scope": "Disjoint harness/event normalization core only; no existing repository/evaluator contract mutations; integration and PR wait for merged/pinned #243"
         },
         {
           "id": "lh-245-security",
@@ -194,14 +209,24 @@
               "manifest_sha256": "e42efad094d2c2c2dc4f7df973bc551f71ac549848541115eafc8891b8fd39ed",
               "bundle_sha256": "48944a943d3fdf39889fc5b97180da44ca067510c8817a9377db18d344cefdd0",
               "task_comparison_run": 43085401688,
-              "task_comparison_status": "queued",
+              "task_comparison_status": "passed_read_only_stopped_supervisor",
               "host_mutation": false,
               "existing_prerequisite_issues": [
                 1533,
                 1579,
                 1609
               ],
-              "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6804972261"
+              "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6805046679",
+              "task_state": {
+                "enabled": true,
+                "state": "Ready",
+                "instance_count": 0,
+                "task_identity_and_checkpoint_acl_comparisons": "passed"
+              },
+              "task_comparison_archive": "passed",
+              "task_comparison_manifest_sha256": "a0fd83025d3c204b586d15705e7793572398e06e0c99ca0935b5e21fc0442df4",
+              "task_comparison_bundle_sha256": "57f12487e284481f0288a3b68e4dd0f7d9cf3699d541f5478f1d2937eabdf78c",
+              "recovery_owner": "https://github.com/pH34r-pH/long-haul-fleet/issues/1533#issuecomment-6805162809"
             }
           }
         },
@@ -2448,6 +2473,27 @@
       "archive": "success",
       "host_mutation": false,
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6804972261"
+    },
+    {
+      "at": "2026-11-11T19:40:07.976159+00:00",
+      "task": "fleet-1612",
+      "status": "blocked_source_ci_supervisor_not_running",
+      "run": 43085401688,
+      "source": "b175250083f41c2bd39f2f2600b60986ba7ffed1",
+      "observation": "enabled Ready zero_instances; historical_checkpoint_identity_and_acl_matches",
+      "fresh_queue_owner_census": "not_established",
+      "host_mutation": false,
+      "archive": "passed",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6805046679"
+    },
+    {
+      "at": "2026-11-11T19:51:40.888477+00:00",
+      "task": "lh-244-pi-trace",
+      "status": "disjoint_core_preparation",
+      "baseline_commit": "5cab6749e65090b16d0b28970fe4edc81379d646",
+      "dependencies": "merged #242",
+      "active_pr_policy": "PR255 remains sole active Long-Haul implementation PR",
+      "integration_gate": "merge and pin #243 before evaluator/worker integration or next PR"
     }
   ]
 }

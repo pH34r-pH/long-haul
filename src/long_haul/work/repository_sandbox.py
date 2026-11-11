@@ -103,6 +103,8 @@ class DockerGVisorSandbox:
         if (environment.runtime, environment.runtime_entrypoint, environment.toolchain) != (
                 "long-haul-gvisor", "runsc", "isolated-python3"):
             raise ValueError("unsupported Docker/gVisor execution profile")
+        if environment.limits.pids < 128 or environment.limits.memory_mib < 256:
+            raise ValueError("Docker/gVisor requires at least 128 host tasks and 256 MiB")
         if content_digest(runsc_path.read_bytes()) != environment.runtime_binary_digest:
             raise ValueError("gVisor runtime binary fingerprint mismatch")
         for name, expected in environment.runtime_files:
