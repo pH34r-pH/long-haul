@@ -32,6 +32,7 @@ def evaluator_check_fingerprint(profile, check):
 
 def evaluator_implementation_reference() -> DigestReference:
     import pydantic
+    import pydantic_core
 
     from ..resource_policy_models import canonical_json
     from .repository_models import content_digest
@@ -45,7 +46,8 @@ def evaluator_implementation_reference() -> DigestReference:
     # Public and private evidence admission uses the shared policy implementation.
     for name in ("resource_policy.py", "resource_policy_models.py", "resource_policy_evaluator.py"):
         manifest["../" + name] = content_digest((root.parent / name).read_bytes())
-    data = canonical_json({"files": manifest, "python": platform.python_version(), "pydantic": pydantic.__version__}).encode()
+    data = canonical_json({"files": manifest, "python": platform.python_version(), "pydantic": pydantic.__version__,
+                           "pydantic_core": pydantic_core.__version__}).encode()
     return DigestReference(reference="urn:long-haul:repository-evaluator-v1", digest=content_digest(data))
 
 

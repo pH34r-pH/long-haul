@@ -6,6 +6,8 @@ Repository evaluation composes the existing WorkContract, EvidencePacket and eve
 
 `RepositoryEvaluationProfileV1` is authenticated control-plane input. It pins the task, evaluator implementation, sandbox implementation, immutable OCI image, exact gVisor bundle, resource/network policy, and every check. Repository or model text cannot supply this admission.
 
+The observed evaluator implementation reference includes its relevant source files and the Python, Pydantic and Pydantic Core version strings. This reference is not an attestation of loaded code or host integrity. Adding Pydantic Core to the reference changes the identity: existing pinned evaluator profiles and dependent private key references must be regenerated and readmitted before use; historical evidence remains historical.
+
 `AcceptancePredicate.evaluator_reference` explicitly identifies a profile-owned check without putting sealed commands into WorkContract. It cannot coexist with an executable/artifact definition. The ordinary evaluator reports these predicates as unknown; only `RepositoryEvaluationRunner` resolves them under the exact profile references in the repository extension. This leaves ordinary command meanings unchanged.
 
 The worker-visible profile contains requirement IDs/descriptions/classes and public check definitions. Sealed commands, input values and expected results remain outside the worker workspace and tool catalog. The frozen profile digest and safe requirement references preserve identity without disclosing those definitions.

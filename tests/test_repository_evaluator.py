@@ -62,6 +62,14 @@ def test_implementation_reference_binds_policy_decision_code(monkeypatch, module
     assert evaluator_implementation_reference() != baseline
 
 
+def test_implementation_reference_binds_pydantic_core_version(monkeypatch):
+    import pydantic_core
+
+    baseline = evaluator_implementation_reference()
+    monkeypatch.setattr(pydantic_core, "__version__", pydantic_core.__version__ + ".synthetic")
+    assert evaluator_implementation_reference() != baseline
+
+
 class FixtureSandbox:
     identity = reference("synthetic-sandbox")
 
