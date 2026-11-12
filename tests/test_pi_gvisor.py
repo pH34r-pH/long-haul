@@ -63,6 +63,20 @@ def evidence(result, events):
                       "events": [event.model_dump(mode="json") for event in events]}))
 
 
+def _qualify_synthetic_holder_view(view, worker, guest, holder):
+    with view() as root:
+        contents = regular_contents(root)
+        assert contents.pop("fixture/clock")
+        assert contents == {"fixture/a": b"changed", "fixture/new/b": b"created"}
+    if os.environ.get("GITHUB_ACTIONS") == "true" and os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted":
+        captured = _hosted_frozen_holder_capture(worker, guest, holder)
+    else:
+        worker._control("kill", guest)
+        captured = copy_docker_workspace(worker.docker_path, holder, 15)
+    assert captured.pop("fixture/clock")
+    assert captured == {"fixture/a": b"changed", "fixture/new/b": b"created"}
+
+
 def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
     """Qualify only the isolated volume experiment, not worker integration."""
     worker, request, _ = worker_setup(tmp_path, PLAN)
@@ -87,8 +101,9 @@ def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
       fs.rmSync('large', {force:true});
       for(let i=0;i<128;i++) { try { fs.writeFileSync('bomb'+i,''); } catch(e) { inodes=e.code==='ENOSPC'; break; } }
       for(let i=0;i<128;i++) fs.rmSync('bomb'+i,{force:true});
-      if(!bytes || !inodes) process.exit(2); console.log(JSON.stringify({bytes,inodes}));
-      setInterval(()=>{},60000);"""
+      if(!bytes || !inodes) process.exit(2);
+      let tick=0; const pulse=()=>fs.writeFileSync('fixture/clock',String(tick++).padStart(8,'0'));
+      pulse(); console.log(JSON.stringify({bytes,inodes})); setInterval(pulse,50);"""
     def labels(role):
         return ["--label=" + key + "=" + value for key, value in intent.labels(role).items()]
 
@@ -130,12 +145,7 @@ def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
             assert holder_info["Config"]["Cmd"] == ["-e", "setInterval(()=>{},60000)"]
 
         view = PausedWorkspaceView(worker._control, worker.docker_path, guest_id, holder_id, volume, options, verify)
-        with view() as root:
-            assert regular_contents(root) == {"fixture/a": b"changed", "fixture/new/b": b"created"}
-        worker._control("kill", guest_id)
-        assert copy_docker_workspace(worker.docker_path, holder_id, 15) == {
-            "fixture/a": b"changed", "fixture/new/b": b"created",
-        }
+        _qualify_synthetic_holder_view(view, worker, guest_id, holder_id)
     assert (recovery_root / (intent.token + ".cleanup.json")).is_file()
     assert not scratch.exists()
 
@@ -316,9 +326,10 @@ def test_synthetic_paused_cgroup_identity_diagnostic(tmp_path):
 
 
 _HOSTED_CGROUP_KILL = r"""
-import json, os, re, sys, time
+import json, os, re, signal, sys, time
 pid, cid = int(sys.argv[1]), sys.argv[2]
-if pid <= 1 or not re.fullmatch('[0-9a-f]{64}', cid):
+mode = sys.argv[3] if len(sys.argv) == 4 else 'immediate'
+if len(sys.argv) not in (3, 4) or pid <= 1 or not re.fullmatch('[0-9a-f]{64}', cid) or mode not in ('immediate', 'capture'):
     raise SystemExit('invalid synthetic guest identity')
 relative = '/system.slice/docker-' + cid + '.scope'
 membership = open('/proc/' + str(pid) + '/cgroup').read().splitlines()
@@ -351,6 +362,17 @@ try:
         if time.monotonic() >= deadline:
             raise SystemExit('synthetic cgroup did not freeze')
         time.sleep(.1)
+    if mode == 'capture':
+        def expired(signum, frame):
+            raise TimeoutError('synthetic capture handshake expired')
+        signal.signal(signal.SIGALRM, expired)
+        signal.alarm(50)
+        try:
+            print(json.dumps({'kernel_freeze_confirmed': True}), flush=True)
+            if sys.stdin.readline().strip() != 'kill':
+                raise SystemExit('synthetic capture was not completed')
+        finally:
+            signal.alarm(0)
     killfile = os.open('cgroup.kill', os.O_WRONLY | os.O_NOFOLLOW, dir_fd=directory)
     try:
         os.write(killfile, b'1')
@@ -383,6 +405,45 @@ finally:
 print(json.dumps({'kernel_freeze_confirmed': True, 'cgroup_kill_acknowledged': True,
                   'cgroup_observation': observation}))
 """
+
+
+def _hosted_frozen_holder_capture(worker, guest, holder):
+    """Observe a synthetic writer before and during a bounded kernel freeze."""
+    before = copy_docker_workspace(worker.docker_path, holder, 15)["fixture/clock"]
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        if copy_docker_workspace(worker.docker_path, holder, 15)["fixture/clock"] != before:
+            break
+        time.sleep(.1)
+    else:
+        raise AssertionError("synthetic writer did not advance before freeze")
+    worker._control("pause", guest)
+    info, = json.loads(worker._control("inspect", guest))
+    assert info["Id"] == guest and info["State"]["Paused"] is True
+    process = subprocess.Popen(["sudo", "-n", "python3", "-c", _HOSTED_CGROUP_KILL,
+                                str(info["State"]["Pid"]), guest, "capture"],
+                               env=_control_environment(), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                               stderr=subprocess.DEVNULL, text=True)
+    try:
+        assert select.select([process.stdout], [], [], 20)[0]
+        assert json.loads(process.stdout.readline()).get("kernel_freeze_confirmed") is True
+        frozen = copy_docker_workspace(worker.docker_path, holder, 15)
+        time.sleep(.3)
+        assert copy_docker_workspace(worker.docker_path, holder, 15) == frozen
+        output, _ = process.communicate("kill\n", timeout=20)
+        assert process.returncode == 0 and json.loads(output).get("cgroup_observation") in {"empty", "removed"}
+        stopped, = json.loads(worker._control("inspect", guest))
+        state = stopped["State"]
+        assert (stopped["Id"] == guest and state["Running"] is False and state["Paused"] is False
+                and state["Pid"] == 0 and state["ExitCode"] == 137)
+        assert copy_docker_workspace(worker.docker_path, holder, 15) == frozen
+        print(json.dumps({"qualification": "synthetic-frozen-holder-capture", "stable": True,
+                          "stopped_and_reconciled": True}))
+        return frozen
+    finally:
+        if process.poll() is None:
+            process.stdin.close()  # EOF makes the synthetic helper thaw if it has not killed.
+            process.wait(timeout=55)
 
 
 def test_hosted_synthetic_cgroup_kill_experiment(tmp_path):
