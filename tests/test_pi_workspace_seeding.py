@@ -1,5 +1,6 @@
 """Seed admission and readback tests; scheduler fencing remains external."""
 import os
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -52,3 +53,20 @@ def test_seed_failure_never_retries_or_claims_success(tmp_path, monkeypatch, cas
         seeder.seed({"fixture/a"}, {"fixture/a": b"fixture"})
     assert len(writes) == (1 if case in {"readback", "revoked-after-write"} else 0)
     assert not (seeder.root / (intent.token + ".cleanup.json")).exists()
+
+
+def test_ambiguous_copy_failure_keeps_private_intent_and_never_retries(tmp_path, monkeypatch):
+    seeder, intent, control = setup_seeder(tmp_path, monkeypatch)
+    monkeypatch.setattr(pi_workspace_seeding, "copy_docker_workspace", lambda *_: {})
+    calls = []
+
+    def fail(*args, **kwargs):
+        calls.append(None)
+        raise subprocess.CalledProcessError(1, args[0], output=b"private provider data")
+
+    monkeypatch.setattr(pi_workspace_seeding.subprocess, "run", fail)
+    with pytest.raises(WorkspaceCleanupRequired) as failure:
+        seeder.seed({"fixture/a"}, {"fixture/a": b"fixture"})
+    assert len(calls) == 1 and control.volume is not None and control.containers
+    assert (seeder.root / (intent.token + ".json")).exists()
+    assert "private provider data" not in str(failure.value)
