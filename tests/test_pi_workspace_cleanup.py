@@ -119,6 +119,26 @@ def test_recovery_retries_partial_failure_without_claiming_cleanup(tmp_path):
     assert LocalWorkspaceFence(root, intent.token, intent.fingerprint).recover(docker).exists()
 
 
+@pytest.mark.parametrize("stuck_id", ["a" * 64, "b" * 64])
+def test_recovery_stops_before_later_resources_if_container_removal_is_unconfirmed(tmp_path, stuck_id):
+    root, intent, docker = setup(tmp_path)
+
+    def control(*args):
+        if args == ("rm", "--force", stuck_id):
+            docker.calls.append(args)
+            return ""  # The daemon acknowledged removal, but the object remains.
+        return docker(*args)
+
+    with pytest.raises(WorkspaceCleanupRequired):
+        recover(root, intent, control)
+    assert not (root / (intent.token + ".cleanup.json")).exists()
+    assert docker.volume is not None
+    assert not any(call[:2] == ("volume", "rm") for call in docker.calls)
+    if stuck_id == "a" * 64:
+        assert intent.holder_name in docker.containers
+        assert ("rm", "--force", "b" * 64) not in docker.calls
+
+
 @pytest.mark.parametrize("change", ["daemon", "volume"])
 def test_recovery_stops_when_daemon_or_volume_changes_mid_cleanup(tmp_path, change):
     root, intent, docker = setup(tmp_path)

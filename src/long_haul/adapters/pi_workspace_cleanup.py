@@ -125,10 +125,16 @@ def recover_workspace_lease(root: Path, token: str, expected_fingerprint: str, c
         intent = load_workspace_intent(root, token, expected_fingerprint)
         _daemon(control, intent.daemon_id)
         worker, holder, volume = _objects(control, intent)
-        for identity in (worker, holder):
+        for name, labels, identity in ((intent.worker_name, intent.labels("worker"), worker),
+                                       (intent.holder_name, intent.labels("holder"), holder)):
             if identity:
                 _daemon(control, intent.daemon_id)
+                if _container(control, name, labels) != identity:
+                    raise ValueError("workspace container changed before removal")
                 control("rm", "--force", identity)
+                _daemon(control, intent.daemon_id)
+                if _container(control, name, labels) is not None:
+                    raise ValueError("workspace container removal is unconfirmed")
         if volume:
             _daemon(control, intent.daemon_id)
             if _volume(control, intent.volume_name, intent.labels("volume"), intent.volume_options) != volume:
