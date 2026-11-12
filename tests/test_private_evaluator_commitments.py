@@ -44,6 +44,10 @@ def synthetic_profile(hidden):
     return original.model_copy(update={"checks": tuple(checks)})
 
 
+def synthetic_keys(sealed):
+    return {"sealed": sealed, "scope": b"scope-only-synthetic-key-material-32", "inspect": b"inspect-only-synthetic-key-material-32"}
+
+
 def evidence_admission(contract, evaluator, attempt_id, writer):
     policy = ResourcePolicyProfile(
         identity=ResourceIdentity(resource_id="urn:fixture:private-evidence", resource_type="evaluator-evidence",
@@ -67,25 +71,34 @@ def evidence_admission(contract, evaluator, attempt_id, writer):
 def test_sealed_commitment_is_stable_private_and_not_an_enumeration_oracle():
     private = synthetic_profile(4)
     key = b"synthetic-test-only-per-check-key!"
-    sealed = PrivateEvaluatorProfile.from_profile(private, {"sealed": key})
-    replay = PrivateEvaluatorProfile.from_profile(private, {"sealed": key})
+    sealed = PrivateEvaluatorProfile.from_profile(private, synthetic_keys(key))
+    replay = PrivateEvaluatorProfile.from_profile(private, synthetic_keys(key))
     assert sealed.fingerprint == replay.fingerprint
     assert sealed.check_fingerprint(private.checks[1]) == replay.check_fingerprint(private.checks[1])
     public = json.dumps(sealed.public_projection()) + sealed.fingerprint + repr(sealed)
     assert "[4, 2]" not in public and "private fixture value 4" not in public
     assert content_digest(b"6\n") not in public and key.hex() not in public
-    guessed = {PrivateEvaluatorProfile.from_profile(synthetic_profile(value), {"sealed": b"attacker-key-with-32-bytes-minimum"}).fingerprint
+    guessed = {PrivateEvaluatorProfile.from_profile(synthetic_profile(value), synthetic_keys(b"attacker-key-with-32-bytes-minimum")).fingerprint
                for value in range(10)}
     assert sealed.fingerprint not in guessed
     bare_checks = {synthetic_profile(value).checks[1].fingerprint for value in range(10)}
     assert sealed.check_fingerprint(private.checks[1]) not in bare_checks
-    assert sealed.fingerprint != PrivateEvaluatorProfile.from_profile(synthetic_profile(5), {"sealed": key}).fingerprint
-    assert sealed.fingerprint != PrivateEvaluatorProfile.from_profile(private, {"sealed": b"different-test-key-at-least-32-bytes"}).fingerprint
+    assert sealed.fingerprint != PrivateEvaluatorProfile.from_profile(synthetic_profile(5), synthetic_keys(key)).fingerprint
+    assert sealed.fingerprint != PrivateEvaluatorProfile.from_profile(private, synthetic_keys(b"different-test-key-at-least-32-bytes")).fingerprint
+    assert sealed.check_fingerprint(private.checks[-1]) != private.checks[-1].fingerprint
+    assert private.checks[-1].requirement.description not in json.dumps(sealed.public_projection())
+    guessed_inspection = {private.checks[-1].model_copy(update={"artifact_digest": content_digest(str(value).encode())}).fingerprint
+                          for value in range(10)}
+    hidden_inspection = private.checks[-1].model_copy(update={"artifact_digest": content_digest(b"4")})
+    inspection_profile = private.model_copy(update={"checks": (*private.checks[:-1], hidden_inspection)})
+    keyed_inspection = PrivateEvaluatorProfile.from_profile(inspection_profile, synthetic_keys(key))
+    assert hidden_inspection.fingerprint in guessed_inspection
+    assert keyed_inspection.check_fingerprint(hidden_inspection) not in guessed_inspection
 
 
 def test_private_profile_rejects_missing_short_or_extra_keys():
     profile_v1 = synthetic_profile(4)
-    for keys in ({}, {"sealed": b"short"}, {"sealed": b"x" * 32, "unexpected": b"y" * 32}):
+    for keys in ({}, synthetic_keys(b"short"), {**synthetic_keys(b"x" * 32), "unexpected": b"y" * 32}):
         with pytest.raises(ValueError):
             PrivateEvaluatorProfile.from_profile(profile_v1, keys)
 
@@ -101,12 +114,12 @@ def test_private_profile_rejects_key_reuse_between_sealed_checks():
     second = sealed.model_copy(update={"requirement": sealed.requirement.model_copy(update={"predicate_id": "second"})})
     profile_v1 = profile_v1.model_copy(update={"checks": (*profile_v1.checks, second)})
     with pytest.raises(ValueError):
-        PrivateEvaluatorProfile.from_profile(profile_v1, {"sealed": b"x" * 32, "second": b"x" * 32})
+        PrivateEvaluatorProfile.from_profile(profile_v1, {**synthetic_keys(b"x" * 32), "second": b"x" * 32})
 
 
 def private_evaluation_fixture(tmp_path):
     root, old_contract, _, old_profile = setup(tmp_path, FixtureSandbox.identity)
-    private = PrivateEvaluatorProfile.from_profile(old_profile, {"sealed": b"synthetic-only-key-is-at-least-32"})
+    private = PrivateEvaluatorProfile.from_profile(old_profile, synthetic_keys(b"synthetic-only-key-is-at-least-32"))
     extension = old_contract.repository_work.model_copy(update={
         "sealed_evaluator": DigestReference(reference=PRIVATE_PROFILE_REFERENCE, digest=private.fingerprint),
         "public_evaluation": public_evaluator_reference(private),
@@ -142,7 +155,7 @@ def test_private_evaluation_redacts_hidden_output_and_rejects_raw_public_event(t
     with pytest.raises(ValueError, match="verified summary"):
         private_repository_evidence_event(summary.model_copy(update={"attempt_id": "forged"}), contract=contract,
                                           packet=private_packets[0], candidate=snapshot.candidate, profile=private)
-    rotated = PrivateEvaluatorProfile.from_profile(old_profile, {"sealed": b"other-synthetic-key-at-least-32-bytes"})
+    rotated = PrivateEvaluatorProfile.from_profile(old_profile, synthetic_keys(b"other-synthetic-key-at-least-32-bytes"))
     with pytest.raises(ValueError, match="verified summary"):
         private_repository_evidence_event(summary, contract=contract, packet=private_packets[0],
                                           candidate=snapshot.candidate, profile=rotated)
@@ -197,6 +210,6 @@ def test_private_evidence_admission_fails_closed_on_denial_and_revocation(tmp_pa
 
 def test_private_evaluation_requires_explicit_sink():
     runner = RepositoryEvaluationRunner(FixtureSandbox(synthetic_profile(4).environment))
-    private = PrivateEvaluatorProfile.from_profile(synthetic_profile(4), {"sealed": b"synthetic-only-key-is-at-least-32"})
+    private = PrivateEvaluatorProfile.from_profile(synthetic_profile(4), synthetic_keys(b"synthetic-only-key-is-at-least-32"))
     with pytest.raises(TypeError, match="private evidence sink"):
         runner.evaluate_private(None, None, private, attempt_id="a", packet_id="p", private_sink=None)

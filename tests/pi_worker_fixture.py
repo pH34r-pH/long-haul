@@ -99,7 +99,10 @@ def worker_setup(tmp_path, plan, *, seconds=20, private=False):
     root, base = repository(tmp_path)
     evaluator = profile(DockerGVisorSandbox.implementation_reference())
     if private:
-        evaluator = PrivateEvaluatorProfile.from_profile(evaluator, {"sealed": b"synthetic-pi-only-test-key-256-bits"})
+        evaluator = PrivateEvaluatorProfile.from_profile(evaluator, {
+            "sealed": b"synthetic-pi-only-test-key-256-bits", "scope": b"scope-only-synthetic-key-material-32",
+            "inspect": b"inspect-only-synthetic-key-material-32",
+        })
     work = contract(root, base, evaluator)
     work.budget.max_attempts = 2
     work.repository_work = work.repository_work.model_copy(update={

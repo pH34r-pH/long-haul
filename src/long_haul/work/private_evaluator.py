@@ -76,9 +76,9 @@ class PrivateEvidenceCheck(FrozenProjection):
     observation_commitment: str | None = Field(default=None, pattern=r"^sha256:[0-9a-f]{64}$")
 
     @model_validator(mode="after")
-    def sealed_has_commitment(self):
-        if (self.classification == "SEALED") != (self.observation_commitment is not None):
-            raise ValueError("only sealed observations carry keyed commitments")
+    def nonpublic_has_commitment(self):
+        if (self.classification != "PUBLIC") != (self.observation_commitment is not None):
+            raise ValueError("only non-public observations carry keyed commitments")
         return self
 
 
@@ -106,7 +106,7 @@ class PrivateEvidenceSummary(FrozenProjection):
 
 
 class PrivateEvaluatorProfile:
-    """Bind an exact private profile with separately held per-sealed-check keys."""
+    """Bind an exact private profile with separately held per-non-public-check keys."""
 
     __slots__ = ("_keys", "_profile")
 
@@ -114,13 +114,13 @@ class PrivateEvaluatorProfile:
         if not isinstance(profile, RepositoryEvaluationProfileV1):
             raise TypeError("expected a validated repository evaluator profile")
         expected = {check.requirement.predicate_id for check in profile.checks
-                    if check.requirement.classification == "SEALED"}
+                    if check.requirement.classification != "PUBLIC"}
         if not expected or set(keys) != expected:
-            raise ValueError("one private key is required for each sealed check")
+            raise ValueError("one private key is required for each non-public check")
         if any(not isinstance(key, bytes) or not 32 <= len(key) <= 64 for key in keys.values()):
-            raise ValueError("sealed check keys must contain 32 to 64 bytes")
+            raise ValueError("non-public check keys must contain 32 to 64 bytes")
         if len(set(keys.values())) != len(keys):
-            raise ValueError("sealed checks require independent keys")
+            raise ValueError("non-public checks require independent keys")
         self._profile = profile
         self._keys = dict(keys)
 
@@ -132,7 +132,7 @@ class PrivateEvaluatorProfile:
     def generate(cls, profile):
         """Generate fresh keys; trusted control must persist them securely for replay."""
         keys = {check.requirement.predicate_id: secrets.token_bytes(32) for check in profile.checks
-                if check.requirement.classification == "SEALED"}
+                if check.requirement.classification != "PUBLIC"}
         return cls(profile, keys)
 
     def __repr__(self):
@@ -169,10 +169,10 @@ class PrivateEvaluatorProfile:
     def check_fingerprint(self, check):
         if check not in self._profile.checks:
             raise ValueError("check does not belong to the frozen evaluator")
-        if check.requirement.classification != "SEALED":
+        if check.requirement.classification == "PUBLIC":
             return check.fingerprint
         payload = canonical_json(check.model_dump(mode="json")).encode()
-        digest = hmac.new(self._keys[check.requirement.predicate_id], b"long-haul-sealed-check-v2\0" + payload,
+        digest = hmac.new(self._keys[check.requirement.predicate_id], b"long-haul-private-check-v2\0" + payload,
                           hashlib.sha256).hexdigest()
         return "sha256:" + digest
 
@@ -186,16 +186,16 @@ class PrivateEvaluatorProfile:
         if check not in self._profile.checks:
             raise ValueError("check does not belong to the frozen evaluator")
         requirement = check.requirement.model_dump(mode="json")
-        if check.requirement.classification == "SEALED":
-            requirement["description"] = "Sealed evaluator requirement"
+        if check.requirement.classification != "PUBLIC":
+            requirement["description"] = "Non-public evaluator requirement"
         return requirement
 
     def observation_commitment(self, check, observation):
-        if check.requirement.classification != "SEALED" or check not in self._profile.checks:
-            raise ValueError("only an admitted sealed check has a private observation commitment")
+        if check.requirement.classification == "PUBLIC" or check not in self._profile.checks:
+            raise ValueError("only an admitted non-public check has a private observation commitment")
         payload = canonical_json(observation.model_dump(mode="json")).encode()
         digest = hmac.new(self._keys[check.requirement.predicate_id],
-                          b"long-haul-sealed-observation-v2\0" + payload, hashlib.sha256).hexdigest()
+                          b"long-haul-private-observation-v2\0" + payload, hashlib.sha256).hexdigest()
         return "sha256:" + digest
 
     @property

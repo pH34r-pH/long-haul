@@ -188,7 +188,7 @@ def _private_summary(packet, profile):
         predicate_id=observed.predicate_id, classification=observed.classification,
         check_commitment=observed.check_fingerprint, state=observed.state.value, outcome=observed.outcome,
         observation_commitment=(profile.observation_commitment(definitions[observed.predicate_id], observed)
-                                if observed.classification == "SEALED" else None),
+                                if observed.classification != "PUBLIC" else None),
     ) for observed in packet.checks)
     return PrivateEvidenceSummary(
         contract_id=packet.evidence.contract_id, attempt_id=packet.evidence.attempt_id,
