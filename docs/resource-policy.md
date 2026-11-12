@@ -117,6 +117,8 @@ Decisions bind the complete authenticated request fingerprint. Derived decisions
 
 Policy profiles, caller identity, fulfilled-duty evidence, and time are admitted by authenticated control code. Loading a profile-shaped object from repository text does not authenticate it. Consumers must compare exact reviewed policy fingerprints before invoking this evaluator; its result does not authenticate its input issuer or assert legal validity.
 
+For optional crew, mission, contract, repository and audience context, a missing value is unknown unless authenticated control explicitly supplies the field name in `known_absent_context`. The evaluator returns `UNKNOWN` if an otherwise applicable prohibition cannot be ruled out because one of its required context values is unknown. A verified absence can rule out a prohibition requiring a value; the absence claim is included in the request fingerprint. An absence claim is not proof by itself: admission code must authenticate it and must not copy it from governed content or untrusted tool arguments. A field cannot be both present and asserted absent. Existing request fingerprints are unchanged when no absence claim is supplied, but decisions for incomplete context can become more restrictive. Retained decisions do not yet identify an exact evaluator implementation; consumers must not replay an old decision as proof of a new evaluation.
+
 ## Enforcement boundary
 
 The intended control flow is:

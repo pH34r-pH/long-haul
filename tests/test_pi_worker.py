@@ -121,6 +121,22 @@ def test_worker_projection_rejects_oversized_total_before_copy(tmp_path):
     assert list(projected.iterdir()) == []
 
 
+def test_worker_projection_denies_unresolved_audience_prohibition(tmp_path):
+    _, _, normalizer, _root, registry, _ = setup_guard(tmp_path)
+    binding = registry["fixture/code.py"]
+    restricted = binding.profile.model_copy(deep=True)
+    restricted.prohibitions = [PolicyRule(rule_id="no-public", actions=[ResourceAction.AI_AUGMENT],
+                                         purposes=["repository-work"], audience_ids=["public"])]
+    registry["fixture/code.py"] = replace(binding, profile=restricted,
+                                           expected_policy_fingerprint=restricted.fingerprint)
+    projected = tmp_path / "projected"
+    projected.mkdir()
+    base = SimpleNamespace(contents={"fixture/code.py": b"before\n"})
+    with pytest.raises(TraceAdmissionDenied):
+        DockerGVisorPiWorker._project(projected, base, registry, normalizer, NOW)
+    assert list(projected.iterdir()) == []
+
+
 def test_worker_projection_checks_all_files_before_copy_and_rejects_policy_drift(tmp_path):
     _, _, normalizer, _root, registry, _ = setup_guard(tmp_path)
     first = registry["fixture/code.py"]

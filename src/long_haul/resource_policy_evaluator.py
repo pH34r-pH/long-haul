@@ -162,6 +162,27 @@ def _matching_rules(
     return permissions, prohibitions
 
 
+def _unresolved_prohibition(rule: PolicyRule, request: ResourceUseRequest) -> bool:
+    if (request.action not in rule.actions or not _rule_matches_time(rule, request)
+            or (rule.purposes and request.purpose not in rule.purposes)):
+        return False
+    dimensions = ((rule.principal_ids, "caller_id"), (rule.crew_ids, "crew_id"),
+                  (rule.mission_ids, "mission_id"), (rule.contract_ids, "contract_id"),
+                  (rule.repository_ids, "repository_id"), (rule.audience_ids, "audience_id"))
+    unknown = False
+    for allowed, field in dimensions:
+        if not allowed:
+            continue
+        actual = getattr(request, field)
+        if actual is None:
+            if field in request.known_absent_context:
+                return False
+            unknown = True
+        elif actual not in allowed:
+            return False
+    return unknown
+
+
 def _resolve_matches(
     permissions: list[PolicyRule],
     prohibitions: list[PolicyRule],
@@ -259,11 +280,20 @@ class ResourcePolicyEvaluator:
         profile: ResourcePolicyProfile,
         request: ResourceUseRequest,
     ) -> PolicyDecision:
+        request = ResourceUseRequest.model_validate(request.model_dump())
         common = _decision_fields(profile, request)
         preflight = _preflight_decision(profile, request, common)
         if preflight is not None:
             return preflight
         permissions, prohibitions = _matching_rules(profile, request)
+        unresolved = [rule.rule_id for rule in profile.prohibitions if _unresolved_prohibition(rule, request)]
+        if unresolved and not prohibitions:
+            return PolicyDecision(
+                status=PolicyDecisionStatus.UNKNOWN,
+                reason="prohibition context is unknown: " + ", ".join(sorted(unresolved)),
+                matched_permissions=[rule.rule_id for rule in permissions],
+                **common,
+            )
         return _resolve_matches(permissions, prohibitions, request, common)
 
     def evaluate_all(
