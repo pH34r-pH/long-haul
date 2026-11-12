@@ -337,6 +337,24 @@ def test_synthetic_gvisor_paused_kill_diagnostic(tmp_path):
         assert isinstance(state.get("Running"), bool) and isinstance(state.get("Paused"), bool)
 
 
+def _synthetic_runtime_state(worker, container):
+    for root in ("/run/docker/runtime-long-haul-gvisor/moby", "/run/docker/runtime-runc/moby"):
+        exists = subprocess.run(["sudo", "-n", "test", "-d", root], env=_control_environment(),
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10, check=False)
+        if exists.returncode != 0:
+            continue
+        result = subprocess.run(["sudo", "-n", str(worker.runsc_path), "--root", root, "state", container],
+                                env=_control_environment(), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                timeout=15, check=False)
+        if result.returncode != 0:
+            continue
+        state = json.loads(result.stdout)
+        assert state.get("id") == container
+        assert state.get("status") in {"created", "running", "paused", "stopped"}
+        return root, state
+    return None, None
+
+
 def test_hosted_synthetic_paused_runtime_state_diagnostic(tmp_path):
     """Observe Docker and runsc states without claiming a containment boundary."""
     if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
@@ -345,24 +363,21 @@ def test_hosted_synthetic_paused_runtime_state_diagnostic(tmp_path):
     with _paused_synthetic_guest(worker) as (container, _):
         info, = json.loads(worker._control("inspect", container))
         assert info["Id"] == container and info["State"].get("Paused") is True
-        runtime_state = "unavailable"
-        for root in ("/run/docker/runtime-long-haul-gvisor/moby", "/run/docker/runtime-runc/moby"):
-            exists = subprocess.run(["sudo", "-n", "test", "-d", root], env=_control_environment(),
-                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10, check=False)
-            if exists.returncode != 0:
-                continue
-            result = subprocess.run(["sudo", "-n", str(worker.runsc_path), "--root", root, "state", container],
-                                    env=_control_environment(), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                                    timeout=15, check=False)
-            if result.returncode != 0:
-                continue
-            state = json.loads(result.stdout)
-            assert state.get("id") == container
-            assert state.get("status") in {"created", "running", "paused", "stopped"}
-            runtime_state = state["status"]
-            break
+        _, state = _synthetic_runtime_state(worker, container)
+        runtime_state = "unavailable" if state is None else state["status"]
         print(json.dumps({"qualification": "synthetic-paused-runtime-state", "docker_paused": True,
                           "runtime_state": runtime_state}))
+
+
+def _synthetic_container_cgroup(pid, container):
+    membership = Path(f"/proc/{pid}/cgroup").read_text().splitlines()
+    unified = [line.removeprefix("0::") for line in membership if line.startswith("0::")]
+    assert len(unified) == 1
+    root = Path("/sys/fs/cgroup").resolve()
+    group = (root / unified[0].lstrip("/")).resolve()
+    assert group.is_relative_to(root) and group.name in {container, "docker-" + container + ".scope"}
+    assert dict(line.split() for line in (group / "cgroup.events").read_text().splitlines())["populated"] == "1"
+    return group
 
 
 def test_hosted_synthetic_paused_runtime_delete_diagnostic(tmp_path):
@@ -376,29 +391,10 @@ def test_hosted_synthetic_paused_runtime_delete_diagnostic(tmp_path):
         assert info["Id"] == container and info["State"].get("Paused") is True
         pid = info["State"].get("Pid")
         assert type(pid) is int and pid > 0
-        selected = None
-        for root in ("/run/docker/runtime-long-haul-gvisor/moby", "/run/docker/runtime-runc/moby"):
-            exists = subprocess.run(["sudo", "-n", "test", "-d", root], env=_control_environment(),
-                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10, check=False)
-            if exists.returncode != 0:
-                continue
-            result = subprocess.run(["sudo", "-n", str(worker.runsc_path), "--root", root, "state", container],
-                                    env=_control_environment(), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                                    timeout=15, check=False)
-            if result.returncode == 0:
-                state = json.loads(result.stdout)
-                if state.get("id") == container and state.get("pid") == pid and state.get("status") == "paused":
-                    selected = root
-                    break
-        if selected is None:
+        selected, state = _synthetic_runtime_state(worker, container)
+        if selected is None or state.get("pid") != pid or state.get("status") != "paused":
             pytest.fail("exact paused synthetic runtime identity could not be verified")
-        membership = Path(f"/proc/{pid}/cgroup").read_text().splitlines()
-        unified = [line.removeprefix("0::") for line in membership if line.startswith("0::")]
-        assert len(unified) == 1
-        cgroup_root = Path("/sys/fs/cgroup").resolve()
-        group = (cgroup_root / unified[0].lstrip("/")).resolve()
-        assert group.is_relative_to(cgroup_root) and group.name in {container, "docker-" + container + ".scope"}
-        assert dict(line.split() for line in (group / "cgroup.events").read_text().splitlines())["populated"] == "1"
+        group = _synthetic_container_cgroup(pid, container)
         result = subprocess.run(["sudo", "-n", str(worker.runsc_path), "--root", selected,
                                  "delete", "--force", container], env=_control_environment(),
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=45, check=False)
