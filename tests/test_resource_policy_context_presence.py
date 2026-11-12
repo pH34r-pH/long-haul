@@ -61,6 +61,25 @@ def test_unrelated_prohibition_does_not_block_and_definite_prohibition_still_con
     assert evaluator.evaluate(combined, request()).status is PolicyDecisionStatus.CONFLICT
 
 
+def test_derived_use_preserves_unknown_source_and_binds_verified_absence():
+    rule = PolicyRule(rule_id="restricted", actions=["ai-augment"], purposes=["research"], crew_ids=["restricted"])
+    first = policy(rule)
+    second = policy(rule).model_copy(update={"identity": ResourceIdentity(resource_id="urn:fixture:other",
+                                                                          resource_type="dataset")})
+    evaluator = ResourcePolicyEvaluator()
+
+    def evaluate(**context):
+        return evaluator.evaluate_all([first, second], lambda resource: request(**context).model_copy(
+            update={"resource_id": resource}))
+
+    unknown = evaluate()
+    absent = evaluate(known_absent_context=["crew_id"])
+    assert unknown.status is PolicyDecisionStatus.UNKNOWN
+    assert absent.status is PolicyDecisionStatus.ALLOW
+    assert unknown.request_fingerprint != absent.request_fingerprint
+    assert len(unknown.source_policy_fingerprints) == 2
+
+
 def test_absence_claims_are_canonical_and_cannot_contradict_context():
     assert request().fingerprint == "resource-use-v1:7733c5613b05d3616eac818969cd1b4658ca4fba8cddf671eecd51ab167a3dac"
     first = request(known_absent_context=["crew_id", "audience_id"])
