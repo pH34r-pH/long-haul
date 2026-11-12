@@ -89,15 +89,14 @@ def test_recovery_removes_owned_worker_holder_then_volume_and_syncs_marker(tmp_p
 def test_recovery_retains_scratch_with_unresolved_evaluator_candidate(tmp_path):
     root, intent, docker = setup(tmp_path)
     fence = LocalWorkspaceFence(root, intent.token, intent.fingerprint)
-    with pytest.raises(WorkspaceCleanupRequired):
-        with fence.launch() as grant:
-            candidate = grant.scratch_root() / "long-haul-evaluator-held"
-            candidate.mkdir()
-            (candidate / "program.py").write_text("private candidate")
-            with pytest.raises(WorkspaceCleanupRequired):
-                grant.cleanup(docker)
-            assert (candidate / "program.py").read_text() == "private candidate"
-            assert not grant.cleaned
+    with pytest.raises(WorkspaceCleanupRequired), fence.launch() as grant:
+        candidate = grant.scratch_root() / "long-haul-evaluator-held"
+        candidate.mkdir()
+        (candidate / "program.py").write_text("private candidate")
+        with pytest.raises(WorkspaceCleanupRequired):
+            grant.cleanup(docker)
+        assert (candidate / "program.py").read_text() == "private candidate"
+        assert not grant.cleaned
     assert (root / "active.json").exists()
     assert not (root / (intent.token + ".cleanup.json")).exists()
     with pytest.raises(WorkspaceCleanupRequired):
