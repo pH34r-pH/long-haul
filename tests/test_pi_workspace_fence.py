@@ -112,6 +112,30 @@ def test_unowned_scratch_symlink_is_never_followed_or_deleted(tmp_path):
     assert (outside / "keep").read_text() == "fixture" and (root / "active.json").exists()
 
 
+def test_owned_scratch_cleanup_does_not_follow_nested_symlink(tmp_path):
+    root, intent, docker = setup(tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "keep").write_text("fixture")
+    with LocalWorkspaceFence(root, intent.token, intent.fingerprint).launch() as grant:
+        scratch = grant.scratch_root()
+        (scratch / "link").symlink_to(outside, target_is_directory=True)
+        grant.cleanup(docker)
+    assert not scratch.exists() and (outside / "keep").read_text() == "fixture"
+
+
+def test_scratch_with_missing_ownership_marker_is_not_removed(tmp_path):
+    root, intent, docker = setup(tmp_path)
+    fence = LocalWorkspaceFence(root, intent.token, intent.fingerprint)
+    with pytest.raises(WorkspaceCleanupRequired), fence.launch() as grant:
+        scratch = grant.scratch_root()
+        (scratch / "keep").write_text("fixture")
+        (scratch / ".workspace-owner").unlink()
+    with pytest.raises(WorkspaceCleanupRequired):
+        fence.recover(docker)
+    assert (scratch / "keep").read_text() == "fixture" and (root / "active.json").exists()
+
+
 def test_crashed_controller_leaves_fence_until_recovery(tmp_path):
     root, intent, docker = setup(tmp_path)
     other = second_intent(root, intent)
