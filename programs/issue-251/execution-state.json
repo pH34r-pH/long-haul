@@ -201,9 +201,10 @@
             "status": "draft",
             "previous_checked_head": "3dbe44f",
             "previous_checks": "all hosted checks passed; package/release intentionally skipped",
-            "current_head_checks": "pending as of checkpoint",
+            "current_head_checks": "all hosted checks passed; package/release intentionally skipped",
             "evidence": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6837419503",
-            "remaining": "Durable evaluator recovery, authenticated host/daemon control, external attachment fencing and private-work containment remain unqualified."
+            "remaining": "Durable evaluator recovery, authenticated host/daemon control, external attachment fencing and private-work containment remain unqualified.",
+            "checks_evidence": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6837558535"
           }
         },
         {
@@ -2836,7 +2837,7 @@
       ],
       "main": "17d689ab7f33ee921143ad007ebd378198268007",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-6837416924",
-      "evidence": "All exact-head hosted checks passed before each merge; owner-authorized review bypass used. Main checks passed for 271-273; 274 main CI remains pending as of checkpoint.",
+      "evidence": "All exact-head hosted checks passed before each merge; owner-authorized review bypass used. All six main workflows passed after each of 271-274.",
       "remaining": "Each slice is partial; #248 remains open. Absence claims need authenticated control; identity and request references are not attestations or enforcement."
     },
     {
@@ -2854,8 +2855,18 @@
       "pull_request": 265,
       "head": "9b9184f0d7c93e5769d542315411c5d6e66b2c1a",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6837419503",
-      "evidence": "Draft incorporated policy slices, passed 206 focused Linux tests and Ruff locally; exact-head hosted checks pending as of checkpoint. Prior head 3dbe44f passed hosted checks.",
-      "remaining": "No durable evaluator recovery, authenticated host/daemon, external attachment fencing or private-work containment qualification. Do not merge the draft based on green tests alone."
+      "evidence": "Draft incorporated policy slices, passed 206 focused Linux tests and Ruff locally, and passed all exact-head hosted checks; package/release intentionally skipped.",
+      "remaining": "No durable evaluator recovery, authenticated host/daemon, external attachment fencing or private-work containment qualification. Do not merge the draft based on green tests alone.",
+      "checks_evidence": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6837558535"
+    },
+    {
+      "at": "2026-11-12T22:22:57+00:00",
+      "task": "lh-248-interchange",
+      "status": "policy_identity_main_checks_passed",
+      "merge_commit": "17d689ab7f33ee921143ad007ebd378198268007",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-6837523825",
+      "evidence": "All six post-merge main workflows passed.",
+      "remaining": "Authentication, evaluator and source trust, independent consumer safety and full interoperability remain open."
     }
   ]
 }
