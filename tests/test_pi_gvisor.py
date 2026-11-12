@@ -315,6 +315,8 @@ if '0::' + relative not in membership:
     raise SystemExit('guest is not in its exact Docker systemd scope')
 path = '/sys/fs/cgroup' + relative
 directory = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+frozen = False
+killed = False
 try:
     if os.fstat(directory).st_ino != os.stat(path, follow_symlinks=False).st_ino:
         raise SystemExit('cgroup identity changed')
@@ -322,9 +324,26 @@ try:
     with os.fdopen(procfile) as stream:
         if str(pid) not in stream.read().splitlines():
             raise SystemExit('guest pid is not a direct cgroup member')
+    freezefile = os.open('cgroup.freeze', os.O_WRONLY | os.O_NOFOLLOW, dir_fd=directory)
+    try:
+        os.write(freezefile, b'1')
+        frozen = True
+    finally:
+        os.close(freezefile)
+    deadline = time.monotonic() + 10
+    while True:
+        events = os.open('cgroup.events', os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory)
+        with os.fdopen(events) as stream:
+            values = dict(line.split() for line in stream.read().splitlines())
+        if values.get('frozen') == '1' and values.get('populated') == '1':
+            break
+        if time.monotonic() >= deadline:
+            raise SystemExit('synthetic cgroup did not freeze')
+        time.sleep(.1)
     killfile = os.open('cgroup.kill', os.O_WRONLY | os.O_NOFOLLOW, dir_fd=directory)
     try:
         os.write(killfile, b'1')
+        killed = True
     finally:
         os.close(killfile)
     deadline = time.monotonic() + 10
@@ -341,8 +360,14 @@ try:
             raise SystemExit('synthetic cgroup remained populated')
         time.sleep(.1)
 finally:
+    if frozen and not killed:
+        freezefile = os.open('cgroup.freeze', os.O_WRONLY | os.O_NOFOLLOW, dir_fd=directory)
+        try:
+            os.write(freezefile, b'0')
+        finally:
+            os.close(freezefile)
     os.close(directory)
-print(json.dumps({'cgroup_kill_acknowledged': True}))
+print(json.dumps({'kernel_freeze_confirmed': True, 'cgroup_kill_acknowledged': True}))
 """
 
 
