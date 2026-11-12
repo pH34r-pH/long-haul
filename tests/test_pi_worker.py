@@ -337,7 +337,8 @@ def test_native_interlocks_use_executor_owned_workspace_views(tmp_path):
             lifecycle.append("exit")
 
     records = iter([start(), request(attempt), end()])
-    harness = PiCodingHarness(normalizer, registry, root, sent.append, lambda: next(records), lambda _: "task", clock=lambda: NOW)
+    harness = PiCodingHarness(normalizer, registry, root, sent.append, lambda: next(records), lambda _: "task")
+    harness.clock = lambda: NOW
     harness.workspace_view = workspace_view
     harness.start(attempt)
     harness._native_session = "synthetic"

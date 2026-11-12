@@ -30,14 +30,14 @@ class PiPrompt:
 
 
 class PiCodingHarness:
-    def __init__(self, normalizer, registry, worker, send, receive, prompt, *, clock=None):
+    def __init__(self, normalizer, registry, worker, send, receive, prompt):
         if normalizer.attempt.harness.harness_id != "pi":
             raise ValueError("real Pi adapter requires exact Pi identity")
         self.identity = normalizer.attempt.harness
         self.projector = PiTrajectoryProjector(normalizer, max_pending=1)
         self.guard = PiToolAdmission(normalizer, registry)
         self.worker, self.send, self.receive, self.prompt = worker, send, receive, prompt
-        self.clock = clock or (lambda: datetime.now(UTC))
+        self.clock = lambda: datetime.now(UTC)
         # Trusted executor owns the lifetime and consistency of each view.
         self.workspace_view = lambda: nullcontext(worker)
         self._started = False
