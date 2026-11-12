@@ -77,6 +77,12 @@ class PausedWorkspaceView:
             raise ValueError("paused workspace binding changed")
         _mount(worker, self.volume, volume["Mountpoint"])
         _mount(holder, self.volume, volume["Mountpoint"])
+        # Point-in-time Docker census only; it does not fence new attachments
+        # or detect host processes and bind mounts of the backing path.
+        users = self.control("container", "ls", "--all", "--no-trunc", "--filter", "volume=" + self.volume,
+                             "--format", "{{.ID}}").splitlines()
+        if len(users) != 2 or set(users) != {self.worker, self.holder}:
+            raise ValueError("workspace volume users are not exactly the admitted worker and holder")
 
     @contextmanager
     def __call__(self):

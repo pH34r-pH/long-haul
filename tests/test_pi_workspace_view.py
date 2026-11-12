@@ -19,12 +19,15 @@ class FakeControl:
         self.paused = False
         self.calls = []
         self.options = OPTIONS
+        self.volume_users = [WORKER, HOLDER]
 
     def __call__(self, *args):
         self.calls.append(args)
         if args[0] in {"pause", "unpause"}:
             self.paused = args[0] == "pause"
             return ""
+        if args[:2] == ("container", "ls"):
+            return "".join(identity + "\n" for identity in self.volume_users)
         if args[:2] == ("volume", "inspect"):
             return json.dumps([{"Name": VOLUME, "Driver": "local", "Scope": "local", "Mountpoint": "/private/volume",
                                 "Options": {"type": "tmpfs", "device": "tmpfs", "o": self.options}}])
@@ -62,6 +65,37 @@ def test_failed_inspection_does_not_resume_untrusted_worker(monkeypatch):
     with pytest.raises(ValueError, match="denied"), make_view(control)():
         raise ValueError("denied")
     assert control.paused and ("unpause", WORKER) not in control.calls
+
+
+def test_unexpected_named_volume_user_holds_view_before_and_after_copy(monkeypatch):
+    control = FakeControl()
+    copied = []
+
+    def copy(*_):
+        copied.append(True)
+        control.volume_users.append("d" * 64)
+        return {"dir/file": b"fixture"}
+
+    monkeypatch.setattr(pi_workspace_view, "copy_docker_workspace", copy)
+    with pytest.raises(ValueError, match="workspace volume users"), make_view(control)():
+        pytest.fail("an unexpected user must not produce a view")
+    assert copied and control.paused and ("unpause", WORKER) not in control.calls
+
+    control = FakeControl()
+    control.volume_users.append("d" * 64)
+    copied.clear()
+    with pytest.raises(ValueError, match="workspace volume users"), make_view(control)():
+        pytest.fail("an unexpected user must not produce a view")
+    assert not copied and not control.paused
+
+
+@pytest.mark.parametrize("users", [[], [WORKER], [WORKER, WORKER], [WORKER, "bad-id"]])
+def test_incomplete_or_ambiguous_named_volume_census_fails_closed(users):
+    control = FakeControl()
+    control.volume_users = users
+    with pytest.raises(ValueError, match="workspace volume users"), make_view(control)():
+        pytest.fail("an incomplete census must not produce a view")
+    assert not control.paused
 
 
 def test_changed_volume_options_after_pause_leaves_worker_paused(monkeypatch):
