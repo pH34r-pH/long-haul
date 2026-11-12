@@ -2,10 +2,13 @@
 import json
 import subprocess
 from contextlib import nullcontext
+from dataclasses import replace
+from datetime import UTC, datetime
 from types import SimpleNamespace
 
 import pytest
-from pi_worker_fixture import admit_prompt
+from pi_worker_fixture import admit_prompt, public_evaluator_admission
+from repository_evaluator_fixture import profile
 from test_harness_trajectory import reference
 from test_pi_worker import setup_guard
 
@@ -13,12 +16,24 @@ from long_haul.adapters.harness_trace import TraceNormalizer
 from long_haul.adapters.pi_harness import PiCodingHarness
 from long_haul.adapters.pi_recovery import PiWorkerCleanupRequired, PiWorkerRecovery
 from long_haul.adapters.pi_worker import DockerGVisorPiWorker, PiWorkerRequest
+from long_haul.work import AcceptancePredicate
 from long_haul.work.harness import harness_attempt
+from long_haul.work.repository_evaluator import public_evaluator_reference
+from long_haul.work.repository_models import DigestReference
 
 
 def fake_executor(tmp_path):
     contract, _, old, _, registry, _ = setup_guard(tmp_path)
     contract.capabilities = ["read", "edit"]
+    evaluator = profile(reference("synthetic-evaluator"))
+    contract.repository_work = contract.repository_work.model_copy(update={
+        "task": evaluator.task, "public_evaluation": public_evaluator_reference(evaluator),
+        "sealed_evaluator": DigestReference(reference="urn:long-haul:evaluator:sealed", digest=evaluator.fingerprint),
+    })
+    contract.success_predicates = [AcceptancePredicate(predicate_id=check.requirement.predicate_id, kind="test",
+        description=check.requirement.description, evaluator_reference=DigestReference(
+            reference="urn:long-haul:evaluator-requirement:" + check.requirement.predicate_id,
+            digest=check.fingerprint)) for check in evaluator.checks]
     from long_haul.work import WorkSession
     session = WorkSession(contract_id=contract.contract_id, session_id=old.attempt.session_id, crew_id=old.attempt.crew_id)
     attempt = harness_attempt(contract, session, old.attempt.harness, "cleanup-negative")
@@ -46,7 +61,8 @@ def fake_executor(tmp_path):
     base = SimpleNamespace(candidate=SimpleNamespace(base=contract.repository_work.source),
                            contents={"fixture/code.py": b"before\n"})
     request = PiWorkerRequest(tmp_path, base, normalizer, registry, lambda _: "task", {}, reference("template"),
-                              admit_prompt(normalizer, "task"))
+                              admit_prompt(normalizer, "task"),
+                              evaluator_admission=public_evaluator_admission(evaluator, contract, attempt, datetime.now(UTC)))
     return worker, request
 
 
@@ -76,8 +92,15 @@ def test_failed_removal_keeps_workspace_control_and_private_identity_until_recov
 
 def test_worker_rejects_unadmitted_sealed_evaluator_before_launch(tmp_path):
     worker, request = fake_executor(tmp_path)
+    with pytest.raises(TypeError, match="trusted worker admission"):
+        worker.run(replace(request, evaluator_admission=None))
+    assert worker.lease_releasable and worker._control_root is None
+
+
+def test_worker_rejects_missing_sealed_evaluator_before_launch(tmp_path):
+    worker, request = fake_executor(tmp_path)
     contract = request.normalizer.contract
-    contract.repository_work = contract.repository_work.model_copy(update={"sealed_evaluator": reference("sealed")})
-    with pytest.raises(ValueError, match="trusted worker admission"):
+    contract.repository_work = contract.repository_work.model_copy(update={"sealed_evaluator": None})
+    with pytest.raises(ValueError, match="requires an exact sealed evaluator"):
         worker.run(request)
     assert worker.lease_releasable and worker._control_root is None

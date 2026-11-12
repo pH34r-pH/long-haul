@@ -75,7 +75,7 @@ def test_actual_pi_keyed_evaluator_has_no_sealed_output_in_public_event(tmp_path
 
 def test_actual_pi_rejects_missing_evaluator_admission_before_launch(tmp_path):
     worker, request, _ = worker_setup(tmp_path, PLAN)
-    with pytest.raises(ValueError, match="trusted worker admission"):
+    with pytest.raises(TypeError, match="trusted worker admission"):
         worker.run(replace(request, evaluator_admission=None))
     assert worker.lease_releasable and worker.pending_recovery is None
 

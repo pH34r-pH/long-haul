@@ -183,10 +183,11 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
             raise PiWorkerCleanupRequired(self.recovery_path)
         normalizer, registry = request.normalizer, request.registry
         contract, attempt = normalizer.contract, normalizer.attempt
-        if contract.repository_work.sealed_evaluator is not None:
-            if not isinstance(request.evaluator_admission, EvaluatorWorkerAdmission):
-                raise ValueError("sealed evaluator requires trusted worker admission")
-            request.evaluator_admission.authorize(contract, attempt, datetime.now(UTC))
+        if contract.repository_work is None or contract.repository_work.sealed_evaluator is None:
+            raise ValueError("repository worker requires an exact sealed evaluator")
+        if not isinstance(request.evaluator_admission, EvaluatorWorkerAdmission):
+            raise TypeError("sealed evaluator requires trusted worker admission")
+        request.evaluator_admission.authorize(contract, attempt, datetime.now(UTC))
         self.assets.verify()
         if (not set(contract.capabilities) <= {"read", "edit"} or contract.repository_work.source != request.base.candidate.base
                 or content_digest(contract.model_dump_json().encode()) != attempt.contract_digest
