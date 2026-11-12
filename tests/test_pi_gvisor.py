@@ -22,6 +22,7 @@ from pi_worker_fixture import (
 from repository_evaluator_fixture import PROGRAM, environment
 from test_private_evaluator_commitments import evidence_admission, summary_admission
 
+from long_haul.adapters import pi_quota_worker
 from long_haul.adapters.harness_trace import TraceAdmissionDenied, TraceNormalizer
 from long_haul.adapters.pi_harness import PiCodingHarness
 from long_haul.adapters.pi_quota_worker import QuotaPiWorker
@@ -525,6 +526,43 @@ def test_hosted_actual_pi_synthetic_kernel_capture(tmp_path, monkeypatch):
     assert worker.lease_releasable and not (root / (intent.token + ".scratch")).exists()
     assert (root / (intent.token + ".cleanup.json")).is_file()
     print(json.dumps({"qualification": "hosted-actual-pi-synthetic-kernel-capture", "real_model": False}))
+
+
+def _synthetic_long_confirm_timeout(monkeypatch):
+    original = pi_quota_worker._prepare_control
+
+    def prepare(root, attempt, tools, synthetic):
+        if synthetic != PLAN:
+            raise ValueError("timeout experiment requires the public synthetic plan")
+        original(root, attempt, tools, synthetic)
+        guard = root / "guard.mjs"
+        source = guard.read_text(encoding="utf-8")
+        if source.count("timeout: 5000") != 1:
+            raise ValueError("unexpected synthetic guard source")
+        root.chmod(0o755)
+        guard.chmod(0o644)
+        guard.write_text(source.replace("timeout: 5000", "timeout: 15000"), encoding="utf-8")
+        guard.chmod(0o444)
+        root.chmod(0o555)
+
+    monkeypatch.setattr(pi_quota_worker, "_prepare_control", prepare)
+
+
+def test_hosted_synthetic_long_confirm_timeout(tmp_path, monkeypatch):
+    """Unqualified test-only guard variant; its identity differs from the worker receipt."""
+    if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
+        pytest.skip("synthetic privileged experiment requires an ephemeral GitHub-hosted runner")
+    _record_synthetic_admission_latency(monkeypatch, "synthetic-timeout-15s")
+    _synthetic_long_confirm_timeout(monkeypatch)
+    with quota_fixture(tmp_path, PLAN) as (worker, request, _, grant, _, _):
+        monkeypatch.setattr(worker, "_capture_and_remove",
+                            lambda view, guest, holder, hp: _synthetic_kernel_capture(worker, view, guest, holder, hp))
+        result, events, snapshot = worker.run_bounded(request, grant)
+        outcomes = [event.outcome.value for event in events if event.phase == "end"]
+        print(json.dumps({"qualification": "synthetic-guard-timeout-comparison", "timeout_ms": 15000,
+                          "control_identity_matches_receipt": False, "outcomes": outcomes}))
+        assert result.terminal == "settled" and snapshot is not None and result.cleanup.process_tree_stopped
+        assert outcomes == ["success", "success"] and b"a + b" in snapshot.contents["program.py"]
 
 
 def _assert_synthetic_capture_abort_thaws(pid, container):
