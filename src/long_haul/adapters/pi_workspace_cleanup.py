@@ -110,10 +110,22 @@ def _admitted_scratch(directory, intent):
         raise
 
 
-def _reject_evaluator_candidates(scratch):
+def _reject_evaluator_candidates(scratch, budget=None, depth=0):
+    if budget is None:
+        budget = [4096]
+    if depth > 128 or budget[0] <= 0 or os.fstat(scratch).st_uid != os.geteuid():
+        raise ValueError("workspace scratch cannot be safely inspected")
+    budget[0] -= 1
     with os.scandir(scratch) as entries:
-        if any(entry.name.startswith(EVALUATOR_CANDIDATE_PREFIX) for entry in entries):
-            raise ValueError("workspace contains an unresolved evaluator candidate")
+        for entry in entries:
+            if entry.name.startswith(EVALUATOR_CANDIDATE_PREFIX):
+                raise ValueError("workspace contains an unresolved evaluator candidate")
+            if entry.is_dir(follow_symlinks=False):
+                child = os.open(entry.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=scratch)
+                try:
+                    _reject_evaluator_candidates(child, budget, depth + 1)
+                finally:
+                    os.close(child)
 
 
 def _check_scratch_before_recovery(root, intent):

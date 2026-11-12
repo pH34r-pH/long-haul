@@ -86,11 +86,15 @@ def test_recovery_removes_owned_worker_holder_then_volume_and_syncs_marker(tmp_p
         LocalWorkspaceFence(root, intent.token, intent.fingerprint).recover(docker)
 
 
-def test_recovery_retains_scratch_with_unresolved_evaluator_candidate(tmp_path):
+@pytest.mark.parametrize("nested", [False, True])
+def test_recovery_retains_scratch_with_unresolved_evaluator_candidate(tmp_path, nested):
     root, intent, docker = setup(tmp_path)
     fence = LocalWorkspaceFence(root, intent.token, intent.fingerprint)
     with pytest.raises(WorkspaceCleanupRequired), fence.launch() as grant:
-        candidate = grant.scratch_root() / "long-haul-evaluator-held"
+        scratch = grant.scratch_root()
+        parent = scratch / "evaluation" / "nested" if nested else scratch
+        parent.mkdir(parents=True, exist_ok=True)
+        candidate = parent / "long-haul-evaluator-held"
         candidate.mkdir()
         (candidate / "program.py").write_text("private candidate")
         with pytest.raises(WorkspaceCleanupRequired):
