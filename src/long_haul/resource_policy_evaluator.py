@@ -264,7 +264,14 @@ class ResourcePolicyEvaluator:
         if preflight is not None:
             return preflight
         permissions, prohibitions = _matching_rules(profile, request)
-        return _resolve_matches(permissions, prohibitions, request, common)
+        decision = _resolve_matches(permissions, prohibitions, request, common)
+        if (decision.status is PolicyDecisionStatus.ALLOW and request.action is not ResourceAction.DELETE
+                and (profile.privacy.legal_basis or profile.privacy.consent_references)):
+            return decision.model_copy(update={
+                "status": PolicyDecisionStatus.UNKNOWN,
+                "reason": "current legal-basis and consent state is not authenticated",
+            })
+        return decision
 
     def evaluate_all(
         self,

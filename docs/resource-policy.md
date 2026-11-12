@@ -115,6 +115,8 @@ Decisions bind the complete authenticated request fingerprint. Derived decisions
 
 Policy profiles, caller identity, fulfilled-duty evidence, and time are admitted by authenticated control code. Loading a profile-shaped object from repository text does not authenticate it. Consumers must compare exact reviewed policy fingerprints before invoking this evaluator; its result does not authenticate its input issuer or assert legal validity.
 
+Legal-basis and consent references do not establish their current validity. Until an authenticated current-state authority is integrated, a non-delete use that would otherwise be allowed returns `UNKNOWN` when either field is populated. Existing prohibitions and other non-allow decisions remain in effect. Deletion still needs its own explicit permission. Empty fields do not prove that no legal basis is required; the caller remains responsible for admitting a complete profile and applicable context.
+
 ## Enforcement boundary
 
 The intended control flow is:

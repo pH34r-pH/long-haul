@@ -253,6 +253,54 @@ def test_expired_resource_can_be_deleted_only_with_explicit_permission():
     assert evaluator.evaluate(policy, request(ResourceAction.DELETE)).status is not PolicyDecisionStatus.ALLOW
 
 
+@pytest.mark.parametrize("privacy", [
+    PrivacyProfile(legal_basis=["dpv:Consent"]),
+    PrivacyProfile(consent_references=["urn:consent:fixture"]),
+    PrivacyProfile(legal_basis=["urn:legal-basis:fixture"]),
+])
+@pytest.mark.parametrize("action", [ResourceAction.READ, ResourceAction.AI_AUGMENT, ResourceAction.DISTRIBUTE])
+def test_unverified_legal_basis_or_consent_does_not_authorize_use(privacy, action):
+    policy = profile(permissions=[PolicyRule(
+        rule_id="allow", actions=[action], purposes=["mission-assistance"],
+    )])
+    policy.privacy = privacy
+    decision = ResourcePolicyEvaluator().evaluate(policy, request(action, purpose="mission-assistance"))
+    assert decision.status is PolicyDecisionStatus.UNKNOWN
+    assert decision.matched_permissions == ["allow"]
+    assert decision.policy_fingerprint == policy.fingerprint
+
+
+def test_unverified_basis_does_not_block_explicit_deletion():
+    policy = profile(permissions=[PolicyRule(rule_id="cleanup", actions=[ResourceAction.DELETE])])
+    policy.privacy = PrivacyProfile(legal_basis=["dpv:Consent"], consent_references=["urn:consent:fixture"])
+    evaluator = ResourcePolicyEvaluator()
+    assert evaluator.evaluate(policy, request(ResourceAction.DELETE)).status is PolicyDecisionStatus.ALLOW
+    policy.permissions = []
+    assert evaluator.evaluate(policy, request(ResourceAction.DELETE)).status is PolicyDecisionStatus.UNKNOWN
+
+
+def test_unverified_basis_does_not_hide_explicit_prohibition():
+    policy = profile(prohibitions=[PolicyRule(rule_id="deny", actions=[ResourceAction.AI_AUGMENT])])
+    policy.privacy = PrivacyProfile(consent_references=["urn:consent:fixture"])
+    decision = ResourcePolicyEvaluator().evaluate(policy, request())
+    assert decision.status is PolicyDecisionStatus.DENY
+    assert decision.matched_prohibitions == ["deny"]
+
+
+def test_derived_resource_fails_closed_when_source_basis_is_unverified():
+    first = profile(permissions=[PolicyRule(rule_id="read", actions=[ResourceAction.READ])])
+    second = first.model_copy(deep=True)
+    second.identity.resource_id = "urn:test:memory:with-consent"
+    second.privacy = PrivacyProfile(consent_references=["urn:consent:fixture"])
+
+    def factory(resource_id):
+        return request(ResourceAction.READ).model_copy(update={"resource_id": resource_id})
+
+    result = ResourcePolicyEvaluator().evaluate_all([first, second], factory)
+    assert result.status is PolicyDecisionStatus.UNKNOWN
+    assert result.source_policy_fingerprints[second.identity.resource_id] == second.fingerprint
+
+
 def test_derived_use_rejects_mixed_requests_and_binds_source_policies():
     first = profile(permissions=[PolicyRule(rule_id="read", actions=[ResourceAction.READ])])
     second = first.model_copy(deep=True)
