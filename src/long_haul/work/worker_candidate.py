@@ -16,6 +16,7 @@ from .repository_models import content_digest, repository_path
 MAX_WORKER_FILES = 256
 MAX_WORKER_DIRECTORIES = 256
 MAX_WORKER_DEPTH = 64
+MAX_WORKER_FILE_BYTES = 1048576
 
 
 def worker_path(value: str) -> str:
@@ -23,6 +24,31 @@ def worker_path(value: str) -> str:
     if path == "." or any(part in {".pi", ".git"} for part in Path(path).parts):
         raise ValueError("worker target must be a regular repository file")
     return path
+
+
+def _file_identity(info: os.stat_result):
+    return (info.st_dev, info.st_ino, info.st_mode, info.st_nlink,
+            info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+
+
+def _bounded_regular_read(path: Path, expected: os.stat_result) -> bytes:
+    """Read one paused/stopped regular file without following a substituted link."""
+    flags = (os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+             | getattr(os, "O_BINARY", 0))
+    try:
+        fd = os.open(path, flags)
+    except OSError as error:
+        raise ValueError("worker file could not be opened safely") from error
+    with os.fdopen(fd, "rb") as source:
+        before = os.fstat(source.fileno())
+        if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1
+                or _file_identity(before) != _file_identity(expected) or before.st_size > MAX_WORKER_FILE_BYTES):
+            raise ValueError("worker file changed during inspection")
+        data = source.read(MAX_WORKER_FILE_BYTES + 1)
+        after = os.fstat(source.fileno())
+        if len(data) != before.st_size or _file_identity(after) != _file_identity(before):
+            raise ValueError("worker file changed during bounded read")
+        return data
 
 
 def regular_contents(root: Path) -> dict[str, bytes]:
@@ -37,7 +63,8 @@ def regular_contents(root: Path) -> dict[str, bytes]:
         with os.scandir(pending.pop()) as entries:
             for entry in entries:
                 path = Path(entry.path)
-                metadata = entry.stat(follow_symlinks=False)
+                # DirEntry.stat on Windows can report zero inode/link metadata.
+                metadata = path.lstat()
                 relative = worker_path(path.relative_to(root).as_posix())
                 if len(Path(relative).parts) > MAX_WORKER_DEPTH:
                     raise ValueError("worker exceeds bounded directory depth")
@@ -47,13 +74,13 @@ def regular_contents(root: Path) -> dict[str, bytes]:
                         raise ValueError("worker exceeds bounded directory count")
                     pending.append(path)
                     continue
-                if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1 or metadata.st_size > 1048576:
+                if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1 or metadata.st_size > MAX_WORKER_FILE_BYTES:
                     raise ValueError("worker contains a link, special file, or oversized file")
                 if len(result) >= MAX_WORKER_FILES or total + metadata.st_size > 4194304:
                     raise ValueError("worker exceeds bounded candidate size")
-                data = path.read_bytes()
+                data = _bounded_regular_read(path, metadata)
                 total += len(data)
-                if total > 4194304 or len(data) > 1048576:
+                if total > 4194304 or len(data) > MAX_WORKER_FILE_BYTES:
                     raise ValueError("worker exceeds bounded candidate size")
                 result[relative] = data
     return result
