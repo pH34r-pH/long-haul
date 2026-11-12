@@ -50,6 +50,9 @@ class SandboxAdapter(Protocol):
     def execute(self, candidate: Path, command: CandidateCommand) -> SandboxResult: ...
 
 
+EVALUATOR_CANDIDATE_PREFIX = "long-haul-evaluator-"
+
+
 class SandboxCleanupRequired(RuntimeError):
     """Private recovery information; do not release the candidate or lease."""
 

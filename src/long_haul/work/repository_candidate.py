@@ -17,7 +17,7 @@ from .repository_evaluation_models import (
 )
 from .repository_git import _GitObjects, git_repository_identity
 from .repository_models import content_digest, repository_path
-from .repository_sandbox import SandboxCleanupRequired
+from .repository_sandbox import EVALUATOR_CANDIDATE_PREFIX, SandboxCleanupRequired
 
 
 @dataclass(frozen=True)
@@ -28,7 +28,7 @@ class CandidateSnapshot:
     @contextmanager
     def materialize(self, *, scratch_root: Path | None = None):
         """Create a fresh executor-owned tree; no worker path is mounted."""
-        root = Path(tempfile.mkdtemp(prefix="long-haul-evaluator-", dir=scratch_root))
+        root = Path(tempfile.mkdtemp(prefix=EVALUATOR_CANDIDATE_PREFIX, dir=scratch_root))
         retained = False
         try:
             for item in self.candidate.files:

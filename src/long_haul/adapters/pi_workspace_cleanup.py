@@ -13,6 +13,7 @@ import shutil
 import stat
 from pathlib import Path
 
+from ..work.repository_sandbox import EVALUATOR_CANDIDATE_PREFIX
 from .pi_workspace_intent import (
     _open_private_root,
     load_workspace_intent,
@@ -106,6 +107,9 @@ def _remove_scratch(root, intent):
             payload = (intent.token + ":" + intent.fingerprint).encode("ascii")
             if not _matches(scratch, ".workspace-owner", payload):
                 raise ValueError("workspace scratch ownership is not admitted")
+            with os.scandir(scratch) as entries:
+                if any(entry.name.startswith(EVALUATOR_CANDIDATE_PREFIX) for entry in entries):
+                    raise ValueError("workspace contains an unresolved evaluator candidate")
             _prepare_scratch_tree(scratch, [4096])
         finally:
             os.close(scratch)
