@@ -129,23 +129,26 @@ class PiCodingHarness:
                 raise TraceArgumentsInvalid("native interlock arrived before prompt acknowledgement")
             if self.projector.state.cancel_requested:
                 raise TraceAdmissionDenied("cancelled attempt cannot admit another operation")
+            return self._confirm(record, now)
         elif (kind.startswith("tool_execution") or kind in {"agent_start", "agent_settled"}) and not self._prompt_acknowledged:
             raise TraceArgumentsInvalid("native execution arrived before admitted prompt acknowledgement")
-        if kind in {"extension_ui_request", "tool_execution_start", "tool_execution_end"}:
+        if kind in {"tool_execution_start", "tool_execution_end"}:
             with self.workspace_view() as worker:
                 return self._workspace_record(record, now, tick, worker)
         return self.projector.feed(record, now, tick)
 
+    def _confirm(self, record, now):
+        try:
+            with self.workspace_view() as worker:
+                self.guard.authorize(record, worker, now)
+        except Exception:
+            self.send({"type": "extension_ui_response", "id": record.get("id"), "confirmed": False})
+            raise
+        self.send({"type": "extension_ui_response", "id": record["id"], "confirmed": True})
+        return ()
+
     def _workspace_record(self, record, now, tick, worker):
         kind = record["type"]
-        if kind == "extension_ui_request":
-            try:
-                self.guard.authorize(record, worker, now)
-            except Exception:
-                self.send({"type": "extension_ui_response", "id": record.get("id"), "confirmed": False})
-                raise
-            self.send({"type": "extension_ui_response", "id": record["id"], "confirmed": True})
-            return ()
         before = after = execution_admission = None
         if kind == "tool_execution_start":
             self.guard.start(record)

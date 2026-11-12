@@ -366,6 +366,31 @@ def test_workspace_view_failure_denies_native_confirmation(tmp_path):
     assert not any(item.get("confirmed") is True for item in sent)
 
 
+@pytest.mark.skipif(os.name != "posix", reason="worker filesystem inspection requires POSIX metadata")
+def test_workspace_view_release_failure_prevents_positive_confirmation(tmp_path):
+    _, attempt, normalizer, root, registry, _ = setup_guard(tmp_path)
+    calls, sent = [], []
+
+    @contextmanager
+    def view():
+        calls.append(None)
+        yield root
+        if len(calls) == 2:
+            raise ValueError("snapshot release failed")
+
+    records = iter([start(), request(attempt)])
+    harness = PiCodingHarness(normalizer, registry, root, sent.append, lambda: next(records), lambda _: "task")
+    harness.workspace_view = view
+    harness.start(attempt)
+    harness._native_session = "synthetic"
+    harness._prompt_acknowledged = True
+    harness.poll(NOW, 1)
+    harness.poll(NOW, 2)
+    assert harness.projector.state.terminal == "protocol_error"
+    assert sent[-1]["confirmed"] is False
+    assert not any(item.get("confirmed") is True for item in sent)
+
+
 def test_nonreading_process_does_not_block_bounded_rpc_writes():
     process = subprocess.Popen([sys.executable, "-I", "-c", "import time;time.sleep(30)"],
                                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

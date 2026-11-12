@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 import tempfile
+import time
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -22,6 +23,7 @@ from long_haul.adapters.harness_trace import TraceAdmissionDenied, TraceNormaliz
 from long_haul.adapters.pi_rpc import pi_prompt
 from long_haul.adapters.pi_workspace_copy import copy_docker_workspace
 from long_haul.adapters.pi_workspace_seed import build_workspace_seed
+from long_haul.adapters.pi_workspace_view import PausedWorkspaceView
 from long_haul.events.store import EventStore
 from long_haul.resource_policy import ResourceAction, ResourceLifecycle
 from long_haul.work import WorkCheckpoint, WorkSession, render_digest
@@ -32,6 +34,7 @@ from long_haul.work.repository_evaluator import (
 )
 from long_haul.work.repository_models import content_digest
 from long_haul.work.repository_sandbox import DockerGVisorSandbox, _control_environment
+from long_haul.work.worker_candidate import regular_contents
 
 pytestmark = pytest.mark.skipif(os.environ.get("LONG_HAUL_REQUIRE_PI_GVISOR") != "1",
                                 reason="actual Pi/gVisor qualification is mandatory in its hosted CI job")
@@ -47,7 +50,7 @@ def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
     """Qualify only the isolated volume experiment, not worker integration."""
     worker, _, _ = worker_setup(tmp_path, PLAN)
     suffix = uuid4().hex
-    volume, holder, guest = ("lh-volume-" + suffix, "lh-holder-" + suffix, "lh-guest-" + suffix)
+    volume, holder, guest = ("lh-workspace-" + suffix, "lh-holder-" + suffix, "lh-guest-" + suffix)
     image, runtime = worker.environment.image, worker.environment.runtime
     mount = "type=volume,src=" + volume + ",dst=/workspace"
     options = "size=1m,nr_inodes=32,mode=0777,nosuid,nodev,noexec"
@@ -61,7 +64,8 @@ def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
       fs.rmSync('large', {force:true});
       for(let i=0;i<128;i++) { try { fs.writeFileSync('bomb'+i,''); } catch(e) { inodes=e.code==='ENOSPC'; break; } }
       for(let i=0;i<128;i++) fs.rmSync('bomb'+i,{force:true});
-      if(!bytes || !inodes) process.exit(2); console.log(JSON.stringify({bytes,inodes}));"""
+      if(!bytes || !inodes) process.exit(2); console.log(JSON.stringify({bytes,inodes}));
+      setInterval(()=>{},60000);"""
     try:
         worker._control("volume", "create", "--driver", "local", "--opt", "type=tmpfs", "--opt", "device=tmpfs",
                         "--opt", "o=" + options, volume)
@@ -74,8 +78,29 @@ def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
                            stderr=subprocess.DEVNULL, timeout=15, check=True)
         guest_id = worker._control("create", "--name", guest, *common, image, "-e", script).strip()
         worker._control("start", guest_id)
-        assert worker._control("wait", guest_id).strip() == "0"
-        assert json.loads(worker._control("logs", guest_id)) == {"bytes": True, "inodes": True}
+        deadline = time.monotonic() + 15
+        observed = ""
+        while not observed and time.monotonic() < deadline:
+            observed = worker._control("logs", guest_id).strip()
+            if not observed:
+                time.sleep(.1)
+        assert json.loads(observed) == {"bytes": True, "inodes": True}
+
+        def verify():
+            guest_info, holder_info = json.loads(worker._control("inspect", guest_id, holder_id))
+            for info in (guest_info, holder_info):
+                host, config = info["HostConfig"], info["Config"]
+                assert info["Image"] == worker.image_id and host["Runtime"] == runtime
+                assert host["NetworkMode"] == "none" and host["ReadonlyRootfs"] and config["User"] == "65534:65534"
+                assert "ALL" in host["CapDrop"] and "no-new-privileges" in host["SecurityOpt"]
+                assert config["Entrypoint"] == ["/usr/local/bin/node"]
+            assert guest_info["Config"]["Cmd"] == ["-e", script]
+            assert holder_info["Config"]["Cmd"] == ["-e", "setInterval(()=>{},60000)"]
+
+        view = PausedWorkspaceView(worker._control, worker.docker_path, guest_id, holder_id, volume, options, verify)
+        with view() as root:
+            assert regular_contents(root) == {"fixture/a": b"changed", "fixture/new/b": b"created"}
+        worker._control("kill", guest_id)
         assert copy_docker_workspace(worker.docker_path, holder_id, 15) == {
             "fixture/a": b"changed", "fixture/new/b": b"created",
         }
