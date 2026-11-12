@@ -11,6 +11,7 @@ from .evaluator import CandidateArtifact, CheckRecord, EvaluatorIdentity, Eviden
 from .private_evaluator import (
     PRIVATE_PROFILE_REFERENCE,
     PrivateEvaluatorProfile,
+    PrivateEvidenceAdmission,
     PrivateEvidenceCheck,
     PrivateEvidenceSummary,
 )
@@ -165,11 +166,13 @@ class RepositoryEvaluationRunner:
         return packet, evaluate_repository_packet(contract, packet, snapshot.candidate, profile)
 
     def evaluate_private(self, contract, snapshot, profile, *, attempt_id, packet_id, private_sink):
-        """Keep raw observations in an explicit private sink; return only keyed summaries."""
-        if not isinstance(profile, PrivateEvaluatorProfile) or not callable(private_sink):
-            raise TypeError("private evaluation requires a keyed profile and a private evidence sink")
+        """Only authenticated control may register the private evidence sink."""
+        if not isinstance(profile, PrivateEvaluatorProfile) or not isinstance(private_sink, PrivateEvidenceAdmission):
+            raise TypeError("private evaluation requires a keyed profile and admitted private evidence sink")
+        private_sink.authorize(contract, profile, attempt_id, datetime.now(UTC))
         packet, evaluation = self._evaluate(contract, snapshot, profile, attempt_id=attempt_id, packet_id=packet_id)
-        private_sink(packet)
+        private_sink.authorize(contract, profile, attempt_id, datetime.now(UTC))
+        private_sink.writer(packet)
         return _private_summary(packet, profile), evaluation
 
 

@@ -1,15 +1,26 @@
 """Synthetic regression for sealed evaluator identity and disclosure boundaries."""
 import json
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from repository_evaluator_fixture import git, profile, setup
 from test_repository_evaluator import FixtureSandbox
 
+from long_haul.resource_policy import (
+    PolicyRule,
+    ResourceIdentity,
+    ResourceLifecycle,
+    ResourcePolicyProfile,
+    ResourceUseRequest,
+)
 from long_haul.work.private_evaluator import (
     PRIVATE_PROFILE_REFERENCE,
     PrivateEvaluatorProfile,
+    PrivateEvidenceAdmission,
 )
 from long_haul.work.repository_candidate import freeze_repository_candidate
+from long_haul.work.repository_evaluation_models import work_contract_fingerprint
 from long_haul.work.repository_evaluator import (
     RepositoryEvaluationRunner,
     private_repository_evidence_event,
@@ -31,6 +42,26 @@ def synthetic_profile(hidden):
             check = check.model_copy(update={"command": command, "requirement": requirement})
         checks.append(check)
     return original.model_copy(update={"checks": tuple(checks)})
+
+
+def evidence_admission(contract, evaluator, attempt_id, writer):
+    policy = ResourcePolicyProfile(
+        identity=ResourceIdentity(resource_id="urn:fixture:private-evidence", resource_type="evaluator-evidence",
+                                  content_digest=evaluator.fingerprint),
+        policy_id="urn:fixture:retention", policy_assigner="urn:fixture:controller", lifecycle="active",
+        permissions=[PolicyRule(rule_id="retain", actions=["retain"], purposes=["repository-evaluator-evidence"],
+                                principal_ids=[evaluator.evaluator_id], contract_ids=[contract.contract_id])],
+    )
+    request = ResourceUseRequest(
+        request_id="private-evidence:" + attempt_id, resource_id=policy.identity.resource_id,
+        action="retain", purpose="repository-evaluator-evidence", caller_id=evaluator.evaluator_id,
+        contract_id=contract.contract_id, mission_id=contract.mission_id,
+        repository_id=contract.repository_work.source.repository_id, now=datetime.now(UTC) - timedelta(seconds=1),
+    )
+    return PrivateEvidenceAdmission(policy=policy, expected_policy_fingerprint=policy.fingerprint, request=request,
+                                    expected_request_fingerprint=request.fingerprint,
+                                    contract_fingerprint=work_contract_fingerprint(contract),
+                                    evaluator_fingerprint=evaluator.fingerprint, attempt_id=attempt_id, writer=writer)
 
 
 def test_sealed_commitment_is_stable_private_and_not_an_enumeration_oracle():
@@ -92,8 +123,12 @@ def test_private_evaluation_redacts_hidden_output_and_rejects_raw_public_event(t
     with pytest.raises(TypeError, match="evaluate_private"):
         runner.evaluate(contract, snapshot, private, attempt_id="private-attempt", packet_id="private-packet")
     private_packets = []
+    admission = evidence_admission(contract, private, "private-attempt", private_packets.append)
+    with pytest.raises(TypeError, match="admitted private evidence sink"):
+        runner.evaluate_private(contract, snapshot, private, attempt_id="private-attempt",
+                                packet_id="unadmitted", private_sink=private_packets.append)
     summary, result = runner.evaluate_private(contract, snapshot, private, attempt_id="private-attempt",
-                                              packet_id="private-packet", private_sink=private_packets.append)
+                                              packet_id="private-packet", private_sink=admission)
     assert result.disposition.value == "ACCEPTED" and len(private_packets) == 1
     with pytest.raises(ValueError, match="private raw"):
         repository_evidence_event(private_packets[0])
@@ -115,7 +150,39 @@ def test_private_evaluation_redacts_hidden_output_and_rejects_raw_public_event(t
 
     with pytest.raises(RuntimeError, match="private storage unavailable"):
         runner.evaluate_private(contract, snapshot, private, attempt_id="failed-storage",
-                                packet_id="not-published", private_sink=failed_private_sink)
+                                packet_id="not-published", private_sink=evidence_admission(
+                                    contract, private, "failed-storage", failed_private_sink))
+
+    initial_calls = len(runner.sandbox.calls)
+    wrong_request = admission.request.model_copy(update={"contract_id": "other"})
+    for invalid in (
+        replace(admission, contract_fingerprint="sha256:" + "0" * 64),
+        replace(admission, request=wrong_request, expected_request_fingerprint=wrong_request.fingerprint),
+        replace(admission, policy=admission.policy.model_copy(update={"lifecycle": ResourceLifecycle.RETRACTED})),
+    ):
+        with pytest.raises(PermissionError, match="retention admission"):
+            runner.evaluate_private(contract, snapshot, private, attempt_id="private-attempt",
+                                    packet_id="invalid", private_sink=invalid)
+    denied_policy = admission.policy.model_copy(update={"permissions": []})
+    denied = replace(admission, policy=denied_policy, expected_policy_fingerprint=denied_policy.fingerprint)
+    with pytest.raises(PermissionError, match="not currently allowed"):
+        runner.evaluate_private(contract, snapshot, private, attempt_id="private-attempt",
+                                packet_id="denied", private_sink=denied)
+    assert len(runner.sandbox.calls) == initial_calls
+
+    revoked_packets = []
+    revoked = evidence_admission(contract, private, "revoked-during-run", revoked_packets.append)
+
+    class RevokingSandbox(FixtureSandbox):
+        def execute(self, target, command):
+            result = super().execute(target, command)
+            revoked.policy.lifecycle = ResourceLifecycle.RETRACTED
+            return result
+
+    with pytest.raises(PermissionError, match="retention admission"):
+        RepositoryEvaluationRunner(RevokingSandbox(private.environment)).evaluate_private(
+            contract, snapshot, private, attempt_id="revoked-during-run", packet_id="revoked", private_sink=revoked)
+    assert revoked_packets == []
 
 
 def test_private_evaluation_requires_explicit_sink():
