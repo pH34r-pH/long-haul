@@ -80,6 +80,11 @@ def _prepare_scratch_tree(directory, budget, depth=0):
     os.fchmod(directory, 0o700)
     with os.scandir(directory) as entries:
         for entry in entries:
+            budget[0] -= 1
+            if budget[0] < 0:
+                raise ValueError("workspace scratch directory bound exceeded")
+            if entry.name.startswith(EVALUATOR_CANDIDATE_PREFIX):
+                raise ValueError("workspace contains an unresolved evaluator candidate")
             if entry.is_dir(follow_symlinks=False):
                 child = os.open(entry.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
                 try:
@@ -157,7 +162,7 @@ def _remove_scratch(root, intent):
             return
         try:
             _reject_evaluator_candidates(scratch)
-            _prepare_scratch_tree(scratch, [4096])
+            _prepare_scratch_tree(scratch, [MAX_SCRATCH_INSPECTION_NODES])
         finally:
             os.close(scratch)
         shutil.rmtree(name, dir_fd=directory)

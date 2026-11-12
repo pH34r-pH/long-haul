@@ -126,6 +126,35 @@ def test_recovery_refuses_oversized_scratch_before_docker_mutation(tmp_path, mon
     assert scratch.is_dir() and (root / "active.json").exists()
 
 
+@pytest.mark.parametrize("change", ["many-files", "evaluator-candidate"])
+def test_recovery_holds_scratch_changed_before_preparation(tmp_path, monkeypatch, change):
+    from long_haul.adapters import pi_workspace_cleanup
+
+    root, intent, docker = setup(tmp_path)
+    fence = LocalWorkspaceFence(root, intent.token, intent.fingerprint)
+    monkeypatch.setattr(pi_workspace_cleanup, "MAX_SCRATCH_INSPECTION_NODES", 4)
+    original = pi_workspace_cleanup._prepare_scratch_tree
+
+    def add_files_before_prepare(directory, budget, depth=0):
+        if depth == 0:
+            scratch = root / (intent.token + ".scratch")
+            if change == "many-files":
+                for index in range(5):
+                    (scratch / f"added-{index}").write_text("fixture")
+            else:
+                (scratch / "long-haul-evaluator-held").mkdir()
+        return original(directory, budget, depth)
+
+    monkeypatch.setattr(pi_workspace_cleanup, "_prepare_scratch_tree", add_files_before_prepare)
+    with pytest.raises(WorkspaceCleanupRequired), fence.launch() as grant:
+        scratch = grant.scratch_root()
+        with pytest.raises(WorkspaceCleanupRequired):
+            grant.cleanup(docker)
+        assert not grant.cleaned
+    assert scratch.is_dir() and (root / "active.json").exists()
+    assert not (root / (intent.token + ".cleanup.json")).exists()
+
+
 @pytest.mark.parametrize("change", ["daemon", "worker-label", "holder-label", "volume-label", "volume-options", "fingerprint"])
 def test_recovery_refuses_foreign_or_unadmitted_objects_before_mutation(tmp_path, change):
     root, intent, docker = setup(tmp_path)
