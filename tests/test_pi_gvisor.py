@@ -364,8 +364,10 @@ try:
             with os.fdopen(events) as stream:
                 values = dict(line.split() for line in stream.read().splitlines())
         except FileNotFoundError:
+            observation = 'removed'
             break
         if values.get('populated') == '0':
+            observation = 'empty'
             break
         if time.monotonic() >= deadline:
             raise SystemExit('synthetic cgroup remained populated')
@@ -378,7 +380,8 @@ finally:
         finally:
             os.close(freezefile)
     os.close(directory)
-print(json.dumps({'kernel_freeze_confirmed': True, 'cgroup_kill_acknowledged': True}))
+print(json.dumps({'kernel_freeze_confirmed': True, 'cgroup_kill_acknowledged': True,
+                  'cgroup_observation': observation}))
 """
 
 
@@ -393,9 +396,16 @@ def test_hosted_synthetic_cgroup_kill_experiment(tmp_path):
         result = subprocess.run(["sudo", "-n", "python3", "-c", _HOSTED_CGROUP_KILL,
                                  str(info["State"]["Pid"]), container],
                                 env=_control_environment(), capture_output=True, timeout=20, check=False)
+        observed = json.loads(result.stdout) if result.returncode == 0 else {}
+        after, = json.loads(worker._control("inspect", container))
+        state = after["State"]
         print(json.dumps({"qualification": "synthetic-hosted-cgroup-kill", "exit_code": result.returncode,
-                          "identity_mismatch": b'exact Docker systemd scope' in result.stderr}))
-        assert result.returncode == 0
+                          "identity_mismatch": b'exact Docker systemd scope' in result.stderr,
+                          "cgroup_observation": observed.get("cgroup_observation"),
+                          "docker_running": state.get("Running"), "docker_paused": state.get("Paused"),
+                          "docker_status": state.get("Status"), "docker_pid_zero": state.get("Pid") == 0,
+                          "docker_exit_137": state.get("ExitCode") == 137}))
+        assert result.returncode == 0 and observed.get("kernel_freeze_confirmed") is True
 
 
 def _wait_for_quota_guest(control, name, process):
