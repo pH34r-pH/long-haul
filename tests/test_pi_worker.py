@@ -95,6 +95,30 @@ def test_worker_projection_admits_current_read_and_model_policy(tmp_path):
     assert (projected / "fixture/code.py").read_bytes() == b"before\n"
 
 
+def test_worker_projection_rejects_oversized_file_before_copy(tmp_path):
+    content = b"x" * (1048576 + 1)
+    _, _, normalizer, _, registry, _ = setup_guard(tmp_path, content=content)
+    projected = tmp_path / "projected"
+    projected.mkdir()
+    with pytest.raises(ValueError, match="bounded file size"):
+        DockerGVisorPiWorker._project(projected, SimpleNamespace(contents={"fixture/code.py": content}),
+                                     registry, normalizer, NOW)
+    assert list(projected.iterdir()) == []
+
+
+def test_worker_projection_rejects_oversized_total_before_copy(tmp_path):
+    content = b"x" * 1048576
+    _, _, normalizer, _, registry, _ = setup_guard(tmp_path, content=content)
+    first = registry.pop("fixture/code.py")
+    registry.update({f"fixture/{index}.py": first for index in range(5)})
+    projected = tmp_path / "projected"
+    projected.mkdir()
+    with pytest.raises(ValueError, match="bounded total size"):
+        DockerGVisorPiWorker._project(projected, SimpleNamespace(contents={path: content for path in registry}),
+                                     registry, normalizer, NOW)
+    assert list(projected.iterdir()) == []
+
+
 def test_worker_projection_checks_all_files_before_copy_and_rejects_policy_drift(tmp_path):
     _, _, normalizer, _root, registry, _ = setup_guard(tmp_path)
     first = registry["fixture/code.py"]

@@ -28,7 +28,9 @@ from ..work.repository_sandbox import DockerGVisorSandbox
 from ..work.worker_candidate import (
     MAX_WORKER_DEPTH,
     MAX_WORKER_DIRECTORIES,
+    MAX_WORKER_FILE_BYTES,
     MAX_WORKER_FILES,
+    MAX_WORKER_TOTAL_BYTES,
     freeze_stopped_worker,
 )
 from .harness_trace import TraceNormalizer, _canonical
@@ -239,11 +241,18 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
         guard._check_roots()
         # Authorize the entire projection before writing any worker-visible bytes.
         projected = {}
+        total_bytes = 0
         for path, admission in registry.items():
             worker_path(path)
             if not contract.permits_path(path):
                 raise ValueError("worker projection outside contract scope")
             data = base.contents.get(path)
+            if data is not None:
+                if not isinstance(data, bytes) or len(data) > MAX_WORKER_FILE_BYTES:
+                    raise ValueError("worker projection exceeds bounded file size")
+                total_bytes += len(data)
+                if total_bytes > MAX_WORKER_TOTAL_BYTES:
+                    raise ValueError("worker projection exceeds bounded total size")
             expected = admission.derived.content_digest if admission.derived else admission.content_digest
             if (content_digest(data) if data is not None else None) != expected:
                 raise ValueError("worker projection source identity mismatch")
