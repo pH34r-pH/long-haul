@@ -2743,6 +2743,27 @@
       "review_rule": "owner_authorized_admin_bypass",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6811236903",
       "remaining": "runtime workspace storage quota, private evaluator commitments, adversarial qualification and full issue acceptance"
+    },
+    {
+      "at": "2026-11-12T04:40:08Z",
+      "task": "lh-248-interchange",
+      "status": "preliminary_shacl_reference_guard_merged",
+      "pull_request": 266,
+      "checked_head": "e59e5f945f2a263bbf987e5c2d625303a8d85f00",
+      "merge_commit": "0eab8e30918e1bdbfbf2fe48d1937945f0b73424",
+      "review_rule": "owner_authorized_admin_bypass",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6814721157",
+      "remaining": "Native ODRL rules and constraints, lossless interchange, complete conformance, lifecycle and privacy semantics, and package projections remain unqualified; issue 248 remains open."
+    },
+    {
+      "at": "2026-11-12T04:40:09Z",
+      "task": "lh-245-security",
+      "status": "draft_quota_worker_stop_unqualified",
+      "pull_request": 265,
+      "checked_head": "a59361b495de7ecfbb6cd78af6ae8567863d53b0",
+      "failed_pi_gvisor_run": 43154563820,
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6814544824",
+      "remaining": "Qualify a fail-closed paused-worker stop without untrusted execution, distributed workspace fencing, private authority and the remaining adversarial profile; the draft is not admitted for private use."
     }
   ]
 }
