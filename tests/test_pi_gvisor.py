@@ -407,6 +407,16 @@ print(json.dumps({'kernel_freeze_confirmed': True, 'cgroup_kill_acknowledged': T
 """
 
 
+def _begin_synthetic_freeze(worker, guest):
+    worker._control("pause", guest)
+    info, = json.loads(worker._control("inspect", guest))
+    assert info["Id"] == guest and info["State"]["Paused"] is True
+    return subprocess.Popen(["sudo", "-n", "python3", "-c", _HOSTED_CGROUP_KILL,
+                             str(info["State"]["Pid"]), guest, "capture"],
+                            env=_control_environment(), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                            stderr=subprocess.DEVNULL, text=True)
+
+
 def _hosted_frozen_holder_capture(worker, guest, holder):
     """Observe a synthetic writer before and during a bounded kernel freeze."""
     before = copy_docker_workspace(worker.docker_path, holder, 15)["fixture/clock"]
@@ -417,13 +427,7 @@ def _hosted_frozen_holder_capture(worker, guest, holder):
         time.sleep(.1)
     else:
         raise AssertionError("synthetic writer did not advance before freeze")
-    worker._control("pause", guest)
-    info, = json.loads(worker._control("inspect", guest))
-    assert info["Id"] == guest and info["State"]["Paused"] is True
-    process = subprocess.Popen(["sudo", "-n", "python3", "-c", _HOSTED_CGROUP_KILL,
-                                str(info["State"]["Pid"]), guest, "capture"],
-                               env=_control_environment(), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                               stderr=subprocess.DEVNULL, text=True)
+    process = _begin_synthetic_freeze(worker, guest)
     try:
         assert select.select([process.stdout], [], [], 20)[0]
         assert json.loads(process.stdout.readline()).get("kernel_freeze_confirmed") is True
@@ -448,14 +452,7 @@ def _hosted_frozen_holder_capture(worker, guest, holder):
 
 def _synthetic_kernel_capture(worker, view, guest, holder, holder_profile):
     """Hosted-only experiment, not a privileged production capture authority."""
-    worker._control("pause", guest)
-    view._check(paused=True)
-    info, = json.loads(worker._control("inspect", guest))
-    assert info["Id"] == guest and info["State"]["Paused"] is True
-    process = subprocess.Popen(["sudo", "-n", "python3", "-c", _HOSTED_CGROUP_KILL,
-                                str(info["State"]["Pid"]), guest, "capture"],
-                               env=_control_environment(), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                               stderr=subprocess.DEVNULL, text=True)
+    process = _begin_synthetic_freeze(worker, guest)
     try:
         assert select.select([process.stdout], [], [], 20)[0]
         assert json.loads(process.stdout.readline()).get("kernel_freeze_confirmed") is True
