@@ -28,6 +28,8 @@ ODRL AI Vocabulary and DPV 2.0 are Community Group outputs, not W3C Recommendati
 
 The reviewed ODRL AI working-draft source is pinned at commit `a4da7f9b42b2c5b02eff2aa644d9180b6e272ad2`; the [source manifest](../contracts/resource-policy/odrl-ai-source-pin.json) records the exact upstream paths and SHA-256 hashes. Run `python scripts/verify_odrl_ai_source.py --source-dir <download-directory>` against the two original upstream files to verify the pin without contacting the network. The pinned HTML describes the actions, but its accompanying Turtle file is a TODO skeleton. The pin is evidence of the source reviewed, not an executable ontology or a qualified interchange mapping. Upgrades require reviewing the source and action hierarchy again.
 
+The DPV 2.0 release source is pinned in the [DPV manifest](../contracts/resource-policy/dpv-source-pin.json). Run `python scripts/verify_dpv_source.py --source <downloaded-dpv.ttl>` to verify locally supplied bytes without network access. This checks source identity only; it does not validate privacy statements, consent, legal basis, or the unfinished interchange mapping.
+
 To obtain the exact source once and then verify it offline:
 
 ```sh

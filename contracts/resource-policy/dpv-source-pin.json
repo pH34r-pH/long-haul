@@ -1,0 +1,12 @@
+{
+  "specification": "W3C Data Privacy Vocabulary 2.0",
+  "status": "Community Group Final Report; not a W3C Recommendation",
+  "report": "https://www.w3.org/community/reports/dpvcg/CG-FINAL-dpv-20240801/",
+  "repository": "https://github.com/w3c-cg/dpv",
+  "tag": "dpv-2.0",
+  "commit": "0849628c56408676a7bbb26d2f5a239f22297bf3",
+  "upstream_path": "2.0/dpv/dpv.ttl",
+  "sha256": "3191f7a90b97487eba8f10ac609f8d8d18910b38ccd38f9bf097646e3f414bd2",
+  "namespace": "https://w3id.org/dpv#",
+  "representation": "RDFS/SKOS Turtle release"
+}
