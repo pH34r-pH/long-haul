@@ -110,6 +110,22 @@ def test_recovery_retains_scratch_with_unresolved_evaluator_candidate(tmp_path, 
     assert len(docker.containers) == 2 and docker.volume is not None
 
 
+def test_recovery_refuses_oversized_scratch_before_docker_mutation(tmp_path, monkeypatch):
+    from long_haul.adapters import pi_workspace_cleanup
+
+    root, intent, docker = setup(tmp_path)
+    fence = LocalWorkspaceFence(root, intent.token, intent.fingerprint)
+    monkeypatch.setattr(pi_workspace_cleanup, "MAX_SCRATCH_INSPECTION_NODES", 2)
+    with pytest.raises(WorkspaceCleanupRequired), fence.launch() as grant:
+        scratch = grant.scratch_root()
+        (scratch / "file-one").write_text("fixture")
+        (scratch / "file-two").write_text("fixture")
+        with pytest.raises(WorkspaceCleanupRequired):
+            grant.cleanup(docker)
+        assert not any(call[0] == "rm" or call[:2] == ("volume", "rm") for call in docker.calls)
+    assert scratch.is_dir() and (root / "active.json").exists()
+
+
 @pytest.mark.parametrize("change", ["daemon", "worker-label", "holder-label", "volume-label", "volume-options", "fingerprint"])
 def test_recovery_refuses_foreign_or_unadmitted_objects_before_mutation(tmp_path, change):
     root, intent, docker = setup(tmp_path)

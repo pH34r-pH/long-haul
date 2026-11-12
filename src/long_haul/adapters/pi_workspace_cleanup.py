@@ -21,6 +21,7 @@ from .pi_workspace_intent import (
 )
 
 _CONTAINER = re.compile(r"[0-9a-f]{64}\Z")
+MAX_SCRATCH_INSPECTION_NODES = 4096
 
 
 class WorkspaceCleanupRequired(RuntimeError):
@@ -112,12 +113,15 @@ def _admitted_scratch(directory, intent):
 
 def _reject_evaluator_candidates(scratch, budget=None, depth=0):
     if budget is None:
-        budget = [4096]
+        budget = [MAX_SCRATCH_INSPECTION_NODES]
     if depth > 128 or budget[0] <= 0 or os.fstat(scratch).st_uid != os.geteuid():
         raise ValueError("workspace scratch cannot be safely inspected")
     budget[0] -= 1
     with os.scandir(scratch) as entries:
         for entry in entries:
+            budget[0] -= 1
+            if budget[0] < 0:
+                raise ValueError("workspace scratch inspection budget exceeded")
             if entry.name.startswith(EVALUATOR_CANDIDATE_PREFIX):
                 raise ValueError("workspace contains an unresolved evaluator candidate")
             if entry.is_dir(follow_symlinks=False):
