@@ -19,6 +19,15 @@ def evidence_packet_digest(packet):
     return content_digest(canonical_json(packet.model_dump(mode="json")).encode())
 
 
+@dataclass(frozen=True, repr=False)
+class PublicSummaryIdentifiers:
+    """Identifiers independently classified as public by trusted control."""
+
+    contract_id: str
+    attempt_id: str
+    predicate_ids: frozenset[str]
+
+
 @dataclass(frozen=True)
 class PublicEvidenceAdmission:
     """Control registry entry for an entire explicitly public packet."""
@@ -27,6 +36,7 @@ class PublicEvidenceAdmission:
     expected_policy_fingerprint: str
     request: object = field(repr=False)
     expected_request_fingerprint: str
+    summary_identifiers: PublicSummaryIdentifiers | None = field(default=None, repr=False)
 
     def authorize(self, packet, contract, profile, now):
         context = (evidence_packet_digest(packet), packet.evidence.attempt_id, packet.evidence.contract_id,
@@ -37,6 +47,11 @@ class PublicEvidenceAdmission:
         context = (evidence_packet_digest(summary), summary.attempt_id, summary.contract_id,
                    "public-evaluator-summary")
         self._authorize(context, contract, profile, now)
+        admitted = self.summary_identifiers
+        if (type(admitted) is not PublicSummaryIdentifiers or type(admitted.predicate_ids) is not frozenset
+                or admitted.contract_id != summary.contract_id or admitted.attempt_id != summary.attempt_id
+                or admitted.predicate_ids != frozenset(check.predicate_id for check in summary.checks)):
+            raise PermissionError("public evidence requires exact identifier classification")
 
     def _authorize(self, context, contract, profile, now):
         request = self.request

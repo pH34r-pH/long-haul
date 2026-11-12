@@ -83,7 +83,7 @@ class PrivateEvidenceCheck(FrozenProjection):
 
 
 class PrivateEvidenceSummary(FrozenProjection):
-    """Public-safe summary; detailed private observations stay with the caller's sink."""
+    """Redacted summary; public disclosure also requires admitted identifier classification."""
 
     schema_version: Literal[2] = 2
     profile: Literal["repository-evidence-private-v2"] = "repository-evidence-private-v2"

@@ -41,6 +41,8 @@ Wall time and combined stdout/stderr are bounded. Timeout/output exhaustion trig
 
 Only content digests and bounded metadata enter the public packet; sealed stdin, expected output, raw stdout/stderr and credentials do not. `repository_evidence_event` writes the packet through the existing append-only EventStore. Failed/invalid attempts are retained the same way as successful attempts. The checked-in JSON Schemas allow Compiler to pin and package these records without another evidence store.
 
+The experimental private-summary path retains contract, attempt and predicate identifiers in its redacted payload. Before emitting a public event, trusted control must independently classify the exact identifiers as public and provide that classification along with exact-summary distribution admission. This is not automated secret detection: a mistaken or self-asserted classification can still disclose sensitive identifiers, so production classification and adversarial publication qualification remain open. Raw private evidence remains in its separately admitted private sink.
+
 The synthetic arithmetic cases are conformance fixtures, not private held-out benchmarks or evidence of agent competence. Preventing all evaluator detection is not guaranteed: filesystem/resource differences can be observed. Qualification omits evaluator-only markers, includes rotated inputs and an adversarial marker/tool-shadow test, and retains this limitation. Scientific benchmark validity and corpus contamination require #64/#246 protocols and independent evidence.
 
 ## Reproduce

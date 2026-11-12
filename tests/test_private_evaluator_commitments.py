@@ -30,6 +30,7 @@ from long_haul.work.repository_evaluator import (
 )
 from long_haul.work.repository_evidence_admission import (
     PublicEvidenceAdmission,
+    PublicSummaryIdentifiers,
     evidence_packet_digest,
 )
 from long_haul.work.repository_models import DigestReference, content_digest
@@ -88,7 +89,10 @@ def summary_admission(contract, evaluator, summary):
         contract_id=contract.contract_id, mission_id=contract.mission_id,
         repository_id=contract.repository_work.source.repository_id, now=datetime.now(UTC) - timedelta(seconds=1),
     )
-    return PublicEvidenceAdmission(policy, policy.fingerprint, request, request.fingerprint)
+    # Synthetic fixture identifiers are separately treated as public test data.
+    identifiers = PublicSummaryIdentifiers(contract.contract_id, summary.attempt_id,
+                                           frozenset({"public", "sealed", "scope", "inspect"}))
+    return PublicEvidenceAdmission(policy, policy.fingerprint, request, request.fingerprint, identifiers)
 
 
 def test_sealed_commitment_is_stable_private_and_not_an_enumeration_oracle():
@@ -201,6 +205,32 @@ def test_private_evaluation_redacts_hidden_output_and_rejects_raw_public_event(t
     assert "[-5, 2]" not in public and content_digest(b"-3\n") not in public
     assert snapshot.candidate.fingerprint not in public and private.task.digest not in public
     assert private.check_fingerprint(private.checks[1]) in public
+
+
+def test_private_summary_requires_independently_classified_identifiers(tmp_path):
+    _, private, contract, snapshot, runner = private_evaluation_fixture(tmp_path)
+    packets = []
+    summary, _ = runner.evaluate_private(
+        contract, snapshot, private, attempt_id="private-attempt", packet_id="private-packet",
+        private_sink=evidence_admission(contract, private, "private-attempt", packets.append),
+    )
+    admission = summary_admission(contract, private, summary)
+    identifiers = admission.summary_identifiers
+    for invalid in (None, replace(identifiers, contract_id="other"), replace(identifiers, attempt_id="other"),
+                    replace(identifiers, predicate_ids=frozenset({"public", "sealed", "scope"}))):
+        with pytest.raises(PermissionError, match="identifier classification"):
+            private_repository_evidence_event(summary, contract=contract, packet=packets[0],
+                                              candidate=snapshot.candidate, profile=private,
+                                              admission=replace(admission, summary_identifiers=invalid))
+    private_repository_evidence_event(summary, contract=contract, packet=packets[0],
+                                      candidate=snapshot.candidate, profile=private, admission=admission)
+    secret_check = summary.checks[0].model_copy(update={"predicate_id": "synthetic-private-canary"})
+    canary = summary.model_copy(update={"checks": (secret_check, *summary.checks[1:])})
+    canary_policy = admission.policy.model_copy(deep=True)
+    canary_policy.identity.content_digest = evidence_packet_digest(canary)
+    canary_admission = replace(admission, policy=canary_policy, expected_policy_fingerprint=canary_policy.fingerprint)
+    with pytest.raises(PermissionError, match="identifier classification"):
+        canary_admission.authorize_summary(canary, contract, private, datetime.now(UTC))
 
 
 def test_private_evidence_admission_fails_closed_on_denial_and_revocation(tmp_path):
