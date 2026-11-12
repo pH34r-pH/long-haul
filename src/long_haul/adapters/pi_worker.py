@@ -283,6 +283,7 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
                 for action in (ResourceAction.READ, ResourceAction.AI_AUGMENT):
                     guard._policy(parents, action, now, request_class="projection")
             projected[path] = data
+        guard.remember_projected_inputs()
         return projected
 
     @staticmethod

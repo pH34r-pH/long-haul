@@ -97,6 +97,20 @@ def test_worker_projection_admits_current_read_and_model_policy(tmp_path):
     assert (projected / "fixture/code.py").read_bytes() == b"before\n"
 
 
+def test_conflicting_projected_policies_deny_before_any_bytes_are_written(tmp_path):
+    _, _, normalizer, _, registry, _ = setup_guard(tmp_path)
+    first = registry["fixture/code.py"]
+    changed = first.profile.model_copy(deep=True)
+    changed.permissions[0].actions = [action for action in changed.permissions[0].actions if action != ResourceAction.DERIVE]
+    registry["fixture/second.py"] = replace(first, profile=changed, expected_policy_fingerprint=changed.fingerprint)
+    projected = tmp_path / "projected"
+    projected.mkdir()
+    base = SimpleNamespace(contents={"fixture/code.py": b"before\n", "fixture/second.py": b"before\n"})
+    with pytest.raises(TraceAdmissionDenied, match="conflicting parent identity"):
+        DockerGVisorPiWorker._project(projected, base, registry, normalizer, NOW)
+    assert list(projected.iterdir()) == []
+
+
 def test_worker_projection_rejects_oversized_file_before_copy(tmp_path):
     content = b"x" * (1048576 + 1)
     _, _, normalizer, _, registry, _ = setup_guard(tmp_path, content=content)

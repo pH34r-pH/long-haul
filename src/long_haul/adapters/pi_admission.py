@@ -151,6 +151,15 @@ class PiToolAdmission:
                 raise TraceAdmissionDenied("conflicting parent identity")
             seen[resource] = fingerprint
 
+    def remember_projected_inputs(self):
+        """Treat all projected bytes as exposed, even without a native read event."""
+        parents = tuple(parent for admission in self.registry.values()
+                        for binding in (admission.derived or admission,)
+                        if binding.content_digest is not None
+                        for parent in self._parents(binding))
+        self._check_input_parents(parents)
+        self._inputs.update({parent.profile.identity.resource_id: parent for parent in parents})
+
     def authorize(self, record: dict, root: Path, now: datetime) -> ToolAdmissionReceipt:
         self._exact_contract()
         request = self._guard_request(record)

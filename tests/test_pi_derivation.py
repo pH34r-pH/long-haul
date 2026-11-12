@@ -12,7 +12,9 @@ from long_haul.adapters.pi_admission import (
     PiToolAdmission,
     WorkerPolicyBinding,
     WorkerPromptAdmission,
+    WorkerResourceAdmission,
 )
+from long_haul.adapters.pi_harness import PiCodingHarness
 from long_haul.resource_policy import ResourceLifecycle
 from long_haul.work.repository_models import content_digest
 
@@ -80,6 +82,36 @@ def test_conflicting_prompt_policy_for_same_resource_is_not_overwritten(tmp_path
     with pytest.raises(TraceAdmissionDenied, match="conflicting parent identity"):
         guard.admit_prompt(admitted(original), "fingerprint", NOW)
     assert guard._inputs[restricted.identity.resource_id].expected_policy_fingerprint == restricted.fingerprint
+
+
+@pytest.mark.parametrize("content", [b"restricted\n", b""])
+def test_unread_projected_file_still_restricts_derived_writes(tmp_path, content):
+    _, attempt, normalizer, root, registry, _ = setup_guard(tmp_path)
+    restricted = registry["fixture/code.py"].profile.model_copy(deep=True)
+    restricted.identity.resource_id = "urn:fixture:unread-projected"
+    restricted.identity.content_digest = content_digest(content)
+    restricted.permissions[0].actions = [action for action in restricted.permissions[0].actions if action.value != "derive"]
+    (root / "fixture/unread.py").write_bytes(content)
+    registry["fixture/unread.py"] = WorkerResourceAdmission(restricted, restricted.fingerprint,
+                                                            restricted.identity.content_digest)
+    harness = PiCodingHarness(normalizer, registry, root, lambda _: None, lambda: None, lambda _: "task")
+    operation = start("write-unread", "write", {"path": "fixture/code.py", "content": "changed"})
+    harness.guard.start(operation)
+    with pytest.raises(TraceAdmissionDenied):
+        harness.guard.authorize(request(attempt, operation, ui="write-unread"), root, NOW)
+
+
+def test_absent_projected_path_is_not_counted_as_exposed_input(tmp_path):
+    _, attempt, normalizer, root, registry, _ = setup_guard(tmp_path)
+    absent = registry["fixture/code.py"].profile.model_copy(deep=True)
+    absent.identity.resource_id = "urn:fixture:not-projected"
+    absent.identity.content_digest = None
+    absent.permissions[0].actions = [action for action in absent.permissions[0].actions if action.value != "derive"]
+    registry["fixture/absent.py"] = WorkerResourceAdmission(absent, absent.fingerprint, None)
+    harness = PiCodingHarness(normalizer, registry, root, lambda _: None, lambda: None, lambda _: "task")
+    operation = start("write-absent", "write", {"path": "fixture/code.py", "content": "changed"})
+    harness.guard.start(operation)
+    assert harness.guard.authorize(request(attempt, operation, ui="write-absent"), root, NOW)
 
 
 def test_final_projection_rejects_direct_mutation_and_revoked_derivation(tmp_path):

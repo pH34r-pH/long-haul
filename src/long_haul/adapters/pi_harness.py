@@ -36,6 +36,7 @@ class PiCodingHarness:
         self.identity = normalizer.attempt.harness
         self.projector = PiTrajectoryProjector(normalizer, max_pending=1)
         self.guard = PiToolAdmission(normalizer, registry)
+        self.guard.remember_projected_inputs()
         self.worker, self.send, self.receive, self.prompt = worker, send, receive, prompt
         self.clock = lambda: datetime.now(UTC)
         # Trusted executor owns the lifetime and consistency of each view.
