@@ -130,6 +130,43 @@ def test_worker_projection_copies_the_exact_checked_bytes(tmp_path):
     assert (projected / "fixture/code.py").read_bytes() == b"before\n"
 
 
+def test_worker_rejects_directory_flood_before_copy_or_candidate_scan(tmp_path):
+    _, _, normalizer, root, registry, _ = setup_guard(tmp_path)
+    projected = tmp_path / "projected"
+    projected.mkdir()
+    source = registry["fixture/code.py"]
+    registry.update({f"fixture/d{index}/code.py": source for index in range(256)})
+    base = SimpleNamespace(contents={"fixture/code.py": b"before\n"})
+    with pytest.raises(ValueError, match="bounded target count"):
+        DockerGVisorPiWorker._project(projected, base, registry, normalizer, NOW)
+    assert list(projected.iterdir()) == []
+    for index in range(256):
+        (root / f"empty-{index}").mkdir()
+    with pytest.raises(ValueError, match="bounded directory count"):
+        regular_contents(root)
+
+
+def test_worker_rejects_excessive_directory_depth_before_copy(tmp_path):
+    _, _, normalizer, _, registry, _ = setup_guard(tmp_path)
+    projected = tmp_path / "projected"
+    projected.mkdir()
+    registry["fixture/" + "d/" * 64 + "code.py"] = registry["fixture/code.py"]
+    with pytest.raises(ValueError, match="bounded directory depth"):
+        DockerGVisorPiWorker._project(projected, SimpleNamespace(contents={}), registry, normalizer, NOW)
+    assert list(projected.iterdir()) == []
+
+
+def test_worker_projection_rejects_excessive_distinct_directories(tmp_path):
+    _, _, normalizer, _, registry, _ = setup_guard(tmp_path)
+    projected = tmp_path / "projected"
+    projected.mkdir()
+    for index in range(5):
+        registry[f"fixture/tree{index}/" + "d/" * 60 + "code.py"] = registry["fixture/code.py"]
+    with pytest.raises(ValueError, match="bounded directory count"):
+        DockerGVisorPiWorker._project(projected, SimpleNamespace(contents={}), registry, normalizer, NOW)
+    assert list(projected.iterdir()) == []
+
+
 @pytest.mark.parametrize("change", ["attempt_id", "session_id", "toolCallId", "toolName", "args"])
 def test_guard_cannot_confirm_another_operation(tmp_path, change):
     _, attempt, _, root, _, guard = setup_guard(tmp_path)

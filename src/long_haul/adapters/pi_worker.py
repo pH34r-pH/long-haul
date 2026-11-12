@@ -25,7 +25,12 @@ from ..work.repository_candidate import CandidateSnapshot
 from ..work.repository_evaluation_models import EvaluatorEnvironment
 from ..work.repository_models import DigestReference, content_digest
 from ..work.repository_sandbox import DockerGVisorSandbox
-from ..work.worker_candidate import freeze_stopped_worker
+from ..work.worker_candidate import (
+    MAX_WORKER_DEPTH,
+    MAX_WORKER_DIRECTORIES,
+    MAX_WORKER_FILES,
+    freeze_stopped_worker,
+)
 from .harness_trace import TraceNormalizer, _canonical
 from .pi_admission import (
     PiToolAdmission,
@@ -64,6 +69,19 @@ class PiWorkerRequest:
     prompt_admission: WorkerPromptAdmission
     cancel_after: float | None = None
     event_store: EventStore | None = field(default=None, repr=False)
+
+
+def _check_projection_bounds(registry):
+    if len(registry) > MAX_WORKER_FILES:
+        raise ValueError("worker projection exceeds bounded target count")
+    directories = set()
+    for path in registry:
+        parts = worker_path(path).split("/")
+        if len(parts) > MAX_WORKER_DEPTH:
+            raise ValueError("worker projection exceeds bounded directory depth")
+        directories.update("/".join(parts[:index]) for index in range(1, len(parts)))
+        if len(directories) > MAX_WORKER_DIRECTORIES:
+            raise ValueError("worker projection exceeds bounded directory count")
 
 
 def _prepare_control(root, attempt, tools, synthetic):
@@ -207,6 +225,7 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
     @staticmethod
     def _project(worker, base, registry, normalizer, now):
         contract = normalizer.contract
+        _check_projection_bounds(registry)
         guard = PiToolAdmission(normalizer, registry)
         guard._exact_contract()
         guard._check_roots()
