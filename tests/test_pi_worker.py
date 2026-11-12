@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import time
+from contextlib import contextmanager
 from dataclasses import replace
 from datetime import timedelta
 from types import SimpleNamespace
@@ -314,6 +315,55 @@ def test_real_adapter_refuses_forged_success_without_interlock_receipt(tmp_path)
     harness.poll(NOW, 1)
     harness.poll(NOW, 2)
     assert harness.projector.state.terminal == "policy_denied"
+
+
+@pytest.mark.skipif(os.name != "posix", reason="worker filesystem inspection requires POSIX metadata")
+def test_native_interlocks_use_executor_owned_workspace_views(tmp_path):
+    _, attempt, normalizer, root, registry, _ = setup_guard(tmp_path)
+    view = tmp_path / "trusted-snapshot"
+    (view / "fixture").mkdir(parents=True)
+    (view / "fixture/code.py").write_bytes(b"before\n")
+    (root / "fixture/code.py").write_bytes(b"untrusted-live-content")
+    lifecycle, sent = [], []
+
+    @contextmanager
+    def workspace_view():
+        lifecycle.append("enter")
+        try:
+            yield view
+        finally:
+            lifecycle.append("exit")
+
+    records = iter([start(), request(attempt), end()])
+    harness = PiCodingHarness(normalizer, registry, root, sent.append, lambda: next(records), lambda _: "task")
+    harness.workspace_view = workspace_view
+    harness.start(attempt)
+    harness._native_session = "synthetic"
+    harness._prompt_acknowledged = True
+    for tick in range(1, 4):
+        harness.poll(NOW, tick)
+    assert harness.projector.state.terminal is None
+    assert sent[-1]["confirmed"] is True
+    assert lifecycle == ["enter", "exit"] * 3
+
+
+def test_workspace_view_failure_denies_native_confirmation(tmp_path):
+    _, attempt, normalizer, root, registry, _ = setup_guard(tmp_path)
+    sent = []
+    harness = PiCodingHarness(normalizer, registry, root, sent.append, lambda: request(attempt), lambda _: "task")
+
+    @contextmanager
+    def failed_view():
+        raise ValueError("snapshot unavailable")
+        yield  # pragma: no cover
+
+    harness.workspace_view = failed_view
+    harness.start(attempt)
+    harness._native_session = "synthetic"
+    harness._prompt_acknowledged = True
+    harness.poll(NOW, 1)
+    assert harness.projector.state.terminal == "protocol_error"
+    assert not any(item.get("confirmed") is True for item in sent)
 
 
 def test_nonreading_process_does_not_block_bounded_rpc_writes():

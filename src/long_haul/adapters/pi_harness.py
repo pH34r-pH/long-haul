@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -36,6 +37,8 @@ class PiCodingHarness:
         self.projector = PiTrajectoryProjector(normalizer, max_pending=1)
         self.guard = PiToolAdmission(normalizer, registry)
         self.worker, self.send, self.receive, self.prompt = worker, send, receive, prompt
+        # Trusted executor owns the lifetime and consistency of each view.
+        self.workspace_view = lambda: nullcontext(worker)
         self._started = False
         self._responses = {}
         self._native_session = None
@@ -126,29 +129,37 @@ class PiCodingHarness:
                 raise TraceArgumentsInvalid("native interlock arrived before prompt acknowledgement")
             if self.projector.state.cancel_requested:
                 raise TraceAdmissionDenied("cancelled attempt cannot admit another operation")
+        elif (kind.startswith("tool_execution") or kind in {"agent_start", "agent_settled"}) and not self._prompt_acknowledged:
+            raise TraceArgumentsInvalid("native execution arrived before admitted prompt acknowledgement")
+        if kind in {"extension_ui_request", "tool_execution_start", "tool_execution_end"}:
+            with self.workspace_view() as worker:
+                return self._workspace_record(record, now, tick, worker)
+        return self.projector.feed(record, now, tick)
+
+    def _workspace_record(self, record, now, tick, worker):
+        kind = record["type"]
+        if kind == "extension_ui_request":
             try:
-                self.guard.authorize(record, self.worker, now)
+                self.guard.authorize(record, worker, now)
             except Exception:
                 self.send({"type": "extension_ui_response", "id": record.get("id"), "confirmed": False})
                 raise
             self.send({"type": "extension_ui_response", "id": record["id"], "confirmed": True})
             return ()
-        if (kind.startswith("tool_execution") or kind in {"agent_start", "agent_settled"}) and not self._prompt_acknowledged:
-            raise TraceArgumentsInvalid("native execution arrived before admitted prompt acknowledgement")
         before = after = execution_admission = None
         if kind == "tool_execution_start":
             self.guard.start(record)
-            before = self._workspace_reference()
+            before = self._workspace_reference(worker)
         elif kind == "tool_execution_end":
-            execution_admission = self.guard.end(record, self.worker, now)
-            after = self._workspace_reference()
+            execution_admission = self.guard.end(record, worker, now)
+            after = self._workspace_reference(worker)
         return self.projector.feed(record, now, tick, candidate_before=before, candidate_after=after,
                                    execution_admission=execution_admission)
 
-    def _workspace_reference(self):
+    def _workspace_reference(self, worker):
         from ..work.repository_models import DigestReference, content_digest
         from .harness_trace import _canonical
-        files = {path: content_digest(data) for path, data in regular_contents(self.worker).items()}
+        files = {path: content_digest(data) for path, data in regular_contents(worker).items()}
         return DigestReference(reference="artifact:worker-observed-tree", digest=content_digest(_canonical(files)))
 
     def poll(self, now: datetime, monotonic_ns: int):
