@@ -585,11 +585,11 @@ def _synthetic_long_confirm_timeout(monkeypatch):
         original(root, attempt, tools, synthetic)
         guard = root / "guard.mjs"
         source = guard.read_text(encoding="utf-8")
-        if source.count("timeout: 5000") != 1:
+        if source.count("timeout: 15000") != 1:
             raise ValueError("unexpected synthetic guard source")
         root.chmod(0o755)
         guard.chmod(0o644)
-        guard.write_text(source.replace("timeout: 5000", "timeout: 15000"), encoding="utf-8")
+        guard.write_text(source.replace("timeout: 15000", "timeout: 30000"), encoding="utf-8")
         guard.chmod(0o444)
         root.chmod(0o555)
 
@@ -600,17 +600,42 @@ def test_hosted_synthetic_long_confirm_timeout(tmp_path, monkeypatch):
     """Unqualified test-only guard variant; its identity differs from the worker receipt."""
     if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
         pytest.skip("synthetic privileged experiment requires an ephemeral GitHub-hosted runner")
-    _record_synthetic_admission_latency(monkeypatch, "synthetic-timeout-15s")
+    _record_synthetic_admission_latency(monkeypatch, "synthetic-timeout-30s")
     _synthetic_long_confirm_timeout(monkeypatch)
     with quota_fixture(tmp_path, PLAN) as (worker, request, _, grant, _, _):
         monkeypatch.setattr(worker, "_capture_and_remove",
                             lambda view, guest, holder, hp: _synthetic_kernel_capture(worker, view, guest, holder, hp))
         result, events, snapshot = worker.run_bounded(request, grant)
         outcomes = [event.outcome.value for event in events if event.phase == "end"]
-        print(json.dumps({"qualification": "synthetic-guard-timeout-comparison", "timeout_ms": 15000,
+        print(json.dumps({"qualification": "synthetic-guard-timeout-comparison", "timeout_ms": 30000,
                           "control_identity_matches_receipt": False, "outcomes": outcomes}))
         assert result.terminal == "settled" and snapshot is not None and result.cleanup.process_tree_stopped
         assert outcomes == ["success", "success"] and b"a + b" in snapshot.contents["program.py"]
+
+
+def test_hosted_actual_guard_tolerates_bounded_slow_confirmation(tmp_path, monkeypatch):
+    """Use the receipt-bound guard, with a deliberate delay beyond the old limit."""
+    if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
+        pytest.skip("synthetic experiment requires an ephemeral GitHub-hosted runner")
+    original = PiCodingHarness._confirm
+    delays = []
+
+    def delayed(harness, record, now):
+        if not delays:
+            time.sleep(6)
+            delays.append(6)
+        return original(harness, record, now)
+
+    monkeypatch.setattr(PiCodingHarness, "_confirm", delayed)
+    with quota_fixture(tmp_path, PLAN) as (worker, request, _, grant, _, _):
+        monkeypatch.setattr(worker, "_capture_and_remove",
+                            lambda view, guest, holder, hp: _synthetic_kernel_capture(worker, view, guest, holder, hp))
+        result, events, snapshot = worker.run_bounded(request, grant)
+        assert delays == [6] and result.terminal == "settled" and snapshot is not None
+        assert [event.outcome.value for event in events if event.phase == "end"] == ["success", "success"]
+        assert b"a + b" in snapshot.contents["program.py"]
+    print(json.dumps({"qualification": "hosted-bound-guard-slow-confirmation", "delay_seconds": 6,
+                      "synthetic_provider": True, "privileged_test_capture": True}))
 
 
 def _assert_synthetic_capture_abort_thaws(pid, container):
