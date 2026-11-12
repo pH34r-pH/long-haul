@@ -92,3 +92,10 @@ def test_workspace_archive_bounds_trailing_bytes_and_rejects_truncation():
         read_workspace_archive(io.BytesIO(valid + b"\0" * MAX_ARCHIVE_BYTES))
     with pytest.raises(ValueError):
         read_workspace_archive(io.BytesIO(valid[:700]))
+
+
+def test_workspace_archive_rejects_corrupt_header_instead_of_treating_it_as_end():
+    raw = bytearray(archive_of([ROOT, ("./a", tarfile.REGTYPE, b"x")]))
+    raw[512] ^= 1  # Change the second header without updating its checksum.
+    with pytest.raises(ValueError, match="invalid header"):
+        read_workspace_archive(io.BytesIO(raw))

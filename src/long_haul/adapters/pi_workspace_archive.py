@@ -27,6 +27,7 @@ class _BoundedStream:
         self.stream = stream
         self.remaining = MAX_ARCHIVE_BYTES
         self.tail = b""
+        self.history = b""
         self.count = 0
 
     def read(self, size=-1):
@@ -38,7 +39,14 @@ class _BoundedStream:
         self.remaining -= len(data)
         self.count += len(data)
         self.tail = (self.tail + data)[-1024:]
+        self.history = (self.history + data)[-65536:]
         return data
+
+    def block_at(self, offset):
+        start = offset - (self.count - len(self.history))
+        if start < 0 or start + 512 > len(self.history):
+            raise ValueError("workspace archive terminator is unavailable")
+        return self.history[start:start + 512]
 
 
 def _entry_path(member):
@@ -118,6 +126,10 @@ def read_workspace_archive(stream):
         with tarfile.open(fileobj=bounded, mode="r|") as archive:
             for member in archive:
                 snapshot.accept(archive, member)
+            # tarfile treats an invalid subsequent header like end-of-archive.
+            # Confirm that its exact stopping block really is a zero block.
+            if bounded.block_at(archive.offset) != b"\0" * 512:
+                raise ValueError("workspace archive has an invalid header")
             # Drain the tar reader, including its internal read-ahead buffer.
             # Only zero padding may follow the first end-of-archive block.
             while padding := archive.fileobj.read(65536):
