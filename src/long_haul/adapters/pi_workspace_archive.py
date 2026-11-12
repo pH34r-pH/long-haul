@@ -102,6 +102,8 @@ class _Snapshot:
             parents = path.split("/")[:-1]
             if any("/".join(parents[:index]) in self.files for index in range(1, len(parents) + 1)):
                 raise ValueError("workspace archive nests an entry beneath a file")
+            if any("/".join(parents[:index]) not in self.directories for index in range(1, len(parents) + 1)):
+                raise ValueError("workspace archive omits a parent directory")
         return self.files
 
 

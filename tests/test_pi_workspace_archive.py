@@ -55,6 +55,7 @@ def test_workspace_archive_rejects_unsafe_entries(entry):
     [ROOT, ROOT],
     [ROOT, ("./a", tarfile.REGTYPE, b"x"), ("./a", tarfile.REGTYPE, b"y")],
     [ROOT, ("./a", tarfile.REGTYPE, b"x"), ("./a/b", tarfile.REGTYPE, b"y")],
+    [ROOT, ("./missing/a", tarfile.REGTYPE, b"x")],
 ])
 def test_workspace_archive_rejects_missing_root_duplicates_and_file_ancestors(entries):
     with pytest.raises(ValueError):
