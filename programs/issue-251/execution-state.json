@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-11T23:39:12.937221+00:00",
+    "updated_at": "2026-11-12T00:19:33.193134+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -186,12 +186,13 @@
           "baseline_commit": "6de4e4be835c92e5bdad35e284b81e9f51f92662",
           "local_scope": "projection admission and final candidate derivation; full security issue remains open",
           "last_merged_slice": {
-            "pull_request": 259,
-            "checked_head": "1f184671821ef1ae6f43c9577b07cb307b78537d",
-            "merge_commit": "54b63f2acd51e8c06a466deb977a4e2dacded4c8",
-            "pi_gvisor_run": 43120314453,
-            "evaluator_run": 43120314492,
-            "main_checks": "passed: CI 43121125353, Pi 43121125255, evaluator 43121125221, governance, requirements and Azure",
+            "pull_request": 261,
+            "checked_head": "a8e19f8b39232e09a024bf8076ab59a9a648f96c",
+            "merge_commit": "95d049f404623c3e7cd04f5c381e6b246ffe14f6",
+            "pi_gvisor_run": 43125505088,
+            "evaluator_run": 43125505041,
+            "initial_structural_failure": 43125327452,
+            "main_checks": "passed: CI 43126386184, Pi 43126386238, evaluator 43126386320, governance, requirements and Azure",
             "review_rule": "owner_authorized_admin_bypass",
             "issue": "open"
           }
@@ -2716,6 +2717,20 @@
       "review_rule": "owner_authorized_admin_bypass",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6809824685",
       "remaining": "private evaluator commitments, bounded workspace backing, remaining adversarial fixtures and full issue acceptance"
+    },
+    {
+      "at": "2026-11-12T00:19:33.193134+00:00",
+      "task": "lh-245-security",
+      "status": "bounded_worker_projection_and_scanning_merged",
+      "pull_request": 261,
+      "checked_head": "a8e19f8b39232e09a024bf8076ab59a9a648f96c",
+      "merge_commit": "95d049f404623c3e7cd04f5c381e6b246ffe14f6",
+      "pi_gvisor_run": 43125505088,
+      "evaluator_run": 43125505041,
+      "initial_structural_failure": 43125327452,
+      "review_rule": "owner_authorized_admin_bypass",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6810531501",
+      "remaining": "runtime workspace storage quota, private evaluator commitments, adversarial qualification and full issue acceptance"
     }
   ]
 }
