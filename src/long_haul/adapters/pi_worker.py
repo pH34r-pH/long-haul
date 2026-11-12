@@ -190,11 +190,8 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
             raise ValueError("Pi worker command differs from the trusted launcher")
         return info
 
-    def run(self, request: PiWorkerRequest):
-        """Synchronous bounded execution; no caller transcript or control secrets mount."""
-        if self._cleanup_pending:
-            raise PiWorkerCleanupRequired(self.recovery_path)
-        normalizer, registry = request.normalizer, request.registry
+    def _validate_request(self, request):
+        normalizer = request.normalizer
         contract, attempt = normalizer.contract, normalizer.attempt
         if contract.repository_work is None or contract.repository_work.sealed_evaluator is None:
             raise ValueError("repository worker requires an exact sealed evaluator")
@@ -209,6 +206,14 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
                 or contract.repository_work.toolchain != self.assets.toolchain_reference()
                 or attempt.harness != self.harness_identity(request.synthetic)):
             raise ValueError("unsupported or mismatched exact Pi worker attempt")
+
+    def run(self, request: PiWorkerRequest):
+        """Synchronous bounded execution; no caller transcript or control secrets mount."""
+        if self._cleanup_pending:
+            raise PiWorkerCleanupRequired(self.recovery_path)
+        self._validate_request(request)
+        normalizer, registry = request.normalizer, request.registry
+        attempt = normalizer.attempt
         control = Path(tempfile.mkdtemp(prefix="long-haul-pi-control-"))
         worker = Path(tempfile.mkdtemp(prefix="long-haul-pi-work-"))
         self._control_root = control
@@ -244,7 +249,7 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
         return self._recovery
 
     @staticmethod
-    def _project(worker, base, registry, normalizer, now):
+    def _authorized_projection(base, registry, normalizer, now):
         contract = normalizer.contract
         _check_projection_bounds(registry)
         guard = PiToolAdmission(normalizer, registry)
@@ -270,6 +275,11 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
                 for action in (ResourceAction.READ, ResourceAction.AI_AUGMENT):
                     guard._policy(parents, action, now, request_class="projection")
             projected[path] = data
+        return projected
+
+    @staticmethod
+    def _project(worker, base, registry, normalizer, now):
+        projected = DockerGVisorPiWorker._authorized_projection(base, registry, normalizer, now)
         worker.chmod(0o777)
         for path, data in projected.items():
             target = worker / path
@@ -355,13 +365,15 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
     def _drive(self, process, normalizer, registry, worker, prompt, cancel_after):
         wire = _Wire(process, self.environment.limits.max_output_bytes)
         harness = PiCodingHarness(normalizer, registry, worker, wire.send, wire.receive, prompt)
+        harness.workspace_view = getattr(self, "_workspace_view", harness.workspace_view)
         harness.start(normalizer.attempt)
         start = time.monotonic()
         duration = min(self.environment.limits.wall_seconds, normalizer.contract.budget.wall_seconds)
+        deadline = min(start + duration, getattr(self, "_execution_deadline", start + duration))
         try:
             while harness.projector.state.terminal is None:
                 now, tick = datetime.now(UTC), time.monotonic_ns()
-                if time.monotonic() - start >= duration:
+                if time.monotonic() >= deadline:
                     harness.projector.interrupt("cancelled" if harness.projector.state.cancel_requested else "timed_out", now, tick)
                     break
                 if cancel_after is not None and time.monotonic() - start >= cancel_after and not harness.projector.state.cancel_requested:

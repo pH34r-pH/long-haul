@@ -19,6 +19,7 @@ from repository_evaluator_fixture import PROGRAM, environment
 from test_private_evaluator_commitments import evidence_admission, summary_admission
 
 from long_haul.adapters.harness_trace import TraceAdmissionDenied, TraceNormalizer
+from long_haul.adapters.pi_quota_worker import QuotaPiWorker
 from long_haul.adapters.pi_rpc import pi_prompt
 from long_haul.adapters.pi_workspace_copy import copy_docker_workspace
 from long_haul.adapters.pi_workspace_fence import LocalWorkspaceFence
@@ -151,6 +152,27 @@ def test_actual_pi_repair_freezes_after_cleanup_then_independent_evaluator(tmp_p
     assert evaluation.disposition.value == "ACCEPTED" and packet.validity == "valid"
     assert list(scratch.iterdir()) == []
     print(json.dumps({"qualification": "independent-evaluation-after-actual-pi", "packet": packet.model_dump(mode="json")}))
+
+
+def test_actual_pi_uses_fenced_quota_workspace_and_reclaims_scratch(tmp_path):
+    worker, request, profile = worker_setup(tmp_path, PLAN, seconds=90, worker_type=QuotaPiWorker)
+    root = (tmp_path / "quota-recovery").resolve()
+    root.mkdir(mode=0o700)
+    intent = WorkspaceLeaseIntent.generate(request.normalizer.attempt.fingerprint, worker.environment.fingerprint,
+                                           worker._control("info", "--format", "{{.ID}}").strip())
+    persist_workspace_intent(root, intent)
+    with LocalWorkspaceFence(root, intent.token, intent.fingerprint).launch() as grant, ExitStack() as cleanup:
+        cleanup.callback(grant.cleanup, worker._control)
+        result, events, snapshot = worker.run_bounded(request, grant)
+        assert result.terminal == "settled" and snapshot is not None and result.cleanup.process_tree_stopped
+        assert [event.tool for event in events if event.phase == "end"] == ["read", "edit"]
+        assert b"a + b" in snapshot.contents["program.py"] and not worker.lease_releasable
+        sandbox = DockerGVisorSandbox(environment(), Path(os.environ["LONG_HAUL_RUNSC"]))
+        packet, evaluation = RepositoryEvaluationRunner(sandbox, scratch_root=grant.scratch_root()).evaluate(
+            request.normalizer.contract, snapshot, profile, attempt_id="quota-fixture", packet_id="quota-fixture")
+        assert packet.validity == "valid" and evaluation.disposition.value == "ACCEPTED"
+    assert worker.lease_releasable and not (root / (intent.token + ".scratch")).exists()
+    assert (root / (intent.token + ".cleanup.json")).is_file()
 
 
 def test_actual_pi_keyed_evaluator_has_no_sealed_output_in_public_event(tmp_path):

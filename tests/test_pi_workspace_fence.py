@@ -124,6 +124,20 @@ def test_owned_scratch_cleanup_does_not_follow_nested_symlink(tmp_path):
     assert not scratch.exists() and (outside / "keep").read_text() == "fixture"
 
 
+def test_recovery_reclaims_readonly_executor_scratch(tmp_path):
+    root, intent, docker = setup(tmp_path)
+    fence = LocalWorkspaceFence(root, intent.token, intent.fingerprint)
+    with pytest.raises(WorkspaceCleanupRequired), fence.launch() as grant:
+        scratch = grant.scratch_root()
+        readonly = scratch / "evaluator" / "nested"
+        readonly.mkdir(parents=True)
+        (readonly / "fixture").write_text("synthetic")
+        readonly.chmod(0o555)
+        readonly.parent.chmod(0o555)
+    assert fence.recover(docker).exists()
+    assert not scratch.exists()
+
+
 def test_scratch_with_missing_ownership_marker_is_not_removed(tmp_path):
     root, intent, docker = setup(tmp_path)
     fence = LocalWorkspaceFence(root, intent.token, intent.fingerprint)

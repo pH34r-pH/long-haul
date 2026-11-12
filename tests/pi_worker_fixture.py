@@ -88,14 +88,14 @@ def installed_assets():
                            DigestReference(reference="artifact:pi-acquisition", digest=content_digest(receipt_path.read_bytes())))
 
 
-def worker_setup(tmp_path, plan, *, seconds=20, private=False):
+def worker_setup(tmp_path, plan, *, seconds=20, private=False, worker_type=DockerGVisorPiWorker):
     assets = installed_assets()
     inherited = environment().model_dump()
     for key in ("image", "candidate_access", "toolchain"):
         inherited.pop(key)
     inherited["limits"]["wall_seconds"] = seconds
     inherited["limits"]["max_output_bytes"] = 262144
-    worker = DockerGVisorPiWorker(PiWorkerEnvironment(**inherited), Path(os.environ["LONG_HAUL_RUNSC"]), assets)
+    worker = worker_type(PiWorkerEnvironment(**inherited), Path(os.environ["LONG_HAUL_RUNSC"]), assets)
     root, base = repository(tmp_path)
     evaluator = profile(DockerGVisorSandbox.implementation_reference())
     if private:

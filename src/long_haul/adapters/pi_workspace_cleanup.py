@@ -69,6 +69,23 @@ def _objects(control, intent):
             _volume(control, intent.volume_name, intent.labels("volume"), intent.volume_options))
 
 
+def _prepare_scratch_tree(directory, budget, depth=0):
+    if depth > 64 or budget[0] <= 0:
+        raise ValueError("workspace scratch directory bound exceeded")
+    budget[0] -= 1
+    if os.fstat(directory).st_uid != os.geteuid():
+        raise ValueError("workspace scratch contains an unowned directory")
+    os.fchmod(directory, 0o700)
+    with os.scandir(directory) as entries:
+        for entry in entries:
+            if entry.is_dir(follow_symlinks=False):
+                child = os.open(entry.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
+                try:
+                    _prepare_scratch_tree(child, budget, depth + 1)
+                finally:
+                    os.close(child)
+
+
 def _remove_scratch(root, intent):
     """Delete only the intent's private scratch via symlink-resistant dirfd APIs."""
     if not shutil.rmtree.avoids_symlink_attacks:
@@ -89,6 +106,7 @@ def _remove_scratch(root, intent):
             payload = (intent.token + ":" + intent.fingerprint).encode("ascii")
             if not _matches(scratch, ".workspace-owner", payload):
                 raise ValueError("workspace scratch ownership is not admitted")
+            _prepare_scratch_tree(scratch, [4096])
         finally:
             os.close(scratch)
         shutil.rmtree(name, dir_fd=directory)

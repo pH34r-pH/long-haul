@@ -52,7 +52,7 @@ class WorkspaceFenceGrant:
         self._fence, self._directory, self._lock = fence, directory, lock
         self._pid, self._seed_digest, self._seeded = os.getpid(), None, False
         self._thread = threading.get_ident()
-        self._worker_started, self._closed = False, False
+        self._worker_started, self._closed, self._cleaned = False, False, False
 
     def _assert_current(self):
         if self._closed or os.getpid() != self._pid or threading.get_ident() != self._thread:
@@ -71,6 +71,19 @@ class WorkspaceFenceGrant:
     def belongs(self, root, token, fingerprint):
         self._assert_current()
         return (root, token, fingerprint) == (self._fence.root, self._fence.token, self._fence.fingerprint)
+
+    def binding(self):
+        self._assert_current()
+        intent = load_workspace_intent(self._fence.root, self._fence.token, self._fence.fingerprint)
+        return self._fence.root, intent
+
+    @property
+    def closed(self):
+        return self._closed
+
+    @property
+    def cleaned(self):
+        return self._cleaned
 
     def begin_seed(self, digest):
         self._assert_current()
@@ -115,6 +128,7 @@ class WorkspaceFenceGrant:
         self._assert_current()
         marker = recover_workspace_lease(self._fence.root, self._fence.token, self._fence.fingerprint, control, self)
         self._fence._clear_active(self._directory)
+        self._cleaned = True
         self._closed = True
         return marker
 
