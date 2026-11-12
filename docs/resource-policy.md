@@ -30,6 +30,8 @@ Runtime code uses the Pydantic projection in `long_haul.resource_policy`; no RDF
 
 The preliminary SHACL shape requires an explicitly typed ODRL policy at the linked policy URI. The current exporter does not produce that policy graph and therefore fails this check. Passing the shape alone does not establish that permissions, constraints, prohibitions, or other policy semantics are complete or safe to enforce.
 
+Install `contracts/resource-policy/test-requirements.txt` alongside the development dependencies to run the policy conformance tests locally.
+
 ## Local authority classes
 
 External rights and provenance vocabularies do not determine whether Long-Haul may interpret content as institutional control. The profile therefore adds a deliberately small operational class:
