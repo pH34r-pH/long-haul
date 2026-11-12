@@ -119,6 +119,8 @@ Policy profiles, caller identity, fulfilled-duty evidence, and time are admitted
 
 For optional crew, mission, contract, repository and audience context, a missing value is unknown unless authenticated control explicitly supplies the field name in `known_absent_context`. The evaluator returns `UNKNOWN` if an otherwise applicable prohibition cannot be ruled out because one of its required context values is unknown. A verified absence can rule out a prohibition requiring a value; the absence claim is included in the request fingerprint. An absence claim is not proof by itself: admission code must authenticate it and must not copy it from governed content or untrusted tool arguments. A field cannot be both present and asserted absent. Existing request fingerprints are unchanged when no absence claim is supplied, but decisions for incomplete context can become more restrictive. Retained decisions do not yet identify an exact evaluator implementation; consumers must not replay an old decision as proof of a new evaluation.
 
+For actions where purpose is optional, omitted or `None` purpose is unknown. A permission with no listed purposes applies only when authenticated control establishes that there is no purpose and includes `purpose` in `known_absent_context`; an unknown purpose cannot satisfy it. Likewise, a prohibition scoped to a purpose remains unresolved when purpose is unknown. Existing callers that intentionally perform a no-purpose operation, including deletion, must supply the authenticated absence claim; no resource or untrusted tool may assert it. Actions that require a purpose cannot use this absence claim.
+
 ## Enforcement boundary
 
 The intended control flow is:

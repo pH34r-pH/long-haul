@@ -317,9 +317,16 @@ class ResourceUseRequest(BaseModel):
     contract_id: str | None = None
     repository_id: str | None = None
     audience_id: str | None = None
-    known_absent_context: tuple[Literal["crew_id", "mission_id", "contract_id", "repository_id", "audience_id"], ...] = ()
+    known_absent_context: tuple[Literal["crew_id", "mission_id", "contract_id", "repository_id", "audience_id", "purpose"], ...] = ()
     fulfilled_duties: list[str] = Field(default_factory=list)
     now: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @field_validator("purpose")
+    @classmethod
+    def nonempty_purpose(cls, value):
+        if value is not None and not value.strip():
+            raise ValueError("purpose cannot be blank")
+        return value
 
     @field_validator("known_absent_context")
     @classmethod
