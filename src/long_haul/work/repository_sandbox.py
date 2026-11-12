@@ -185,7 +185,7 @@ class DockerGVisorSandbox:
         actual = (host["Runtime"], host["NetworkMode"], host["ReadonlyRootfs"], info["Config"]["User"],
                   host["Memory"], host["MemorySwap"], host["PidsLimit"], host["NanoCpus"], info["Image"],
                   "ALL" in [cap.upper() for cap in host.get("CapDrop", [])],
-                  any(s.startswith("no-new-privileges") for s in host.get("SecurityOpt", [])),
+                  host.get("SecurityOpt") in (["no-new-privileges"], ["no-new-privileges:true"]),
                   host.get("Tmpfs", {}), host.get("Privileged", False), host.get("PidMode", ""),
                   info["Config"]["AttachStdout"], info["Config"]["AttachStderr"], info["Config"]["OpenStdin"])
         expected = (self.environment.runtime, "none", True, "65534:65534", limits.memory_mib * 1048576,

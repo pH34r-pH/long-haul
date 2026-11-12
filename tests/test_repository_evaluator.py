@@ -273,6 +273,34 @@ def test_offline_schema_shapes_match_runtime_models():
         assert retained == expected
 
 
+@pytest.mark.parametrize(("security_opt", "allowed"), [
+    (["no-new-privileges"], True), (["no-new-privileges:true"], True),
+    (["no-new-privileges:false"], False), (["no-new-privileges=false"], False),
+    (["no-new-privileges-disabled"], False), (["no-new-privileges", "seccomp=unconfined"], False),
+])
+def test_sandbox_checks_exact_security_options(tmp_path, monkeypatch, security_opt, allowed):
+    from repository_evaluator_fixture import environment
+
+    adapter = DockerGVisorSandbox.__new__(DockerGVisorSandbox)
+    adapter.environment = environment()
+    adapter.image_id = "sha256:" + "a" * 64
+    limits = adapter.environment.limits
+    host = {"Runtime": adapter.environment.runtime, "NetworkMode": "none", "ReadonlyRootfs": True,
+            "Memory": limits.memory_mib * 1048576, "MemorySwap": limits.memory_mib * 1048576,
+            "PidsLimit": limits.pids, "NanoCpus": int(limits.cpus * 1000000000),
+            "CapDrop": ["ALL"], "SecurityOpt": security_opt, "Tmpfs": adapter._expected_tmpfs()}
+    info = {"HostConfig": host, "Mounts": [], "Image": adapter.image_id,
+            "Config": {"User": "65534:65534", "AttachStdout": True, "AttachStderr": True, "OpenStdin": True}}
+    monkeypatch.setattr(adapter, "_control", lambda *args: json.dumps([info]))
+    monkeypatch.setattr(adapter, "_verify_environment", lambda *_: None)
+    monkeypatch.setattr(adapter, "_verify_mounts", lambda *_: None)
+    if allowed:
+        assert adapter._verify_configuration("fixture", tmp_path) == info
+    else:
+        with pytest.raises(ValueError, match="containment configuration mismatch"):
+            adapter._verify_configuration("fixture", tmp_path)
+
+
 def test_failed_container_cleanup_remains_invalid_and_unresolved(tmp_path, monkeypatch):
     from repository_evaluator_fixture import environment
 
