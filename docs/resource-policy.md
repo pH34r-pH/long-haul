@@ -123,6 +123,8 @@ For actions where purpose is optional, omitted or `None` purpose is unknown. A p
 
 New policy decisions carry an evaluator identity derived from the policy source files and Python, Pydantic, and pydantic-core version strings. The evaluator refuses to produce a decision if those observed inputs differ from its import-time snapshot; derived decisions require all source decisions to have the same identity. Older decisions without this field remain explicitly unversioned and retain their legacy serialization. An identity is a content reference, not an attestation of loaded code, host integrity, package provenance, or authorization. Trusted control must independently admit the expected implementation and current input state; consumers must not treat a self-asserted identity or an old decision as proof of a new evaluation.
 
+The Pi/Nacre policy receipt projection carries the identity when present and preserves unversioned legacy receipts without inventing one. Projection alone does not verify the identity or enforce a policy decision; downstream admission must authenticate and compare it against trusted expectations before using the receipt.
+
 ## Enforcement boundary
 
 The intended control flow is:

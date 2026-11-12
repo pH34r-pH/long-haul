@@ -129,7 +129,16 @@ def test_build_context_binds_authoritative_work_identity():
     assert context.caller_context.evidence_ref == "event:caller-admitted-1"
     assert context.scopes == [PiNacreScope(scope_type="crew", scope_id="crew-1")]
     assert context.policy_decisions[0].status == "ALLOW"
+    assert context.policy_decisions[0].evaluator_implementation == ResourcePolicyEvaluator.implementation_reference()
+    assert json.loads(context.model_dump_json())["policy_decisions"][0]["evaluator_implementation"] == (
+        ResourcePolicyEvaluator.implementation_reference())
     assert context.capture_proposals is True
+
+
+def test_policy_receipt_preserves_legacy_unversioned_serialization():
+    legacy = policy_receipt().model_copy(update={"evaluator_implementation": None})
+    assert "evaluator_implementation" not in json.loads(legacy.model_dump_json())
+    assert "evaluator_implementation" in json.loads(policy_receipt().model_dump_json())
 
 
 def test_context_rejects_missing_crew_or_contract_mismatch():
