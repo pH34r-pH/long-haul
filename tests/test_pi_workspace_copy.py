@@ -47,6 +47,15 @@ def test_copy_rejects_valid_archive_if_subprocess_fails(tmp_path):
         copy_docker_workspace(tool, CONTAINER, 5)
 
 
+@pytest.mark.parametrize("chunk", [1, 17, 511])
+def test_copy_accepts_complete_archive_delivered_in_short_pipe_reads(tmp_path, chunk):
+    action = ("\nfor offset in range(0, len(data), " + str(chunk) + "):\n"
+              " sys.stdout.buffer.write(data[offset:offset+" + str(chunk) + "]); sys.stdout.flush()\n"
+              " if offset < 1536: time.sleep(0.001)")
+    tool = _stub(tmp_path, action=action)
+    assert copy_docker_workspace(tool, CONTAINER, 10) == {"file": b"fixture"}
+
+
 def test_copy_terminates_stalled_subprocess_at_deadline(tmp_path):
     tool = _stub(tmp_path, action="time.sleep(30)")
     start = time.monotonic()
