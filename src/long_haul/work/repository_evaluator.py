@@ -192,10 +192,13 @@ def _private_summary(packet, profile):
     ) for observed in packet.checks)
     return PrivateEvidenceSummary(
         contract_id=packet.evidence.contract_id, attempt_id=packet.evidence.attempt_id,
-        candidate_fingerprint=packet.candidate.fingerprint, task_fingerprint=profile.task.digest,
-        evaluator_fingerprint=profile.fingerprint, contract_fingerprint=packet.contract_fingerprint,
-        environment_fingerprint=packet.evaluator_environment.digest,
-        sandbox_fingerprint=packet.sandbox_implementation.digest, checks=checks, validity=packet.validity,
+        candidate_fingerprint=profile.binding_commitment("candidate", packet.candidate.fingerprint),
+        task_fingerprint=profile.binding_commitment("task", profile.task.digest),
+        evaluator_fingerprint=profile.fingerprint,
+        contract_fingerprint=profile.binding_commitment("contract", packet.contract_fingerprint),
+        environment_fingerprint=profile.binding_commitment("environment", packet.evaluator_environment.digest),
+        sandbox_fingerprint=profile.binding_commitment("sandbox", packet.sandbox_implementation.digest),
+        checks=checks, validity=packet.validity,
     )
 
 

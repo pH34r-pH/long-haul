@@ -85,6 +85,8 @@ def test_sealed_commitment_is_stable_private_and_not_an_enumeration_oracle():
     assert sealed.check_fingerprint(private.checks[1]) not in bare_checks
     assert sealed.fingerprint != PrivateEvaluatorProfile.from_profile(synthetic_profile(5), synthetic_keys(key)).fingerprint
     assert sealed.fingerprint != PrivateEvaluatorProfile.from_profile(private, synthetic_keys(b"different-test-key-at-least-32-bytes")).fingerprint
+    assert sealed.binding_commitment("candidate", "guessable") == replay.binding_commitment("candidate", "guessable")
+    assert sealed.binding_commitment("candidate", "guessable") != sealed.binding_commitment("task", "guessable")
     assert sealed.check_fingerprint(private.checks[-1]) != private.checks[-1].fingerprint
     assert private.checks[-1].requirement.description not in json.dumps(sealed.public_projection())
     guessed_inspection = {private.checks[-1].model_copy(update={"artifact_digest": content_digest(str(value).encode())}).fingerprint
@@ -161,6 +163,7 @@ def test_private_evaluation_redacts_hidden_output_and_rejects_raw_public_event(t
                                           candidate=snapshot.candidate, profile=rotated)
     public = summary.model_dump_json() + event.model_dump_json()
     assert "[-5, 2]" not in public and content_digest(b"-3\n") not in public
+    assert snapshot.candidate.fingerprint not in public and private.task.digest not in public
     assert private.check_fingerprint(private.checks[1]) in public
 
 

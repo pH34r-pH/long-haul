@@ -198,6 +198,15 @@ class PrivateEvaluatorProfile:
                           b"long-haul-private-observation-v2\0" + payload, hashlib.sha256).hexdigest()
         return "sha256:" + digest
 
+    def binding_commitment(self, domain, value):
+        """Create a domain-separated opaque binding without exposing a bare hash."""
+        if domain not in {"candidate", "task", "contract", "environment", "sandbox"}:
+            raise ValueError("unsupported private binding domain")
+        key_material = canonical_json([[name, self._keys[name].hex()] for name in sorted(self._keys)]).encode()
+        extracted = hmac.new(b"long-haul-private-binding-extract-v2", key_material, hashlib.sha256).digest()
+        payload = canonical_json([domain, value]).encode()
+        return "sha256:" + hmac.new(extracted, b"long-haul-private-binding-v2\0" + payload, hashlib.sha256).hexdigest()
+
     @property
     def fingerprint(self):
         value = self._profile.model_dump(mode="json", exclude={"checks"})
