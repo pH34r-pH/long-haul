@@ -8,6 +8,7 @@ from test_pi_workspace_cleanup import setup
 
 from long_haul.adapters import pi_quota_worker
 from long_haul.adapters.pi_quota_worker import QuotaPiWorker
+from long_haul.adapters.pi_worker import DockerGVisorPiWorker
 from long_haul.adapters.pi_workspace_cleanup import WorkspaceCleanupRequired
 from long_haul.adapters.pi_workspace_fence import LocalWorkspaceFence
 
@@ -68,3 +69,21 @@ def test_candidate_requires_matching_post_stop_snapshot(monkeypatch, changed):
     else:
         assert worker._capture_and_remove(view, "a" * 64, "b" * 64, object()) == {"a": b"before"}
         assert calls.index(("kill", "--signal=KILL", "a" * 64)) < calls.index(("remove",))
+
+
+@pytest.mark.parametrize("change", [
+    {"LogConfig": {"Type": "json-file"}},
+    {"RestartPolicy": {"Name": "always"}},
+    {"AutoRemove": True},
+])
+def test_quota_worker_rejects_uncontrolled_logs_or_restart(monkeypatch, change):
+    worker = object.__new__(QuotaPiWorker)
+    worker._quota_intent = SimpleNamespace(worker_name="fixture-worker", labels=lambda _: {"fixture": "bound"})
+    host = {"LogConfig": {"Type": "none"}, "RestartPolicy": {"Name": "no"}, "AutoRemove": False}
+    info = {"Name": "/fixture-worker", "Config": {"Labels": {"fixture": "bound"}}, "HostConfig": host}
+    monkeypatch.setattr(DockerGVisorPiWorker, "_verify_configuration", lambda *args: info)
+    monkeypatch.setattr(pi_quota_worker, "_verify_privileges", lambda _: None)
+    assert worker._verify_configuration("container", None) is info
+    host.update(change)
+    with pytest.raises(ValueError, match="identity"):
+        worker._verify_configuration("container", None)

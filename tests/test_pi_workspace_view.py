@@ -1,6 +1,7 @@
 """Host-owned workspace view tests; no claim of full worker isolation."""
 import json
 import os
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -40,11 +41,14 @@ def make_view(control, verify=lambda: None):
 
 
 @pytest.mark.skipif(os.name != "posix", reason="private view modes require POSIX filesystem semantics")
-def test_view_pauses_copies_and_holds_until_inspection_finishes(monkeypatch):
+def test_view_pauses_copies_and_holds_until_inspection_finishes(tmp_path, monkeypatch):
     control, checks = FakeControl(), []
     monkeypatch.setattr(pi_workspace_view, "copy_docker_workspace", lambda *_: {"dir/file": b"fixture"})
-    with make_view(control, lambda: checks.append(control.paused))() as root:
+    view = make_view(control, lambda: checks.append(control.paused))
+    view = replace(view, scratch_root=tmp_path)
+    with view() as root:
         assert control.paused and (root / "dir/file").read_bytes() == b"fixture"
+        assert root.parent == tmp_path
         assert root.stat().st_mode & 0o077 == 0
         assert (root / "dir/file").stat().st_mode & 0o077 == 0
     assert not root.exists() and not control.paused

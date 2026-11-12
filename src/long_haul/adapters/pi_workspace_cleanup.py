@@ -70,7 +70,7 @@ def _objects(control, intent):
 
 
 def _prepare_scratch_tree(directory, budget, depth=0):
-    if depth > 64 or budget[0] <= 0:
+    if depth > 128 or budget[0] <= 0:
         raise ValueError("workspace scratch directory bound exceeded")
     budget[0] -= 1
     if os.fstat(directory).st_uid != os.geteuid():

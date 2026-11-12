@@ -55,6 +55,7 @@ class PausedWorkspaceView:
     volume: str
     options: str
     verify: Callable = field(repr=False)
+    scratch_root: Path | None = field(default=None, repr=False)
 
     def __post_init__(self):
         options = _OPTIONS.fullmatch(self.options)
@@ -86,7 +87,7 @@ class PausedWorkspaceView:
         self._check(paused=True)
         files = copy_docker_workspace(self.docker_path, self.holder, 15)
         self._check(paused=True)
-        with tempfile.TemporaryDirectory(prefix="long-haul-workspace-view-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="long-haul-workspace-view-", dir=self.scratch_root) as temporary:
             root = Path(temporary)
             _materialize(root, files)
             yield root

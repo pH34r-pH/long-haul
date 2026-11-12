@@ -59,10 +59,11 @@ def _verify_configuration(info, intent, profile, holder_id, running):
     actual = (info["Id"], info["Name"], info["Image"], config["User"], config["Entrypoint"], config["Cmd"],
               state.get("Running"), state.get("Paused"), host["Runtime"], host["NetworkMode"], host["ReadonlyRootfs"],
               host["Memory"], host["MemorySwap"], host["PidsLimit"], host["NanoCpus"], host.get("Privileged", False),
-              host.get("PidMode", ""), host.get("Tmpfs") or {}, host.get("LogConfig", {}).get("Type"))
+              host.get("PidMode", ""), host.get("Tmpfs") or {}, host.get("LogConfig", {}).get("Type"),
+              host.get("RestartPolicy", {}).get("Name"), host.get("AutoRemove"))
     expected = (holder_id, "/" + intent.holder_name, profile.image_id, "65534:65534", ["/usr/local/bin/node"],
                 ["-e", _HOLDER_PROGRAM], running, False, "long-haul-gvisor", "none", True,
-                128 * 1048576, 128 * 1048576, 64, 500000000, False, "", {}, "none")
+                128 * 1048576, 128 * 1048576, 64, 500000000, False, "", {}, "none", "no", False)
     if (actual != expected or any(labels.get(key) != value for key, value in intent.labels("holder").items())
             or sorted(config.get("Env", [])) != sorted(profile.image_environment)):
         raise ValueError("workspace holder profile differs from admitted configuration")

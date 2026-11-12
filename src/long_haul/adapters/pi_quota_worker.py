@@ -100,8 +100,11 @@ class QuotaPiWorker(DockerGVisorPiWorker):
     def _verify_configuration(self, container, candidate):
         info = super()._verify_configuration(container, candidate)
         _verify_privileges(info["HostConfig"])
+        host = info["HostConfig"]
         labels = info["Config"].get("Labels") or {}
         if (info["Name"] != "/" + self._quota_intent.worker_name
+                or host.get("LogConfig", {}).get("Type") != "none"
+                or host.get("RestartPolicy", {}).get("Name") != "no" or host.get("AutoRemove") is not False
                 or any(labels.get(key) != value for key, value in self._quota_intent.labels("worker").items())):
             raise ValueError("quota Pi worker identity differs from its intent")
         return info
@@ -152,14 +155,14 @@ class QuotaPiWorker(DockerGVisorPiWorker):
         if time.monotonic() >= self._execution_deadline:
             raise TimeoutError("quota worker execution deadline exceeded")
 
-    def _view(self, container, projection, holder, holder_profile):
+    def _view(self, container, projection, holder, holder_profile, scratch):
         def verify():
             self._ensure_deadline()
             self._verify_configuration(container, projection)
             verify_workspace_holder(self._control, self._quota_intent, holder_profile, holder, running=True)
             self._ensure_deadline()
         return PausedWorkspaceView(self._control, self.docker_path, container, holder, self._quota_intent.volume_name,
-                                   self._quota_intent.volume_options, verify)
+                                   self._quota_intent.volume_options, verify, scratch)
 
     def _remove_exact(self, container):
         intent = self._quota_intent
@@ -195,7 +198,7 @@ class QuotaPiWorker(DockerGVisorPiWorker):
         if len(container) != 64 or any(char not in "0123456789abcdef" for char in container):
             raise ValueError("quota worker identity is invalid")
         self._verify_configuration(container, projection)
-        view = self._view(container, projection, holder, holder_profile)
+        view = self._view(container, projection, holder, holder_profile, grant.scratch_root())
         self._workspace_view = view
         files = None
         try:
