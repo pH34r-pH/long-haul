@@ -56,7 +56,7 @@ EVALUATOR_CANDIDATE_PREFIX = "long-haul-evaluator-"
 class SandboxCleanupRequired(RuntimeError):
     """Private recovery information; do not release the candidate or lease."""
 
-    def __init__(self, container_id: str, workspace: Path):
+    def __init__(self, container_id: str | None, workspace: Path):
         super().__init__("sandbox cleanup is unconfirmed; retain the workspace and lease")
         self.container_id = container_id
         self.workspace = workspace
@@ -252,9 +252,14 @@ class DockerGVisorSandbox:
         result = SandboxResult("invalid", diagnostic="sandbox_invalid", outputs_observed=False)
         removed = False
         try:
-            candidate_id = self._control(*self._create_arguments(candidate, command)).strip()
-            if len(candidate_id) != 64 or any(c not in "0123456789abcdef" for c in candidate_id):
-                raise ValueError("malformed sandbox container identity")
+            arguments = self._create_arguments(candidate, command)
+            try:
+                candidate_id = self._control(*arguments).strip()
+                if len(candidate_id) != 64 or any(c not in "0123456789abcdef" for c in candidate_id):
+                    raise ValueError("malformed sandbox container identity")
+            except BaseException:  # noqa: BLE001 -- creation may have happened even if the response was lost.
+                self._pending_cleanup = (None, Path(candidate))
+                raise SandboxCleanupRequired(*self._pending_cleanup) from None
             container = candidate_id
             self._verify_configuration(container, candidate)
             result = self._execute(container, command)

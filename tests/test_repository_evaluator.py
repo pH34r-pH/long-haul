@@ -360,6 +360,34 @@ def test_evaluator_reports_cleanup_only_after_exact_absence_census(tmp_path, mon
     assert ("container", "ls", "--all", "--no-trunc", "--filter", "id=" + "c" * 64, "--format", "{{.ID}}") in calls
 
 
+@pytest.mark.parametrize("outcome", ["error", "interrupted", "malformed"])
+def test_evaluator_retains_candidate_when_container_creation_is_ambiguous(tmp_path, monkeypatch, outcome):
+    _, work, snapshot, profile = setup(tmp_path, FixtureSandbox.identity)
+    scratch = tmp_path / "owned-scratch"
+    scratch.mkdir(mode=0o700)
+    sandbox = DockerGVisorSandbox.__new__(DockerGVisorSandbox)
+    sandbox.environment, sandbox.identity = profile.environment, FixtureSandbox.identity
+    sandbox.image_id = "sha256:" + "a" * 64
+
+    def control(*arguments):
+        assert arguments[0] == "create"
+        if outcome == "error":
+            raise subprocess.CalledProcessError(1, ["docker", "create"])
+        if outcome == "interrupted":
+            raise KeyboardInterrupt()
+        return "not-a-container-id"
+
+    monkeypatch.setattr(sandbox, "_control", control)
+    runner = RepositoryEvaluationRunner(sandbox, scratch_root=scratch)
+    with pytest.raises(SandboxCleanupRequired) as failure:
+        runner.evaluate(work, snapshot, profile, attempt_id="attempt-1", packet_id="packet-1")
+    assert failure.value.container_id is None and failure.value.lease_releasable is False
+    assert (failure.value.workspace / "program.py").is_file()
+    with pytest.raises(SandboxCleanupRequired):
+        runner.evaluate(work, snapshot, profile, attempt_id="attempt-2", packet_id="packet-2")
+    assert list(scratch.iterdir()) == [failure.value.workspace]
+
+
 @pytest.mark.parametrize("census", ["present", "error", "unexpected", "interrupted", "mode_error", "mode_interrupt"])
 def test_evaluator_holds_candidate_when_acknowledged_removal_is_unconfirmed(tmp_path, monkeypatch, census):
     from pathlib import Path
