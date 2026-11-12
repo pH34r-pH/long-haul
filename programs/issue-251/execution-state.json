@@ -2909,6 +2909,25 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6838832423",
       "evidence": "Evaluator reference now binds the Pydantic Core version. Focused regression, Ruff and 78 Linux evaluator, private commitment, key adapter and Pi admission tests passed.",
       "remaining": "Changes evaluator identities and requires regeneration/readmission of pinned profiles and dependent key references. Exact-head hosted checks and all security/private-use gates remain open."
+    },
+    {
+      "at": "2026-11-12T23:29:30.070758+00:00",
+      "task": "lh-245-security",
+      "status": "private_summary_identifier_classification_draft",
+      "pull_request": 265,
+      "tested_code_commit": "c1b36cd23062e934635cd7d01f27b02761b5a24f",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839003146",
+      "evidence": "Synthetic summary identifiers were exposed absent independent classification. Event emission now requires an exact trusted identifier classification; 79 focused Linux tests, full suite 786 passed/64 skipped, and Ruff passed.",
+      "remaining": "Trusted classification is not automatic secret detection. Model-facing and other disclosure paths, private authority, containment and recovery remain unqualified; existing callers and evaluator identities require updates. Hosted exact-head checks required."
+    },
+    {
+      "at": "2026-11-12T23:29:30.070758+00:00",
+      "task": "lh-245-security",
+      "status": "prior_evaluator_core_identity_hosted_checks_passed",
+      "head": "dd6eb0805b51a25a9b521d6d02be9d8f0e5e8276",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839006536",
+      "evidence": "All hosted checks passed or were intentionally skipped on that exact head.",
+      "remaining": "New identifier classification code was not included; full security acceptance remains open."
     }
   ]
 }
