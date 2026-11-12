@@ -23,6 +23,11 @@ from long_haul.adapters.harness_trace import TraceAdmissionDenied, TraceNormaliz
 from long_haul.adapters.pi_rpc import pi_prompt
 from long_haul.adapters.pi_workspace_cleanup import recover_workspace_lease
 from long_haul.adapters.pi_workspace_copy import copy_docker_workspace
+from long_haul.adapters.pi_workspace_holder import (
+    HolderProfile,
+    allocate_workspace_holder,
+    verify_workspace_holder,
+)
 from long_haul.adapters.pi_workspace_intent import (
     WorkspaceLeaseIntent,
     persist_workspace_intent,
@@ -63,7 +68,7 @@ def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
     recovery_root = (tmp_path / "workspace-recovery").resolve()
     recovery_root.mkdir(mode=0o700)
     persist_workspace_intent(recovery_root, intent)
-    volume, holder, guest = intent.volume_name, intent.holder_name, intent.worker_name
+    volume, guest = intent.volume_name, intent.worker_name
     image, runtime = worker.environment.image, worker.environment.runtime
     mount = "type=volume,src=" + volume + ",dst=/workspace"
     common = ["--runtime=" + runtime, "--network=none", "--read-only", "--user=65534:65534",
@@ -82,11 +87,11 @@ def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
         return ["--label=" + key + "=" + value for key, value in intent.labels(role).items()]
 
     try:
-        worker._control("volume", "create", *labels("volume"), "--driver", "local", "--opt", "type=tmpfs", "--opt", "device=tmpfs",
-                        "--opt", "o=" + options, volume)
-        holder_id = worker._control("create", "--name", holder, *labels("holder"), *common,
-                                    image, "-e", "setInterval(()=>{},60000)").strip()
-        worker._control("start", holder_id)
+        holder_profile = HolderProfile(image, worker.image_id,
+                                       tuple(key + "=" + value for key, value in worker.image_environment.items()),
+                                       worker._verify_runtime)
+        holder_id = allocate_workspace_holder(recovery_root, intent.token, intent.fingerprint, worker._control,
+                                             holder_profile, lambda fingerprint: fingerprint == intent.fingerprint)
         seed = build_workspace_seed({"fixture/a", "fixture/new/b"}, {"fixture/a": b"fixture"})
         with tempfile.TemporaryDirectory(prefix="lh-docker-config-") as config:
             subprocess.run([str(worker.docker_path), "--config", config, "cp", "-a", "-", holder_id + ":/workspace"],
@@ -103,6 +108,7 @@ def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
         assert json.loads(observed) == {"bytes": True, "inodes": True}
 
         def verify():
+            verify_workspace_holder(worker._control, intent, holder_profile, holder_id, running=True)
             guest_info, holder_info = json.loads(worker._control("inspect", guest_id, holder_id))
             for info in (guest_info, holder_info):
                 host, config = info["HostConfig"], info["Config"]
