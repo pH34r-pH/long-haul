@@ -125,7 +125,8 @@ def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
       for(let i=0;i<128;i++) { try { fs.writeFileSync('bomb'+i,''); } catch(e) { inodes=e.code==='ENOSPC'; break; } }
       for(let i=0;i<128;i++) fs.rmSync('bomb'+i,{force:true});
       if(!bytes || !inodes) process.exit(2);
-      let tick=0; const pulse=()=>fs.writeFileSync('fixture/clock',String(tick++).padStart(8,'0'));
+      const clock=fs.openSync('fixture/clock','w');
+      let tick=0; const pulse=()=>fs.writeSync(clock,String(tick++).padStart(8,'0'),0,'utf8');
       pulse(); console.log(JSON.stringify({bytes,inodes})); setInterval(pulse,50);"""
     def labels(role):
         return ["--label=" + key + "=" + value for key, value in intent.labels(role).items()]
