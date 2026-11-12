@@ -63,6 +63,7 @@ lh:GovernedResourceShape
     ] ;
     sh:property [
         sh:path odrl:hasPolicy ;
+        sh:class odrl:Policy ;
         sh:minCount 1 ;
         sh:maxCount 1
     ] ;
