@@ -58,7 +58,8 @@ def _rule_matches(rule: PolicyRule, request: ResourceUseRequest, *, prohibition:
         return False
     if rule.purposes and request.purpose not in rule.purposes:
         return False
-    if not prohibition and not rule.purposes and request.purpose is not None:
+    if (not prohibition and not rule.purposes
+            and (request.purpose is not None or "purpose" not in request.known_absent_context)):
         return False
     return _rule_matches_context(rule, request) and _rule_matches_time(rule, request)
 
@@ -163,13 +164,19 @@ def _matching_rules(
 
 
 def _unresolved_prohibition(rule: PolicyRule, request: ResourceUseRequest) -> bool:
-    if (request.action not in rule.actions or not _rule_matches_time(rule, request)
-            or (rule.purposes and request.purpose not in rule.purposes)):
+    if request.action not in rule.actions or not _rule_matches_time(rule, request):
         return False
+    unknown = False
+    if rule.purposes:
+        if request.purpose is None:
+            if "purpose" in request.known_absent_context:
+                return False
+            unknown = True
+        elif request.purpose not in rule.purposes:
+            return False
     dimensions = ((rule.principal_ids, "caller_id"), (rule.crew_ids, "crew_id"),
                   (rule.mission_ids, "mission_id"), (rule.contract_ids, "contract_id"),
                   (rule.repository_ids, "repository_id"), (rule.audience_ids, "audience_id"))
-    unknown = False
     for allowed, field in dimensions:
         if not allowed:
             continue

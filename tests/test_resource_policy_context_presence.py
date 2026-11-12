@@ -95,3 +95,54 @@ def test_absence_claims_are_canonical_and_cannot_contradict_context():
     rule = PolicyRule(rule_id="restricted", actions=["ai-augment"], crew_ids=["present"])
     with pytest.raises(ValidationError):
         ResourcePolicyEvaluator().evaluate(policy(rule), forged)
+
+
+def test_optional_purpose_requires_verified_absence_for_a_purpose_free_permission():
+    source = ResourcePolicyProfile(
+        identity=ResourceIdentity(resource_id="urn:fixture:resource", resource_type="dataset"),
+        policy_id="urn:fixture:policy", policy_assigner="urn:fixture:issuer", lifecycle="active",
+        permissions=[PolicyRule(rule_id="no-purpose", actions=["read"])],
+        prohibitions=[PolicyRule(rule_id="no-research", actions=["read"], purposes=["research"])],
+    )
+    common = {"request_id": "fixture", "resource_id": "urn:fixture:resource", "action": "read",
+              "caller_id": "fixture", "now": NOW}
+    unknown = ResourceUseRequest(**common)
+    none = ResourceUseRequest(**common, known_absent_context=["purpose"])
+    research = ResourceUseRequest(**common, purpose="research")
+    evaluator = ResourcePolicyEvaluator()
+    assert evaluator.evaluate(source, unknown).status is PolicyDecisionStatus.UNKNOWN
+    assert evaluator.evaluate(source, none).status is PolicyDecisionStatus.ALLOW
+    assert evaluator.evaluate(source, research).status is PolicyDecisionStatus.DENY
+    assert unknown.fingerprint != none.fingerprint
+    with pytest.raises(ValidationError):
+        ResourceUseRequest(**common, purpose="research", known_absent_context=["purpose"])
+    with pytest.raises(ValidationError):
+        ResourceUseRequest(**common, purpose="  ")
+    with pytest.raises(ValidationError):
+        request(known_absent_context=["purpose"])
+
+
+def test_unknown_optional_purpose_does_not_satisfy_a_purpose_free_permission():
+    source = ResourcePolicyProfile(
+        identity=ResourceIdentity(resource_id="urn:fixture:resource", resource_type="dataset"),
+        policy_id="urn:fixture:policy", policy_assigner="urn:fixture:issuer", lifecycle="active",
+        permissions=[PolicyRule(rule_id="no-purpose", actions=["read"])],
+    )
+    requested = ResourceUseRequest(request_id="fixture", resource_id="urn:fixture:resource", action="read",
+                                   caller_id="fixture", now=NOW)
+    assert ResourcePolicyEvaluator().evaluate(source, requested).status is PolicyDecisionStatus.UNKNOWN
+
+
+def test_explicit_purpose_selects_only_its_matching_rules():
+    source = ResourcePolicyProfile(
+        identity=ResourceIdentity(resource_id="urn:fixture:resource", resource_type="dataset"),
+        policy_id="urn:fixture:policy", policy_assigner="urn:fixture:issuer", lifecycle="active",
+        permissions=[PolicyRule(rule_id="teaching", actions=["read"], purposes=["teaching"])],
+        prohibitions=[PolicyRule(rule_id="no-research", actions=["read"], purposes=["research"])],
+    )
+    common = {"request_id": "fixture", "resource_id": "urn:fixture:resource", "action": "read",
+              "caller_id": "fixture", "now": NOW}
+    evaluator = ResourcePolicyEvaluator()
+    assert evaluator.evaluate(source, ResourceUseRequest(**common)).status is PolicyDecisionStatus.UNKNOWN
+    assert evaluator.evaluate(source, ResourceUseRequest(**common, purpose="teaching")).status is PolicyDecisionStatus.ALLOW
+    assert evaluator.evaluate(source, ResourceUseRequest(**common, purpose="research")).status is PolicyDecisionStatus.DENY
