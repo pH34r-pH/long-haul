@@ -2889,6 +2889,16 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6838391046",
       "evidence": "Hosted Pi run: 30 passed and one frozen synthetic clock was empty; truncate during repeated writes is plausible, not proven. Fixture now writes fixed-length in place while preserving nonempty and stability assertions; Node smoke and Ruff passed.",
       "remaining": "Fresh hosted checks required; do not infer production process containment, race-free cleanup or private-use qualification."
+    },
+    {
+      "at": "2026-11-12T23:13:41.743935+00:00",
+      "task": "lh-245-security",
+      "status": "key_write_interruption_handle_draft",
+      "pull_request": 265,
+      "tested_code_commit": "7dfbb45c944f3bef06b70846577a0e8708c56a99",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6838622278",
+      "evidence": "Synthetic provider interruption after possible write previously escaped without a locator. Catchable write/readback interruptions now retain an opaque hold; 75 focused Linux tests and Ruff passed.",
+      "remaining": "No durable pre-write intent or crash/host recovery; no live Azure principal, authority, lifecycle or private-work qualification. Exact-head hosted checks required."
     }
   ]
 }
