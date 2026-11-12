@@ -313,6 +313,79 @@ def test_synthetic_paused_cgroup_identity_diagnostic(tmp_path):
             worker._control("rm", "--force", container)
 
 
+_HOSTED_CGROUP_KILL = r"""
+import json, os, re, sys, time
+pid, cid = int(sys.argv[1]), sys.argv[2]
+if pid <= 1 or not re.fullmatch('[0-9a-f]{64}', cid):
+    raise SystemExit('invalid synthetic guest identity')
+relative = '/system.slice/docker-' + cid + '.scope'
+membership = open('/proc/' + str(pid) + '/cgroup').read().splitlines()
+if '0::' + relative not in membership:
+    raise SystemExit('guest is not in its exact Docker systemd scope')
+path = '/sys/fs/cgroup' + relative
+directory = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+try:
+    if os.fstat(directory).st_ino != os.stat(path, follow_symlinks=False).st_ino:
+        raise SystemExit('cgroup identity changed')
+    procfile = os.open('cgroup.procs', os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory)
+    with os.fdopen(procfile) as stream:
+        if str(pid) not in stream.read().splitlines():
+            raise SystemExit('guest pid is not a direct cgroup member')
+    killfile = os.open('cgroup.kill', os.O_WRONLY | os.O_NOFOLLOW, dir_fd=directory)
+    try:
+        os.write(killfile, b'1')
+    finally:
+        os.close(killfile)
+    deadline = time.monotonic() + 10
+    while True:
+        try:
+            events = os.open('cgroup.events', os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory)
+            with os.fdopen(events) as stream:
+                values = dict(line.split() for line in stream.read().splitlines())
+        except FileNotFoundError:
+            break
+        if values.get('populated') == '0':
+            break
+        if time.monotonic() >= deadline:
+            raise SystemExit('synthetic cgroup remained populated')
+        time.sleep(.1)
+finally:
+    os.close(directory)
+print(json.dumps({'cgroup_kill_acknowledged': True}))
+"""
+
+
+def test_hosted_synthetic_cgroup_kill_experiment(tmp_path):
+    """Experiment only on a disposable synthetic guest in hosted CI."""
+    if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
+        pytest.skip("synthetic privileged experiment requires an ephemeral GitHub-hosted runner")
+    worker, _, _ = worker_setup(tmp_path, PLAN)
+    name = "lh-cgroup-kill-diagnostic-" + uuid4().hex
+    container = None
+    try:
+        container = worker._control("create", "--name=" + name, "--runtime=long-haul-gvisor", "--network=none",
+            "--read-only", "--user=65534:65534", "--cap-drop=ALL", "--security-opt=no-new-privileges",
+            "--entrypoint=/usr/local/bin/node", "--pull=never", worker.environment.image,
+            "-e", "setInterval(()=>{},60000)").strip()
+        worker._control("start", container)
+        worker._control("pause", container)
+        info, = json.loads(worker._control("inspect", container))
+        assert info["Id"] == container and info["State"]["Paused"] is True
+        result = subprocess.run(["sudo", "-n", "python3", "-c", _HOSTED_CGROUP_KILL,
+                                 str(info["State"]["Pid"]), container],
+                                env=_control_environment(), capture_output=True, timeout=20, check=False)
+        print(json.dumps({"qualification": "synthetic-hosted-cgroup-kill", "exit_code": result.returncode,
+                          "identity_mismatch": b'exact Docker systemd scope' in result.stderr}))
+        assert result.returncode == 0
+    finally:
+        if container is not None:
+            try:
+                worker._control("unpause", container)
+            except subprocess.SubprocessError:
+                pass
+            worker._control("rm", "--force", container)
+
+
 def _wait_for_quota_guest(control, name, process):
     deadline = time.monotonic() + 55
     while time.monotonic() < deadline:
