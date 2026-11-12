@@ -97,11 +97,13 @@ def test_recovery_retains_scratch_with_unresolved_evaluator_candidate(tmp_path):
             grant.cleanup(docker)
         assert (candidate / "program.py").read_text() == "private candidate"
         assert not grant.cleaned
+        assert not any(call[0] == "rm" or call[:2] == ("volume", "rm") for call in docker.calls)
     assert (root / "active.json").exists()
     assert not (root / (intent.token + ".cleanup.json")).exists()
     with pytest.raises(WorkspaceCleanupRequired):
         fence.recover(docker)
     assert candidate.is_dir()
+    assert len(docker.containers) == 2 and docker.volume is not None
 
 
 @pytest.mark.parametrize("change", ["daemon", "worker-label", "holder-label", "volume-label", "volume-options", "fingerprint"])

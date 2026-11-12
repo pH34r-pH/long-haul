@@ -87,6 +87,48 @@ def _prepare_scratch_tree(directory, budget, depth=0):
                     os.close(child)
 
 
+def _admitted_scratch(directory, intent):
+    name = intent.token + ".scratch"
+    try:
+        metadata = os.stat(name, dir_fd=directory, follow_symlinks=False)
+    except FileNotFoundError:
+        return None
+    if not stat.S_ISDIR(metadata.st_mode) or metadata.st_uid != os.geteuid() or metadata.st_mode & 0o077:
+        raise ValueError("workspace scratch identity is not private")
+    scratch = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
+    try:
+        from .pi_workspace_fence import _matches
+
+        opened = os.fstat(scratch)
+        payload = (intent.token + ":" + intent.fingerprint).encode("ascii")
+        if ((opened.st_dev, opened.st_ino) != (metadata.st_dev, metadata.st_ino)
+                or not _matches(scratch, ".workspace-owner", payload)):
+            raise ValueError("workspace scratch ownership is not admitted")
+        return scratch
+    except BaseException:
+        os.close(scratch)
+        raise
+
+
+def _reject_evaluator_candidates(scratch):
+    with os.scandir(scratch) as entries:
+        if any(entry.name.startswith(EVALUATOR_CANDIDATE_PREFIX) for entry in entries):
+            raise ValueError("workspace contains an unresolved evaluator candidate")
+
+
+def _check_scratch_before_recovery(root, intent):
+    directory = _open_private_root(root)
+    try:
+        scratch = _admitted_scratch(directory, intent)
+        if scratch is not None:
+            try:
+                _reject_evaluator_candidates(scratch)
+            finally:
+                os.close(scratch)
+    finally:
+        os.close(directory)
+
+
 def _remove_scratch(root, intent):
     """Delete only the intent's private scratch via symlink-resistant dirfd APIs."""
     if not shutil.rmtree.avoids_symlink_attacks:
@@ -94,22 +136,11 @@ def _remove_scratch(root, intent):
     directory = _open_private_root(root)
     try:
         name = intent.token + ".scratch"
-        try:
-            metadata = os.stat(name, dir_fd=directory, follow_symlinks=False)
-        except FileNotFoundError:
+        scratch = _admitted_scratch(directory, intent)
+        if scratch is None:
             return
-        if not stat.S_ISDIR(metadata.st_mode) or metadata.st_uid != os.geteuid() or metadata.st_mode & 0o077:
-            raise ValueError("workspace scratch identity is not private")
-        scratch = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
         try:
-            from .pi_workspace_fence import _matches
-
-            payload = (intent.token + ":" + intent.fingerprint).encode("ascii")
-            if not _matches(scratch, ".workspace-owner", payload):
-                raise ValueError("workspace scratch ownership is not admitted")
-            with os.scandir(scratch) as entries:
-                if any(entry.name.startswith(EVALUATOR_CANDIDATE_PREFIX) for entry in entries):
-                    raise ValueError("workspace contains an unresolved evaluator candidate")
+            _reject_evaluator_candidates(scratch)
             _prepare_scratch_tree(scratch, [4096])
         finally:
             os.close(scratch)
@@ -127,6 +158,7 @@ def recover_workspace_lease(root: Path, token: str, expected_fingerprint: str, c
         if (not isinstance(grant, WorkspaceFenceGrant) or not grant.belongs(root, token, expected_fingerprint)):
             raise ValueError("workspace recovery lacks the held local fence")
         intent = load_workspace_intent(root, token, expected_fingerprint)
+        _check_scratch_before_recovery(root, intent)
         _daemon(control, intent.daemon_id)
         worker, holder, volume = _objects(control, intent)
         for name, labels, identity in ((intent.worker_name, intent.labels("worker"), worker),
