@@ -92,7 +92,8 @@ def test_worker_projection_admits_current_read_and_model_policy(tmp_path):
     projected = tmp_path / "projected"
     projected.mkdir()
     base = SimpleNamespace(contents={"fixture/code.py": (root / "fixture/code.py").read_bytes()})
-    DockerGVisorPiWorker._project(projected, base, registry, normalizer, NOW)
+    admitted = DockerGVisorPiWorker._project(projected, base, registry, normalizer, NOW)
+    assert admitted == {"fixture/code.py": b"before\n"}
     assert (projected / "fixture/code.py").read_bytes() == b"before\n"
 
 
@@ -151,7 +152,8 @@ def test_worker_projection_copies_the_exact_checked_bytes(tmp_path):
     base = SimpleNamespace(contents=ChangedAfterRead({"fixture/code.py": b"before\n"}))
     projected = tmp_path / "projected"
     projected.mkdir()
-    DockerGVisorPiWorker._project(projected, base, registry, normalizer, NOW)
+    admitted = DockerGVisorPiWorker._project(projected, base, registry, normalizer, NOW)
+    assert admitted == {"fixture/code.py": b"before\n"}
     assert (projected / "fixture/code.py").read_bytes() == b"before\n"
 
 

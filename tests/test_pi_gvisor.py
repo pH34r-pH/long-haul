@@ -1,8 +1,6 @@
 """Required hosted gate: actual pinned Pi + deterministic provider, not a real LLM."""
 import json
 import os
-import subprocess
-import tempfile
 import time
 from dataclasses import replace
 from datetime import UTC, datetime
@@ -33,6 +31,7 @@ from long_haul.adapters.pi_workspace_intent import (
     persist_workspace_intent,
 )
 from long_haul.adapters.pi_workspace_seed import build_workspace_seed
+from long_haul.adapters.pi_workspace_seeding import HolderSeeder
 from long_haul.adapters.pi_workspace_view import PausedWorkspaceView
 from long_haul.events.store import EventStore
 from long_haul.resource_policy import ResourceAction, ResourceLifecycle
@@ -43,7 +42,7 @@ from long_haul.work.repository_evaluator import (
     private_repository_evidence_event,
 )
 from long_haul.work.repository_models import content_digest
-from long_haul.work.repository_sandbox import DockerGVisorSandbox, _control_environment
+from long_haul.work.repository_sandbox import DockerGVisorSandbox
 from long_haul.work.worker_candidate import regular_contents
 
 pytestmark = pytest.mark.skipif(os.environ.get("LONG_HAUL_REQUIRE_PI_GVISOR") != "1",
@@ -92,11 +91,11 @@ def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
                                        worker._verify_runtime)
         holder_id = allocate_workspace_holder(recovery_root, intent.token, intent.fingerprint, worker._control,
                                              holder_profile, lambda fingerprint: fingerprint == intent.fingerprint)
-        seed = build_workspace_seed({"fixture/a", "fixture/new/b"}, {"fixture/a": b"fixture"})
-        with tempfile.TemporaryDirectory(prefix="lh-docker-config-") as config:
-            subprocess.run([str(worker.docker_path), "--config", config, "cp", "-a", "-", holder_id + ":/workspace"],
-                           input=seed, env=_control_environment(), stdout=subprocess.DEVNULL,
-                           stderr=subprocess.DEVNULL, timeout=15, check=True)
+        targets, contents = {"fixture/a", "fixture/new/b"}, {"fixture/a": b"fixture"}
+        digest = content_digest(build_workspace_seed(targets, contents))
+        seeder = HolderSeeder(recovery_root, intent.token, intent.fingerprint, worker._control, worker.docker_path,
+                              holder_id, holder_profile, lambda fingerprint: fingerprint == digest)
+        seeder.seed(targets, contents)
         guest_id = worker._control("create", "--name", guest, *labels("worker"), *common, image, "-e", script).strip()
         worker._control("start", guest_id)
         deadline = time.monotonic() + 15

@@ -280,6 +280,7 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
         for directory in worker.rglob("*"):
             if directory.is_dir():
                 directory.chmod(0o777)
+        return projected
 
     def _run(self, request, worker):
         normalizer = request.normalizer
