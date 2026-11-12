@@ -11,7 +11,13 @@ from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 RESOURCE_POLICY_SCHEMA_VERSION = 1
 RESOURCE_POLICY_PROFILE_ID = "https://ph34r.dev/ns/long-haul/resource-policy/v1"
@@ -378,6 +384,14 @@ class PolicyDecision(BaseModel):
     policy_fingerprint: str | None = None
     source_policy_fingerprints: dict[str, str] = Field(default_factory=dict)
     evaluated_at: datetime
+    evaluator_implementation: str | None = Field(default=None, pattern=r"^resource-policy-evaluator-v1:sha256:[0-9a-f]{64}$")
+
+    @model_serializer(mode="wrap")
+    def serialize_legacy(self, handler):
+        result = handler(self)
+        if self.evaluator_implementation is None:
+            result.pop("evaluator_implementation", None)
+        return result
 
 
 def profile_json_schema() -> dict[str, Any]:
