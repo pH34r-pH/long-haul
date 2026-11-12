@@ -19,7 +19,7 @@ from long_haul.adapters.pi_worker import DockerGVisorPiWorker, PiWorkerRequest
 from long_haul.work import AcceptancePredicate
 from long_haul.work.harness import harness_attempt
 from long_haul.work.repository_evaluator import public_evaluator_reference
-from long_haul.work.repository_models import DigestReference
+from long_haul.work.repository_models import DigestReference, content_digest
 
 
 def fake_executor(tmp_path):
@@ -150,6 +150,28 @@ def test_fresh_executor_recovery_requires_independent_expected_record(tmp_path):
     assert expected.workspace.exists() and expected.control.exists()
     cleanup = worker.recover(path, expected_recovery=expected)
     assert cleanup.process_tree_stopped and not expected.workspace.exists() and not expected.control.exists()
+
+
+def test_recovery_evidence_binds_receipt_bytes_actually_checked(tmp_path):
+    worker, request = fake_executor(tmp_path)
+    with pytest.raises(PiWorkerCleanupRequired) as failure:
+        worker.run(request)
+    path = failure.value.receipt_path
+    original = path.read_bytes()
+    receipt = PiWorkerRecovery.model_validate_json(original)
+    worker.fail_removal = False
+    original_control = worker._control
+
+    def control(*args):
+        if args[0] == "rm":
+            path.write_text("changed after admission")
+        return original_control(*args)
+
+    worker._control = control
+    cleanup = worker.recover()
+    evidence = {"recovery": content_digest(original), "container": receipt.container_id, "removed": True,
+                "environment": worker.environment.fingerprint}
+    assert cleanup.evidence.digest == content_digest(json.dumps(evidence, sort_keys=True).encode())
 
 
 @pytest.mark.parametrize("census", ["present", "error"])

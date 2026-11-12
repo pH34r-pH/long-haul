@@ -55,14 +55,15 @@ def recover_worker(executor, receipt_path: Path, expected: PiWorkerRecovery) -> 
     """
     if not isinstance(expected, PiWorkerRecovery):
         raise TypeError("recovery requires an independently trusted expected record")
-    receipt = PiWorkerRecovery.model_validate_json(receipt_path.read_bytes())
+    receipt_bytes = receipt_path.read_bytes()
+    receipt = PiWorkerRecovery.model_validate_json(receipt_bytes)
     if receipt != expected:
         raise ValueError("recovery receipt differs from trusted expected record")
     if receipt.environment.digest != executor.environment.fingerprint:
         raise ValueError("recovery requires the exact worker environment")
     executor._control("rm", "--force", "--volumes", receipt.container_id)
     confirm_container_absent(executor._control, receipt.container_id)
-    evidence = {"recovery": content_digest(receipt_path.read_bytes()), "container": receipt.container_id,
+    evidence = {"recovery": content_digest(receipt_bytes), "container": receipt.container_id,
                 "removed": True, "environment": executor.environment.fingerprint}
     cleanup = HarnessCleanup(
         attempt_id=receipt.attempt.attempt_id, session_id=receipt.attempt.session_id,
