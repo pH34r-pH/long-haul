@@ -248,9 +248,10 @@ def test_expired_resource_can_be_deleted_only_with_explicit_permission():
     policy.privacy.deletion_required = True
     policy.invalidated_at = NOW
     evaluator = ResourcePolicyEvaluator()
-    assert evaluator.evaluate(policy, request(ResourceAction.DELETE)).status is PolicyDecisionStatus.ALLOW
+    assert evaluator.evaluate(policy, request(ResourceAction.DELETE)).status is PolicyDecisionStatus.UNKNOWN
+    assert evaluator.evaluate(policy, request(ResourceAction.DELETE, known_absent_context=["purpose"])).status is PolicyDecisionStatus.ALLOW
     policy.permissions = []
-    assert evaluator.evaluate(policy, request(ResourceAction.DELETE)).status is not PolicyDecisionStatus.ALLOW
+    assert evaluator.evaluate(policy, request(ResourceAction.DELETE, known_absent_context=["purpose"])).status is not PolicyDecisionStatus.ALLOW
 
 
 def test_derived_use_rejects_mixed_requests_and_binds_source_policies():
