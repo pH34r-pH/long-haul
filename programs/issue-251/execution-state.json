@@ -2928,6 +2928,25 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839006536",
       "evidence": "All hosted checks passed or were intentionally skipped on that exact head.",
       "remaining": "New identifier classification code was not included; full security acceptance remains open."
+    },
+    {
+      "at": "2026-11-12T23:36:33.605937+00:00",
+      "task": "lh-245-security",
+      "status": "conflicting_input_policy_draft",
+      "pull_request": 265,
+      "tested_code_commit": "cfc25a1ed432df7ca3fbf195e9a50e50e8fcc641",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839138732",
+      "evidence": "A synthetic conflict caused an earlier input policy to be overwritten before a derived-write admission. The guard now rejects conflicting policy identities before delivery; 82 focused and 788 full Linux tests passed, 64 full-suite tests skipped, and Ruff passed.",
+      "remaining": "A changed policy identity within an attempt fails closed. Exact-head hosted checks and host, containment, fencing and private-use qualification remain open."
+    },
+    {
+      "at": "2026-11-12T23:36:33.605937+00:00",
+      "task": "lh-245-security",
+      "status": "summary_identifier_hosted_checks_passed",
+      "head": "94525ccfc00ffa9e9c1894cd096e09bf165de175",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839138732",
+      "evidence": "All exact-head hosted checks passed or were intentionally skipped.",
+      "remaining": "The subsequent conflict fix was not included; full security acceptance remains open."
     }
   ]
 }
