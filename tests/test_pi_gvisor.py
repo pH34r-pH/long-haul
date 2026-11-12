@@ -1,9 +1,12 @@
 """Required hosted gate: actual pinned Pi + deterministic provider, not a real LLM."""
 import json
 import os
+import subprocess
+import tempfile
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from pi_worker_fixture import (
@@ -17,6 +20,8 @@ from test_private_evaluator_commitments import evidence_admission, summary_admis
 
 from long_haul.adapters.harness_trace import TraceAdmissionDenied, TraceNormalizer
 from long_haul.adapters.pi_rpc import pi_prompt
+from long_haul.adapters.pi_workspace_copy import copy_docker_workspace
+from long_haul.adapters.pi_workspace_seed import build_workspace_seed
 from long_haul.events.store import EventStore
 from long_haul.resource_policy import ResourceAction, ResourceLifecycle
 from long_haul.work import WorkCheckpoint, WorkSession, render_digest
@@ -26,7 +31,7 @@ from long_haul.work.repository_evaluator import (
     private_repository_evidence_event,
 )
 from long_haul.work.repository_models import content_digest
-from long_haul.work.repository_sandbox import DockerGVisorSandbox
+from long_haul.work.repository_sandbox import DockerGVisorSandbox, _control_environment
 
 pytestmark = pytest.mark.skipif(os.environ.get("LONG_HAUL_REQUIRE_PI_GVISOR") != "1",
                                 reason="actual Pi/gVisor qualification is mandatory in its hosted CI job")
@@ -36,6 +41,49 @@ def evidence(result, events):
     print(json.dumps({"qualification": "actual-pi-synthetic-provider-gvisor", "real_model": False,
                       "result": result.model_dump(mode="json"),
                       "events": [event.model_dump(mode="json") for event in events]}))
+
+
+def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
+    """Qualify only the isolated volume experiment, not worker integration."""
+    worker, _, _ = worker_setup(tmp_path, PLAN)
+    suffix = uuid4().hex
+    volume, holder, guest = ("lh-volume-" + suffix, "lh-holder-" + suffix, "lh-guest-" + suffix)
+    image, runtime = worker.environment.image, worker.environment.runtime
+    mount = "type=volume,src=" + volume + ",dst=/workspace"
+    options = "size=1m,nr_inodes=32,mode=0777,nosuid,nodev,noexec"
+    common = ["--runtime=" + runtime, "--network=none", "--read-only", "--user=65534:65534",
+              "--cap-drop=ALL", "--security-opt=no-new-privileges", "--pids-limit=64", "--memory=128m",
+              "--mount=" + mount, "--entrypoint=/usr/local/bin/node", "--pull=never"]
+    script = """const fs=require('fs'); process.chdir('/workspace');
+      fs.writeFileSync('fixture/a','changed'); fs.writeFileSync('fixture/new/b','created');
+      let bytes=false, inodes=false;
+      try { fs.writeFileSync('large', Buffer.alloc(2*1024*1024)); } catch(e) { bytes=e.code==='ENOSPC'; }
+      fs.rmSync('large', {force:true});
+      for(let i=0;i<128;i++) { try { fs.writeFileSync('bomb'+i,''); } catch(e) { inodes=e.code==='ENOSPC'; break; } }
+      for(let i=0;i<128;i++) fs.rmSync('bomb'+i,{force:true});
+      if(!bytes || !inodes) process.exit(2); console.log(JSON.stringify({bytes,inodes}));"""
+    try:
+        worker._control("volume", "create", "--driver", "local", "--opt", "type=tmpfs", "--opt", "device=tmpfs",
+                        "--opt", "o=" + options, volume)
+        holder_id = worker._control("create", "--name", holder, *common, image, "-e", "setInterval(()=>{},60000)").strip()
+        worker._control("start", holder_id)
+        seed = build_workspace_seed({"fixture/a", "fixture/new/b"}, {"fixture/a": b"fixture"})
+        with tempfile.TemporaryDirectory(prefix="lh-docker-config-") as config:
+            subprocess.run([str(worker.docker_path), "--config", config, "cp", "-a", "-", holder_id + ":/workspace"],
+                           input=seed, env=_control_environment(), stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL, timeout=15, check=True)
+        guest_id = worker._control("create", "--name", guest, *common, image, "-e", script).strip()
+        worker._control("start", guest_id)
+        assert worker._control("wait", guest_id).strip() == "0"
+        assert json.loads(worker._control("logs", guest_id)) == {"bytes": True, "inodes": True}
+        assert copy_docker_workspace(worker.docker_path, holder_id, 15) == {
+            "fixture/a": b"changed", "fixture/new/b": b"created",
+        }
+    finally:
+        for name in (guest, holder):
+            subprocess.run([str(worker.docker_path), "rm", "--force", name], env=_control_environment(),
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=15, check=False)
+        worker._control("volume", "rm", volume)
 
 
 def test_actual_pi_repair_freezes_after_cleanup_then_independent_evaluator(tmp_path):
