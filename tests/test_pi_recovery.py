@@ -72,3 +72,12 @@ def test_failed_removal_keeps_workspace_control_and_private_identity_until_recov
     assert not receipt.workspace.exists() and not receipt.control.exists()
     assert path.exists() and (path.parent / "cleanup.json").exists()
     assert not worker._cleanup_pending and worker.recovery_path is None
+
+
+def test_worker_rejects_unadmitted_sealed_evaluator_before_launch(tmp_path):
+    worker, request = fake_executor(tmp_path)
+    contract = request.normalizer.contract
+    contract.repository_work = contract.repository_work.model_copy(update={"sealed_evaluator": reference("sealed")})
+    with pytest.raises(ValueError, match="trusted worker admission"):
+        worker.run(request)
+    assert worker.lease_releasable and worker._control_root is None

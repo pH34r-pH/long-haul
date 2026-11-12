@@ -6,7 +6,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from pi_worker_fixture import PLAN, admit_prompt, worker_setup
+from pi_worker_fixture import (
+    PLAN,
+    admit_prompt,
+    public_evaluator_admission,
+    worker_setup,
+)
 from repository_evaluator_fixture import PROGRAM, environment
 
 from long_haul.adapters.harness_trace import TraceAdmissionDenied, TraceNormalizer
@@ -103,7 +108,7 @@ def test_revoked_projection_is_denied_before_worker_launch(tmp_path):
 
 
 def test_actual_pi_resume_starts_fresh_native_session_and_retains_candidate_history(tmp_path):
-    worker, request, _ = worker_setup(tmp_path, PLAN)
+    worker, request, evaluator = worker_setup(tmp_path, PLAN)
     store = EventStore(tmp_path / "history.jsonl")
     previous, events, snapshot = worker.run(replace(request, event_store=store))
     first_native = worker.last_native_session_tag
@@ -127,6 +132,7 @@ def test_actual_pi_resume_starts_fresh_native_session_and_retains_candidate_hist
     prompt = lambda now: pi_prompt(contract, digest, session=fresh, evaluation_time=now)
     resumed, new_events, candidate = worker.run(replace(request, base=snapshot, normalizer=normalizer,
         registry=registry, prompt=prompt, synthetic=plan, event_store=store,
+        evaluator_admission=public_evaluator_admission(evaluator, contract, attempt, datetime.now(UTC)),
         prompt_admission=admit_prompt(normalizer, prompt(datetime.now(UTC)))))
     evidence(resumed, new_events)
     assert resumed.terminal == "settled" and candidate.candidate == snapshot.candidate

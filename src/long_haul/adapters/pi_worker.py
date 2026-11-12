@@ -39,6 +39,7 @@ from .pi_admission import (
     worker_path,
 )
 from .pi_assets import CONTROL, PiRuntimeAssets
+from .pi_evaluator_admission import EvaluatorWorkerAdmission
 from .pi_harness import PiCodingHarness, PiPrompt
 from .pi_recovery import (
     PiWorkerCleanupRequired,
@@ -69,6 +70,7 @@ class PiWorkerRequest:
     prompt_admission: WorkerPromptAdmission
     cancel_after: float | None = None
     event_store: EventStore | None = field(default=None, repr=False)
+    evaluator_admission: EvaluatorWorkerAdmission | None = field(default=None, repr=False)
 
 
 def _check_projection_bounds(registry):
@@ -121,6 +123,7 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
     def implementation_reference():
         root = Path(__file__).parents[1]
         names = ("adapters/pi_worker.py", "adapters/pi_harness.py", "adapters/pi_admission.py", "adapters/pi_assets.py",
+                 "adapters/pi_evaluator_admission.py", "work/private_evaluator.py", "work/repository_evaluator.py",
                  "adapters/pi_trajectory.py", "adapters/harness_trace.py", "work/harness.py", "work/worker_candidate.py",
                  "work/repository_sandbox.py", "work/repository_git.py", "work/repository_candidate.py",
                  "resource_policy_models.py", "resource_policy_evaluator.py", "adapters/pi_recovery.py", "adapters/pi_rpc.py")
@@ -178,9 +181,13 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
         """Synchronous bounded execution; no caller transcript or control secrets mount."""
         if self._cleanup_pending:
             raise PiWorkerCleanupRequired(self.recovery_path)
-        self.assets.verify()
         normalizer, registry = request.normalizer, request.registry
         contract, attempt = normalizer.contract, normalizer.attempt
+        if contract.repository_work.sealed_evaluator is not None:
+            if not isinstance(request.evaluator_admission, EvaluatorWorkerAdmission):
+                raise ValueError("sealed evaluator requires trusted worker admission")
+            request.evaluator_admission.authorize(contract, attempt, datetime.now(UTC))
+        self.assets.verify()
         if (not set(contract.capabilities) <= {"read", "edit"} or contract.repository_work.source != request.base.candidate.base
                 or content_digest(contract.model_dump_json().encode()) != attempt.contract_digest
                 or contract.budget.max_tokens_per_attempt is not None
