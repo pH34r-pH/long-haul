@@ -172,8 +172,26 @@ def quota_fixture(tmp_path, plan):
         yield worker, request, profile, grant, root, intent
 
 
-def test_actual_pi_uses_fenced_quota_workspace_and_reclaims_scratch(tmp_path):
+def test_actual_pi_uses_fenced_quota_workspace_and_reclaims_scratch(tmp_path, monkeypatch):
     with quota_fixture(tmp_path, PLAN) as (worker, request, profile, grant, root, intent):
+        original_control = worker._control
+
+        def synthetic_control(*arguments):
+            if len(arguments) != 3 or arguments[:2] != ("kill", "--signal=KILL"):
+                return original_control(*arguments)
+            with tempfile.TemporaryDirectory(prefix="lh-synthetic-docker-config-") as config:
+                result = subprocess.run([str(worker.docker_path), "--config", config, *arguments],
+                                        env=_control_environment(), capture_output=True,
+                                        timeout=15, check=False)
+            error = result.stderr.lower()
+            print(json.dumps({"qualification": "synthetic-quota-stop-diagnostic",
+                              "acknowledged": result.returncode == 0,
+                              "mentions_paused": b"paused" in error,
+                              "mentions_zombie": b"zombie" in error}))
+            result.check_returncode()
+            return result.stdout.decode()
+
+        monkeypatch.setattr(worker, "_control", synthetic_control)
         result, events, snapshot = worker.run_bounded(request, grant)
         assert result.terminal == "settled" and snapshot is not None and result.cleanup.process_tree_stopped
         assert [event.tool for event in events if event.phase == "end"] == ["read", "edit"]
