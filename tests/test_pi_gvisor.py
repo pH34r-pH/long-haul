@@ -23,6 +23,7 @@ from repository_evaluator_fixture import PROGRAM, environment
 from test_private_evaluator_commitments import evidence_admission, summary_admission
 
 from long_haul.adapters.harness_trace import TraceAdmissionDenied, TraceNormalizer
+from long_haul.adapters.pi_harness import PiCodingHarness
 from long_haul.adapters.pi_quota_worker import QuotaPiWorker
 from long_haul.adapters.pi_rpc import pi_prompt
 from long_haul.adapters.pi_trajectory import PiTrajectoryProjector
@@ -185,6 +186,7 @@ def quota_fixture(tmp_path, plan):
 
 @pytest.mark.parametrize("diagnostic_sample", range(3))
 def test_actual_pi_uses_fenced_quota_workspace_and_reclaims_scratch(tmp_path, monkeypatch, diagnostic_sample):
+    _record_synthetic_admission_latency(monkeypatch, str(diagnostic_sample))
     with quota_fixture(tmp_path, PLAN) as (worker, request, profile, grant, root, intent):
         original_control = worker._control
         original_end = PiTrajectoryProjector._end
@@ -238,6 +240,23 @@ def test_actual_pi_uses_fenced_quota_workspace_and_reclaims_scratch(tmp_path, mo
         assert packet.validity == "valid" and evaluation.disposition.value == "ACCEPTED"
     assert worker.lease_releasable and not (root / (intent.token + ".scratch")).exists()
     assert (root / (intent.token + ".cleanup.json")).is_file()
+
+
+def _record_synthetic_admission_latency(monkeypatch, sample):
+    original = PiCodingHarness._confirm
+
+    def measured(harness, record, now):
+        start = time.monotonic()
+        outcome = "exception"
+        try:
+            result = original(harness, record, now)
+            outcome = "host_approved"
+            return result
+        finally:
+            print(json.dumps({"qualification": "synthetic-admission-latency", "sample": sample,
+                              "duration_ms": round((time.monotonic() - start) * 1000), "host_result": outcome}))
+
+    monkeypatch.setattr(PiCodingHarness, "_confirm", measured)
 
 
 def test_actual_quota_pi_cancellation_reclaims_resources_without_candidate(tmp_path):
@@ -479,6 +498,7 @@ def test_hosted_actual_pi_synthetic_kernel_capture(tmp_path, monkeypatch):
     """Test-only privileged path; no production admission or isolation claim."""
     if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
         pytest.skip("synthetic privileged experiment requires an ephemeral GitHub-hosted runner")
+    _record_synthetic_admission_latency(monkeypatch, "kernel-capture")
     with quota_fixture(tmp_path, PLAN) as (worker, request, profile, grant, root, intent):
         monkeypatch.setattr(worker, "_capture_and_remove",
                             lambda view, guest, holder, hp: _synthetic_kernel_capture(worker, view, guest, holder, hp))
