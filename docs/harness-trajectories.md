@@ -110,6 +110,10 @@ any text. Input history records only the template reference, keyed actual text
 identity, task/context references, source decisions and requested/acknowledged
 status. A denied or unacknowledged request never claims delivery. These initial
 input policies also restrict every subsequent candidate derivation.
+Within an attempt, a later prompt or native read cannot replace an earlier
+policy for the same resource identifier with a different fingerprint. The host
+denies that conflict before delivery so a later derivation cannot silently lose
+the earlier input restriction; changed authority requires a fresh admission.
 
 The agent's settings, model/auth configuration and system text are separately
 read-only mounts inside a disposable writable lock/cache parent. The launcher

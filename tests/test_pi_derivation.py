@@ -8,7 +8,11 @@ from test_harness_trajectory import NOW, end, start
 from test_pi_worker import request, setup_guard
 
 from long_haul.adapters.harness_trace import TraceAdmissionDenied
-from long_haul.adapters.pi_admission import PiToolAdmission
+from long_haul.adapters.pi_admission import (
+    PiToolAdmission,
+    WorkerPolicyBinding,
+    WorkerPromptAdmission,
+)
 from long_haul.resource_policy import ResourceLifecycle
 from long_haul.work.repository_models import content_digest
 
@@ -40,6 +44,42 @@ def test_write_read_edit_uses_new_identity_and_retains_exact_parent_policies(tmp
     mutate(guard, attempt, root, call="edit-derived", content="edited\n", tool="edit")
     assert guard.derived["fixture/code.py"].identity.content_digest == content_digest(b"edited\n")
     assert len(guard.derivations) == 2 and registry["fixture/code.py"].profile.model_dump_json() == original
+
+
+def test_conflicting_input_policy_for_same_resource_is_not_overwritten(tmp_path):
+    _, attempt, normalizer, root, registry, _ = setup_guard(tmp_path)
+    first = registry["fixture/code.py"]
+    restricted = first.profile.model_copy(deep=True)
+    restricted.permissions[0].actions = [action for action in restricted.permissions[0].actions if action.value != "derive"]
+    registry["fixture/code.py"] = replace(first, profile=restricted, expected_policy_fingerprint=restricted.fingerprint)
+    (root / "fixture/second.py").write_bytes(b"before\n")
+    registry["fixture/second.py"] = first
+    guard = PiToolAdmission(normalizer, registry)
+    first_read = start("first-read")
+    guard.start(first_read)
+    guard.authorize(request(attempt, first_read, ui="first-read"), root, NOW)
+    guard.end(end("first-read"), root, NOW)
+    second_read = start("second-read", args={"path": "fixture/second.py"})
+    guard.start(second_read)
+    with pytest.raises(TraceAdmissionDenied, match="conflicting parent identity"):
+        guard.authorize(request(attempt, second_read, ui="second-read"), root, NOW)
+    assert guard._inputs[restricted.identity.resource_id].expected_policy_fingerprint == restricted.fingerprint
+
+
+def test_conflicting_prompt_policy_for_same_resource_is_not_overwritten(tmp_path):
+    _, attempt, _, _, registry, guard = setup_guard(tmp_path)
+    original = registry["fixture/code.py"].profile
+    restricted = original.model_copy(deep=True)
+    restricted.permissions[0].actions = [action for action in restricted.permissions[0].actions if action.value != "derive"]
+    def admitted(profile):
+        return WorkerPromptAdmission((WorkerPolicyBinding(profile, profile.fingerprint),), "fingerprint",
+                                     attempt.context_manifest, attempt.digest)
+
+    guard.admit_prompt(admitted(restricted), "fingerprint", NOW)
+    guard.admit_prompt(admitted(restricted), "fingerprint", NOW)
+    with pytest.raises(TraceAdmissionDenied, match="conflicting parent identity"):
+        guard.admit_prompt(admitted(original), "fingerprint", NOW)
+    assert guard._inputs[restricted.identity.resource_id].expected_policy_fingerprint == restricted.fingerprint
 
 
 def test_final_projection_rejects_direct_mutation_and_revoked_derivation(tmp_path):
