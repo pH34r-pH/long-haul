@@ -79,17 +79,22 @@ def stopped_worker_fixture():
 @pytest.mark.parametrize("changed", [False, True])
 def test_candidate_requires_matching_post_stop_snapshot(monkeypatch, changed):
     worker, calls = stopped_worker_fixture()
-    view = SimpleNamespace(_check=lambda **_: calls.append(("check",)), _check_volume_users=lambda: None)
+    view = SimpleNamespace(_check=lambda **kw: calls.append(("check", kw["paused"])), _check_volume_users=lambda: None)
     snapshots = iter([{"a": b"before"}, {"a": b"after" if changed else b"before"}])
-    monkeypatch.setattr(pi_quota_worker, "copy_docker_workspace", lambda *_: next(snapshots))
+    def copy(*_):
+        calls.append(("copy",))
+        return next(snapshots)
+    monkeypatch.setattr(pi_quota_worker, "copy_docker_workspace", copy)
     monkeypatch.setattr(pi_quota_worker, "verify_workspace_holder", lambda *args, **kwargs: None)
     if changed:
-        with pytest.raises(ValueError, match="changed while stopping"):
+        with pytest.raises(ValueError, match="changed after stopping"):
             worker._capture_and_remove(view, "a" * 64, "b" * 64, object())
         assert ("remove",) not in calls
     else:
         assert worker._capture_and_remove(view, "a" * 64, "b" * 64, object()) == ({"a": b"before"}, True)
-        assert calls.index(("kill", "--signal=KILL", "a" * 64)) < calls.index(("remove",))
+        assert ("pause", "a" * 64) not in calls
+        assert calls.index(("check", False)) < calls.index(("kill", "--signal=KILL", "a" * 64))
+        assert calls.index(("kill", "--signal=KILL", "a" * 64)) < calls.index(("copy",)) < calls.index(("remove",))
 
 
 @pytest.mark.parametrize("stopped", [False, True])
@@ -112,7 +117,10 @@ def test_ambiguous_kill_is_never_retried_and_requires_exact_stopped_state(monkey
     worker._control = control
     worker._remove_exact = lambda _: calls.append(("remove",))
     view = SimpleNamespace(_check=lambda **_: None, _check_volume_users=lambda: None)
-    monkeypatch.setattr(pi_quota_worker, "copy_docker_workspace", lambda *_: {"a": b"fixture"})
+    def copy(*_):
+        calls.append(("copy",))
+        return {"a": b"fixture"}
+    monkeypatch.setattr(pi_quota_worker, "copy_docker_workspace", copy)
     monkeypatch.setattr(pi_quota_worker, "verify_workspace_holder", lambda *args, **kwargs: None)
     if stopped:
         assert worker._capture_and_remove(view, "a" * 64, "b" * 64, object()) == ({"a": b"fixture"}, False)
@@ -120,7 +128,7 @@ def test_ambiguous_kill_is_never_retried_and_requires_exact_stopped_state(monkey
     else:
         with pytest.raises(ValueError, match="stop is unconfirmed"):
             worker._capture_and_remove(view, "a" * 64, "b" * 64, object())
-        assert ("remove",) not in calls
+        assert ("remove",) not in calls and ("copy",) not in calls
     assert sum(call[0] == "kill" for call in calls) == 1
 
 

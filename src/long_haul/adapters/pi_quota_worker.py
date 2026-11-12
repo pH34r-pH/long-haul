@@ -177,10 +177,7 @@ class QuotaPiWorker(DockerGVisorPiWorker):
 
     def _capture_and_remove(self, view, container, holder, holder_profile):
         self._ensure_deadline()
-        self._control("pause", container)
-        view._check(paused=True)
-        files = copy_docker_workspace(self.docker_path, holder, 15)
-        view._check(paused=True)
+        view._check(paused=False)
         acknowledged = True
         try:
             self._control("kill", "--signal=KILL", container)
@@ -198,11 +195,15 @@ class QuotaPiWorker(DockerGVisorPiWorker):
         self._ensure_deadline()
         verify_workspace_holder(self._control, self._quota_intent, holder_profile, holder, running=True)
         view._check_volume_users()
+        files = copy_docker_workspace(self.docker_path, holder, 15)
+        view._check_volume_users()
+        self._ensure_deadline()
+        verify_workspace_holder(self._control, self._quota_intent, holder_profile, holder, running=True)
         stopped_files = copy_docker_workspace(self.docker_path, holder, 15)
         view._check_volume_users()
         self._ensure_deadline()
         if stopped_files != files:
-            raise ValueError("quota workspace changed while stopping the worker")
+            raise ValueError("quota workspace changed after stopping the worker")
         self._remove_exact(container)
         verify_workspace_holder(self._control, self._quota_intent, holder_profile, holder, running=True)
         self._ensure_deadline()
