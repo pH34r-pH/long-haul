@@ -299,16 +299,31 @@ def _test_docker_control(config, *arguments):
     return result.stdout.decode()
 
 
+def _synthetic_child_script(detached):
+    child = "process.stdout.write('child-ready\\n'); setInterval(()=>{},60000)"
+    return ("const {spawn}=require('child_process'); const child=spawn(process.execPath,['-e'," +
+            json.dumps(child) + "],{detached:" + json.dumps(detached) + ",stdio:'inherit'}); " +
+            "child.unref(); setTimeout(()=>{process.kill(child.pid,0); console.log('child-verified')},500); " +
+            "setInterval(()=>{},60000)")
+
+
 @contextmanager
-def _paused_synthetic_guest(worker):
+def _paused_synthetic_guest(worker, *, detached=None):
     name = "lh-paused-diagnostic-" + uuid4().hex
     container = None
     try:
         container = worker._control("create", "--name=" + name, "--runtime=long-haul-gvisor", "--network=none",
             "--read-only", "--user=65534:65534", "--cap-drop=ALL", "--security-opt=no-new-privileges",
             "--entrypoint=/usr/local/bin/node", "--pull=never", worker.environment.image,
-            "-e", "setInterval(()=>{},60000)").strip()
+            "-e", "setInterval(()=>{},60000)" if detached is None else _synthetic_child_script(detached)).strip()
         worker._control("start", container)
+        if detached is not None:
+            deadline = time.monotonic() + 20
+            while "child-verified" not in worker._control("logs", container):
+                if time.monotonic() >= deadline:
+                    raise AssertionError("synthetic child did not start")
+                time.sleep(.1)
+            assert "child-ready" in worker._control("logs", container)
         worker._control("pause", container)
         yield container, name
     finally:
@@ -380,12 +395,13 @@ def _synthetic_container_cgroup(pid, container):
     return group
 
 
-def test_hosted_synthetic_paused_runtime_delete_diagnostic(tmp_path):
+@pytest.mark.parametrize("detached", [False, True])
+def test_hosted_synthetic_paused_runtime_delete_diagnostic(tmp_path, detached):
     """Destroy only an exact disposable guest; this is not a production stop path."""
     if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
         pytest.skip("synthetic destructive diagnostic requires an ephemeral GitHub-hosted runner")
     worker, _, _ = worker_setup(tmp_path, PLAN)
-    with _paused_synthetic_guest(worker) as (container, _):
+    with _paused_synthetic_guest(worker, detached=detached) as (container, _):
         assert len(container) == 64 and all(char in "0123456789abcdef" for char in container)
         info, = json.loads(worker._control("inspect", container))
         assert info["Id"] == container and info["State"].get("Paused") is True
@@ -411,7 +427,10 @@ def test_hosted_synthetic_paused_runtime_delete_diagnostic(tmp_path):
             docker_running = docker_paused = None
         print(json.dumps({"qualification": "synthetic-paused-runtime-delete", "returncode": result.returncode,
                           "cgroup_populated": populated, "docker_running": docker_running,
-                          "docker_paused": docker_paused, "production_stop_qualified": False}))
+                          "docker_paused": docker_paused, "detached": detached, "child_started": True,
+                          "production_stop_qualified": False}))
+        assert result.returncode == 0 and populated in {"0", "removed"}
+        assert docker_running is False and docker_paused is False
 
 
 def _wait_synthetic_cgroup_empty(events):
@@ -435,15 +454,10 @@ def test_hosted_synthetic_unpaused_stop_empties_guest_cgroup(tmp_path, detached)
         pytest.skip("cgroup experiment requires an ephemeral GitHub-hosted runner")
     worker, _, _ = worker_setup(tmp_path, PLAN)
     name = "lh-stop-tree-" + uuid4().hex
-    child = "process.stdout.write('child-ready\\n'); setInterval(()=>{},60000)"
-    script = ("const {spawn}=require('child_process'); const child=spawn(process.execPath,['-e'," +
-              json.dumps(child) + "],{detached:" + json.dumps(detached) + ",stdio:'inherit'}); " +
-              "child.unref(); setTimeout(()=>{process.kill(child.pid,0); console.log('child-verified')},500); " +
-              "setInterval(()=>{},60000)")
     container = worker._control("create", "--name=" + name, "--runtime=long-haul-gvisor", "--network=none",
         "--read-only", "--user=65534:65534", "--cap-drop=ALL", "--security-opt=no-new-privileges",
         "--pids-limit=64", "--memory=256m", "--entrypoint=/usr/local/bin/node", "--pull=never",
-        worker.environment.image, "-e", script).strip()
+        worker.environment.image, "-e", _synthetic_child_script(detached)).strip()
     try:
         worker._control("start", container)
         deadline = time.monotonic() + 20
