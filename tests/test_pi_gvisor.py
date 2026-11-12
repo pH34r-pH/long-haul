@@ -60,10 +60,10 @@ def evidence(result, events):
 def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
     """Qualify only the isolated volume experiment, not worker integration."""
     worker, request, _ = worker_setup(tmp_path, PLAN)
-    daemon = worker._control("info", "--format", "{{.ID}}").strip()
     options = "size=1m,nr_inodes=32,mode=0777,nosuid,nodev,noexec"
     intent = WorkspaceLeaseIntent(token=uuid4().hex, attempt_fingerprint=request.normalizer.attempt.fingerprint,
-                                  environment_fingerprint=worker.environment.fingerprint, daemon_id=daemon,
+                                  environment_fingerprint=worker.environment.fingerprint,
+                                  daemon_id=worker._control("info", "--format", "{{.ID}}").strip(),
                                   volume_options=options)
     recovery_root = (tmp_path / "workspace-recovery").resolve()
     recovery_root.mkdir(mode=0o700)

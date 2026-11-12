@@ -307,13 +307,7 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
             with self._attached_process(container) as process:
                 harness = self._drive(process, normalizer, request.registry, worker,
                                       PiPrompt(request.prompt, request.prompt_template, request.prompt_admission), request.cancel_after)
-                observed = json.loads(self._control("inspect", container))[0]["State"]
-                if harness.projector.state.terminal is None:
-                    now, tick = datetime.now(UTC), time.monotonic_ns()
-                    if observed.get("OOMKilled"):
-                        harness.projector.interrupt("resource_exhausted", now, tick)
-                    else:
-                        harness.projector.eof(now, tick)
+                self._classify_worker_exit(container, harness)
         finally:
             # Success here is mandatory; failures leave no candidate or resume receipt.
             self._remove_worker(container)
@@ -346,6 +340,15 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
             for derivation in harness.guard.derivations:
                 request.event_store.append(Event(event_type="observation", source="worker-derivation-v1", payload=derivation))
         return result, harness.projector.events, snapshot
+
+    def _classify_worker_exit(self, container, harness):
+        observed = json.loads(self._control("inspect", container))[0]["State"]
+        if harness.projector.state.terminal is None:
+            now, tick = datetime.now(UTC), time.monotonic_ns()
+            if observed.get("OOMKilled"):
+                harness.projector.interrupt("resource_exhausted", now, tick)
+            else:
+                harness.projector.eof(now, tick)
 
     @staticmethod
     def _validate_candidate(request, worker, guard):

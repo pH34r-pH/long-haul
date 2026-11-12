@@ -22,6 +22,7 @@ from .pi_workspace_copy import copy_docker_workspace
 from .pi_workspace_fence import LocalWorkspaceFence, WorkspaceFenceGrant
 from .pi_workspace_holder import (
     HolderProfile,
+    _verify_privileges,
     allocate_workspace_holder,
     verify_workspace_holder,
 )
@@ -98,6 +99,7 @@ class QuotaPiWorker(DockerGVisorPiWorker):
 
     def _verify_configuration(self, container, candidate):
         info = super()._verify_configuration(container, candidate)
+        _verify_privileges(info["HostConfig"])
         labels = info["Config"].get("Labels") or {}
         if (info["Name"] != "/" + self._quota_intent.worker_name
                 or any(labels.get(key) != value for key, value in self._quota_intent.labels("worker").items())):
@@ -175,6 +177,15 @@ class QuotaPiWorker(DockerGVisorPiWorker):
         view._check(paused=True)
         files = copy_docker_workspace(self.docker_path, holder, 15)
         view._check(paused=True)
+        self._control("kill", "--signal=KILL", container)
+        stopped, = json.loads(self._control("inspect", container))
+        state = stopped["State"]
+        if (stopped["Id"] != container or state.get("Running") is not False or state.get("Paused") is not False
+                or state.get("Pid") != 0 or state.get("Error")):
+            raise ValueError("quota worker process-tree stop is unconfirmed")
+        verify_workspace_holder(self._control, self._quota_intent, holder_profile, holder, running=True)
+        if copy_docker_workspace(self.docker_path, holder, 15) != files:
+            raise ValueError("quota workspace changed while stopping the worker")
         self._remove_exact(container)
         verify_workspace_holder(self._control, self._quota_intent, holder_profile, holder, running=True)
         return files
@@ -191,13 +202,7 @@ class QuotaPiWorker(DockerGVisorPiWorker):
             with self._attached_process(container) as process:
                 harness = self._drive(process, request.normalizer, request.registry, projection,
                                       PiPrompt(request.prompt, request.prompt_template, request.prompt_admission), request.cancel_after)
-                observed = json.loads(self._control("inspect", container))[0]["State"]
-                if harness.projector.state.terminal is None:
-                    now, tick = datetime.now(UTC), time.monotonic_ns()
-                    if observed.get("OOMKilled"):
-                        harness.projector.interrupt("resource_exhausted", now, tick)
-                    else:
-                        harness.projector.eof(now, tick)
+                self._classify_worker_exit(container, harness)
                 if harness.projector.state.terminal == "settled":
                     files = self._capture_and_remove(view, container, holder, holder_profile)
                 else:
