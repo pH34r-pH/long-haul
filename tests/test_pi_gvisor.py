@@ -196,7 +196,11 @@ def test_actual_pi_uses_fenced_quota_workspace_and_reclaims_scratch(tmp_path, mo
         monkeypatch.setattr(worker, "_control", synthetic_control)
         result, events, snapshot = worker.run_bounded(request, grant)
         assert result.terminal == "settled" and snapshot is not None and result.cleanup.process_tree_stopped
-        assert [event.tool for event in events if event.phase == "end"] == ["read", "edit"]
+        completed = [event for event in events if event.phase == "end"]
+        print(json.dumps({"qualification": "synthetic-quota-edit-diagnostic", "sample": diagnostic_sample,
+                          "outcomes": [event.outcome.value for event in completed]}))
+        assert [event.tool for event in completed] == ["read", "edit"]
+        assert all(event.outcome.value == "success" for event in completed)
         assert b"a + b" in snapshot.contents["program.py"] and not worker.lease_releasable
         sandbox = DockerGVisorSandbox(environment(), Path(os.environ["LONG_HAUL_RUNSC"]))
         packet, evaluation = RepositoryEvaluationRunner(sandbox, scratch_root=grant.scratch_root()).evaluate(
