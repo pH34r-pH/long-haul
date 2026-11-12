@@ -39,12 +39,21 @@ def retain_recovery(receipt: PiWorkerRecovery):
     return path
 
 
+def confirm_container_absent(control, container_id):
+    """Require a point-in-time Docker census after acknowledged removal."""
+    output = control("container", "ls", "--all", "--no-trunc", "--filter", "id=" + container_id,
+                     "--format", "{{.ID}}")
+    if output.strip():
+        raise ValueError("worker container removal is unconfirmed")
+
+
 def recover_worker(executor, receipt_path: Path) -> HarnessCleanup:
     """Explicit retry; no result, candidate or reuse right exists until rm succeeds."""
     receipt = PiWorkerRecovery.model_validate_json(receipt_path.read_bytes())
     if receipt.environment.digest != executor.environment.fingerprint:
         raise ValueError("recovery requires the exact worker environment")
     executor._control("rm", "--force", "--volumes", receipt.container_id)
+    confirm_container_absent(executor._control, receipt.container_id)
     evidence = {"recovery": content_digest(receipt_path.read_bytes()), "container": receipt.container_id,
                 "removed": True, "environment": executor.environment.fingerprint}
     cleanup = HarnessCleanup(

@@ -51,6 +51,8 @@ def fake_executor(tmp_path):
     def control(*arguments):
         if arguments[0] == "rm" and worker.fail_removal:
             raise subprocess.CalledProcessError(1, ["docker", "rm"])
+        if arguments[:2] == ("container", "ls"):
+            return ""
         return "c" * 64 if arguments[0] == "create" else json.dumps([{"State": {"Running": True}}])
     worker._control = control
     def drive(process, normalizer, registry, root, prompt, cancel):
@@ -88,6 +90,48 @@ def test_failed_removal_keeps_workspace_control_and_private_identity_until_recov
     assert not receipt.workspace.exists() and not receipt.control.exists()
     assert path.exists() and (path.parent / "cleanup.json").exists()
     assert not worker._cleanup_pending and worker.recovery_path is None
+
+
+def test_acknowledged_removal_must_confirm_absence_before_recovery_or_reuse(tmp_path):
+    worker, request = fake_executor(tmp_path)
+    with pytest.raises(PiWorkerCleanupRequired) as failure:
+        worker.run(request)
+    receipt = PiWorkerRecovery.model_validate_json(failure.value.receipt_path.read_bytes())
+    original_control = worker._control
+    worker.fail_removal = False
+
+    def control(*args):
+        if args[:2] == ("container", "ls"):
+            return receipt.container_id + "\n"
+        return original_control(*args)
+
+    worker._control = control
+    with pytest.raises((ValueError, PiWorkerCleanupRequired)):
+        worker.recover()
+    assert receipt.workspace.exists() and receipt.control.exists()
+    assert worker._cleanup_pending and not worker.lease_releasable
+    assert not (failure.value.receipt_path.parent / "cleanup.json").exists()
+
+
+@pytest.mark.parametrize("census", ["present", "error"])
+def test_acknowledged_removal_does_not_allow_unconfirmed_initial_cleanup(tmp_path, census):
+    worker, request = fake_executor(tmp_path)
+    original_control = worker._control
+    worker.fail_removal = False
+
+    def control(*args):
+        if args[:2] == ("container", "ls"):
+            if census == "error":
+                raise subprocess.CalledProcessError(1, args)
+            return "c" * 64 + "\n"
+        return original_control(*args)
+
+    worker._control = control
+    with pytest.raises(PiWorkerCleanupRequired) as failure:
+        worker.run(request)
+    receipt = PiWorkerRecovery.model_validate_json(failure.value.receipt_path.read_bytes())
+    assert receipt.workspace.exists() and receipt.control.exists()
+    assert worker._cleanup_pending and not worker.lease_releasable
 
 
 def test_worker_rejects_unadmitted_sealed_evaluator_before_launch(tmp_path):

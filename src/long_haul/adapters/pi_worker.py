@@ -46,6 +46,7 @@ from .pi_harness import PiCodingHarness, PiPrompt
 from .pi_recovery import (
     PiWorkerCleanupRequired,
     PiWorkerRecovery,
+    confirm_container_absent,
     recover_worker,
     retain_recovery,
 )
@@ -358,6 +359,7 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
     def _remove_worker(self, container):
         try:
             self._control("rm", "--force", "--volumes", container)
+            confirm_container_absent(self._control, container)
         except (OSError, ValueError, subprocess.SubprocessError):
             self.recovery_path = retain_recovery(self._recovery)
             raise PiWorkerCleanupRequired(self.recovery_path) from None
