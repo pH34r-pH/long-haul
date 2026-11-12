@@ -25,6 +25,7 @@ from test_private_evaluator_commitments import evidence_admission, summary_admis
 from long_haul.adapters.harness_trace import TraceAdmissionDenied, TraceNormalizer
 from long_haul.adapters.pi_quota_worker import QuotaPiWorker
 from long_haul.adapters.pi_rpc import pi_prompt
+from long_haul.adapters.pi_trajectory import PiTrajectoryProjector
 from long_haul.adapters.pi_workspace_copy import copy_docker_workspace
 from long_haul.adapters.pi_workspace_fence import LocalWorkspaceFence
 from long_haul.adapters.pi_workspace_holder import (
@@ -176,6 +177,19 @@ def quota_fixture(tmp_path, plan):
 def test_actual_pi_uses_fenced_quota_workspace_and_reclaims_scratch(tmp_path, monkeypatch, diagnostic_sample):
     with quota_fixture(tmp_path, PLAN) as (worker, request, profile, grant, root, intent):
         original_control = worker._control
+        original_end = PiTrajectoryProjector._end
+
+        def synthetic_end(projector, record, *args):
+            if record.get("toolName") == "edit" and record.get("isError") is True:
+                error = json.dumps(record.get("result")).lower()
+                print(json.dumps({"qualification": "synthetic-quota-edit-error", "sample": diagnostic_sample,
+                                  "permission": any(word in error for word in ("eacces", "eperm", "permission")),
+                                  "read_only": "read-only" in error or "erofs" in error,
+                                  "missing": "enoent" in error or "not found" in error,
+                                  "no_match": "could not find" in error or "no match" in error}))
+            return original_end(projector, record, *args)
+
+        monkeypatch.setattr(PiTrajectoryProjector, "_end", synthetic_end)
 
         def synthetic_control(*arguments):
             if len(arguments) != 3 or arguments[:2] != ("kill", "--signal=KILL"):
