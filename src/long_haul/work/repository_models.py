@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import PurePosixPath
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer, model_validator
 
 
 def content_digest(content: bytes) -> str:
@@ -137,6 +137,16 @@ class ContextItem(FrozenProjection):
     symbol: str | None = None
     truncated: bool = False
     omitted_byte_count: int = Field(default=0, ge=0)
+    policy_evaluator_implementation: str | None = Field(
+        default=None, pattern=r"^resource-policy-evaluator-v1:sha256:[0-9a-f]{64}$"
+    )
+
+    @model_serializer(mode="wrap")
+    def serialize_legacy_identity(self, handler):
+        result = handler(self)
+        if self.policy_evaluator_implementation is None:
+            result.pop("policy_evaluator_implementation", None)
+        return result
 
     @model_validator(mode="after")
     def valid_range(self):

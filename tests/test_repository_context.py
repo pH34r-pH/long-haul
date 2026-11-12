@@ -14,6 +14,7 @@ from long_haul.resource_policy import (
     ResourceAction,
     ResourceIdentity,
     ResourceLifecycle,
+    ResourcePolicyEvaluator,
     ResourcePolicyProfile,
     ResourceUseRequest,
 )
@@ -26,6 +27,7 @@ from long_haul.work import (
 )
 from long_haul.work.repository_context import (
     ContextAdmission,
+    authorize_repository_context_delivery,
     render_repository_context,
     repository_context_event,
     select_repository_context,
@@ -149,6 +151,59 @@ def test_exact_identity_reconstruction_and_common_lookup_paths(repository):
     shuffled = spec.model_dump()
     shuffled["lookups"] = list(reversed(spec.lookups))
     assert ContextSelection.model_validate(shuffled).fingerprint == spec.fingerprint
+
+
+def test_context_manifest_binds_policy_evaluator_and_rejects_drift(repository, monkeypatch):
+    source = provider(repository)
+    view, admissions = context(source, selection(ContextLookup(path="code.py")))
+    item, = view.manifest.items
+    assert item.policy_evaluator_implementation == ResourcePolicyEvaluator.implementation_reference()
+    authorize_repository_context_delivery(view, admissions, NOW)
+    original = ResourcePolicyEvaluator.evaluate
+
+    def changed(evaluator, profile, request):
+        decision = original(evaluator, profile, request)
+        return decision.model_copy(update={"evaluator_implementation": "resource-policy-evaluator-v1:sha256:" + "f" * 64})
+
+    monkeypatch.setattr(ResourcePolicyEvaluator, "evaluate", changed)
+    with pytest.raises(ValueError, match="context or admitted policy changed"):
+        verify_repository_context(source, view.manifest, admissions)
+    with pytest.raises(ValueError, match="policy.*implementation"):
+        authorize_repository_context_delivery(view, admissions, NOW)
+
+
+def test_legacy_context_item_is_unversioned_and_cannot_be_delivered(repository):
+    source = provider(repository)
+    view, admissions = context(source, selection(ContextLookup(path="code.py")))
+    legacy_item = view.manifest.items[0].model_copy(update={"policy_evaluator_implementation": None})
+    assert "policy_evaluator_implementation" not in legacy_item.model_dump(mode="json")
+    legacy_manifest = view.manifest.model_copy(update={"items": (legacy_item,)})
+    legacy_data = legacy_manifest.model_dump(mode="json")
+    assert "policy_evaluator_implementation" not in legacy_data["items"][0]
+    assert RepositoryContextManifestV1.model_validate(legacy_data).fingerprint == legacy_manifest.fingerprint
+    legacy_view = view.model_copy(update={"manifest": legacy_manifest})
+    with pytest.raises(ValueError, match="context or admitted policy changed"):
+        verify_repository_context(source, legacy_manifest, admissions)
+    with pytest.raises(ValueError, match="policy.*implementation"):
+        authorize_repository_context_delivery(legacy_view, admissions, NOW)
+
+
+def test_lexical_selection_rejects_mixed_evaluator_identities(repository, monkeypatch):
+    source = provider(repository)
+    spec = selection(ContextLookup(path="code.py", kind="lexical", query="return"))
+    _, admissions = context(source, spec)
+    original = ResourcePolicyEvaluator.evaluate
+
+    def changed(evaluator, profile, request):
+        decision = original(evaluator, profile, request)
+        if request.action is ResourceAction.SEARCH:
+            return decision.model_copy(update={"evaluator_implementation": "resource-policy-evaluator-v1:sha256:" + "f" * 64})
+        return decision
+
+    monkeypatch.setattr(ResourcePolicyEvaluator, "evaluate", changed)
+    view = select_repository_context(source, spec, admissions)
+    assert not view.manifest.items
+    assert view.manifest.omissions[0].reason == "policy_denied"
 
 
 def test_repository_instructions_do_not_change_authority_or_acceptance(repository):

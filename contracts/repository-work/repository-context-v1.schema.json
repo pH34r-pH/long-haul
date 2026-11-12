@@ -88,6 +88,19 @@
           "title": "Omitted Byte Count",
           "type": "integer"
         },
+        "policy_evaluator_implementation": {
+          "anyOf": [
+            {
+              "pattern": "^resource-policy-evaluator-v1:sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Policy Evaluator Implementation"
+        },
         "policy_fingerprint": {
           "pattern": "^resource-policy-v1:[0-9a-f]{64}$",
           "title": "Policy Fingerprint",

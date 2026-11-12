@@ -55,17 +55,25 @@ class ContextAdmission:
     authority_class: str = "repository-reference"
 
 
-def _authorized(admission: ContextAdmission, lookup: ContextLookup) -> bool:
+def _authorized(admission: ContextAdmission, lookup: ContextLookup) -> str | None:
     profile, request = admission.profile, admission.request
     if (profile.fingerprint != admission.expected_policy_fingerprint
             or profile.authority_class.value != admission.authority_class
             or request.action is not ResourceAction.AI_AUGMENT):
-        return False
+        return None
     evaluator = ResourcePolicyEvaluator()
     requests = [request]
     if lookup.kind == "lexical":
         requests.append(request.model_copy(update={"action": ResourceAction.SEARCH}))
-    return all(evaluator.evaluate(profile, use).status is PolicyDecisionStatus.ALLOW for use in requests)
+    implementation = None
+    for use in requests:
+        decision = evaluator.evaluate(profile, use)
+        if (decision.status is not PolicyDecisionStatus.ALLOW
+                or decision.evaluator_implementation is None
+                or (implementation is not None and decision.evaluator_implementation != implementation)):
+            return None
+        implementation = decision.evaluator_implementation
+    return implementation
 
 
 def _bound_use(provider, selection, admission):
@@ -107,25 +115,27 @@ def _spans(lookup: ContextLookup, text: str) -> list[tuple[int, int, str | None]
 
 def _read_admitted(provider, selection, lookup, admission):
     if (not _bound_use(provider, selection, admission)
-            or admission.data_class not in selection.admitted_data_classes
-            or not _authorized(admission, lookup)):
-        return None, "policy_denied"
+            or admission.data_class not in selection.admitted_data_classes):
+        return None, "policy_denied", None
+    implementation = _authorized(admission, lookup)
+    if implementation is None:
+        return None, "policy_denied", None
     if (provider.source.visibility == "private" or provider.source.data_class != "public") and admission.data_class == "public":
-        return None, "policy_denied"  # Declassification requires a separately reviewed derivative.
+        return None, "policy_denied", None  # Declassification requires a separately reviewed derivative.
     try:
         document = provider.read(lookup.path)
     except FileNotFoundError:
-        return None, "missing"
+        return None, "missing", None
     except NotImplementedError:
-        return None, "unavailable"
+        return None, "unavailable", None
     except (ValueError, PermissionError, UnicodeError):
-        return None, "invalid_source"
+        return None, "invalid_source", None
     if document.reference.digest != admission.profile.identity.content_digest:
-        return None, "invalid_source"
-    return document, None
+        return None, "invalid_source", None
+    return document, None, implementation
 
 
-def _context_item(lookup, document, admission, span, remaining):
+def _context_item(lookup, document, admission, span, remaining, implementation):
     start, end, symbol = span
     complete = "".join(document.text.splitlines(keepends=True)[start - 1:end]).encode()
     excerpt = complete[:remaining].decode("utf-8", errors="ignore")
@@ -135,6 +145,7 @@ def _context_item(lookup, document, admission, span, remaining):
         resource_id=admission.profile.identity.resource_id, authority_class=admission.authority_class,
         data_class=admission.data_class, policy_fingerprint=admission.expected_policy_fingerprint,
         request_fingerprint=admission.request.fingerprint,
+        policy_evaluator_implementation=implementation,
         start_line=start, end_line=end, excerpt_digest=content_digest(data), byte_count=len(data),
         symbol=symbol, truncated=len(data) < len(complete), omitted_byte_count=len(complete) - len(data),
     ), excerpt
@@ -149,7 +160,7 @@ class _SelectionBuilder:
     def omit(self, lookup, reason, omitted_matches=None):
         self.omissions.append(ContextOmission(lookup=lookup, reason=reason, omitted_matches=omitted_matches))
 
-    def add_spans(self, lookup, document, admission, spans):
+    def add_spans(self, lookup, document, admission, spans, implementation):
         if not spans:
             self.omit(lookup, "no_match")
         for index, span in enumerate(spans):
@@ -159,7 +170,7 @@ class _SelectionBuilder:
             if self.remaining <= 0:
                 self.omit(lookup, "byte_budget", len(spans) - index)
                 break
-            item, excerpt = _context_item(lookup, document, admission, span, self.remaining)
+            item, excerpt = _context_item(lookup, document, admission, span, self.remaining, implementation)
             if item.byte_count == 0:
                 self.omit(lookup, "byte_budget")
                 break
@@ -174,7 +185,7 @@ class _SelectionBuilder:
             self.omit(lookup, "token_budget_unavailable")
             return
         admission = self.admissions.get(lookup.path)
-        document, reason = _read_admitted(self.provider, self.selection, lookup, admission)
+        document, reason, implementation = _read_admitted(self.provider, self.selection, lookup, admission)
         if reason:
             self.omit(lookup, reason)
             return
@@ -183,7 +194,7 @@ class _SelectionBuilder:
         except (NotImplementedError, SyntaxError, RecursionError, MemoryError):
             self.omit(lookup, "unavailable")
             return
-        self.add_spans(lookup, document, admission, spans)
+        self.add_spans(lookup, document, admission, spans, implementation)
 
 
 def select_repository_context(
@@ -224,8 +235,13 @@ def authorize_repository_context_delivery(view, admissions, now: datetime) -> No
                 or binding.authority_class != item.authority_class):
             raise ValueError("context delivery lacks exact current policy/use admission")
         fresh = replace_admission(binding, request=binding.request.model_copy(update={"now": now}))
-        if not _authorized(fresh, item.lookup):
+        if item.policy_evaluator_implementation is None:
+            raise ValueError("context delivery policy implementation is unversioned")
+        implementation = _authorized(fresh, item.lookup)
+        if implementation is None:
             raise ValueError("context delivery policy is expired, revoked, or incompatible")
+        if implementation != item.policy_evaluator_implementation:
+            raise ValueError("context delivery policy implementation changed")
 
 
 def render_repository_context(view: RepositoryContextView) -> str:
