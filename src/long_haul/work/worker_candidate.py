@@ -13,6 +13,10 @@ from .repository_candidate import CandidateSnapshot, freeze_repository_candidate
 from .repository_git import _GitObjects
 from .repository_models import content_digest, repository_path
 
+MAX_WORKER_FILES = 256
+MAX_WORKER_DIRECTORIES = 256
+MAX_WORKER_DEPTH = 64
+
 
 def worker_path(value: str) -> str:
     path = repository_path(value)
@@ -24,16 +28,34 @@ def worker_path(value: str) -> str:
 def regular_contents(root: Path) -> dict[str, bytes]:
     """Only after process-tree cleanup, or while the executor has paused native execution."""
     result = {}
-    for path in root.rglob("*"):
-        mode = path.lstat().st_mode
-        relative = worker_path(path.relative_to(root).as_posix())
-        if stat.S_ISDIR(mode):
-            continue
-        if not stat.S_ISREG(mode) or path.stat().st_nlink != 1 or path.stat().st_size > 1048576:
-            raise ValueError("worker contains a link, special file, or oversized file")
-        result[relative] = path.read_bytes()
-        if len(result) > 256 or sum(map(len, result.values())) > 4194304:
-            raise ValueError("worker exceeds bounded candidate size")
+    directories = 0
+    pending = [root]
+    total = 0
+    while pending:
+        # Stream directory entries instead of materializing a potentially
+        # unbounded directory listing before the count limit is applied.
+        with os.scandir(pending.pop()) as entries:
+            for entry in entries:
+                path = Path(entry.path)
+                metadata = entry.stat(follow_symlinks=False)
+                relative = worker_path(path.relative_to(root).as_posix())
+                if len(Path(relative).parts) > MAX_WORKER_DEPTH:
+                    raise ValueError("worker exceeds bounded directory depth")
+                if stat.S_ISDIR(metadata.st_mode):
+                    directories += 1
+                    if directories > MAX_WORKER_DIRECTORIES:
+                        raise ValueError("worker exceeds bounded directory count")
+                    pending.append(path)
+                    continue
+                if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1 or metadata.st_size > 1048576:
+                    raise ValueError("worker contains a link, special file, or oversized file")
+                if len(result) >= MAX_WORKER_FILES or total + metadata.st_size > 4194304:
+                    raise ValueError("worker exceeds bounded candidate size")
+                data = path.read_bytes()
+                total += len(data)
+                if total > 4194304 or len(data) > 1048576:
+                    raise ValueError("worker exceeds bounded candidate size")
+                result[relative] = data
     return result
 
 
