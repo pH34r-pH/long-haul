@@ -25,6 +25,7 @@ from long_haul.work.repository_evaluation_models import (
     RepositoryEvidencePacketV1,
     SandboxExecutionReceipt,
     evaluate_repository_packet,
+    evaluator_implementation_reference,
 )
 from long_haul.work.repository_evaluator import (
     RepositoryEvaluationRunner,
@@ -44,6 +45,21 @@ from long_haul.work.repository_sandbox import (
     _bounded_output,
     _startup_receipt,
 )
+
+
+@pytest.mark.parametrize("module", ["resource_policy.py", "resource_policy_evaluator.py"])
+def test_implementation_reference_binds_policy_decision_code(monkeypatch, module):
+    from pathlib import Path
+
+    baseline = evaluator_implementation_reference()
+    original = Path.read_bytes
+
+    def changed(path):
+        result = original(path)
+        return result + b"\n# synthetic change\n" if path.name == module else result
+
+    monkeypatch.setattr(Path, "read_bytes", changed)
+    assert evaluator_implementation_reference() != baseline
 
 
 class FixtureSandbox:

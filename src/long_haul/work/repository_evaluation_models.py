@@ -42,7 +42,9 @@ def evaluator_implementation_reference() -> DigestReference:
         "repository_evidence_admission.py",
     )
     manifest = {name: content_digest((root / name).read_bytes()) for name in files}
-    manifest["../resource_policy_models.py"] = content_digest((root.parent / "resource_policy_models.py").read_bytes())
+    # Public and private evidence admission uses the shared policy implementation.
+    for name in ("resource_policy.py", "resource_policy_models.py", "resource_policy_evaluator.py"):
+        manifest["../" + name] = content_digest((root.parent / name).read_bytes())
     data = canonical_json({"files": manifest, "python": platform.python_version(), "pydantic": pydantic.__version__}).encode()
     return DigestReference(reference="urn:long-haul:repository-evaluator-v1", digest=content_digest(data))
 
