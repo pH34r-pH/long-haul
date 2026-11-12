@@ -172,7 +172,8 @@ def quota_fixture(tmp_path, plan):
         yield worker, request, profile, grant, root, intent
 
 
-def test_actual_pi_uses_fenced_quota_workspace_and_reclaims_scratch(tmp_path, monkeypatch):
+@pytest.mark.parametrize("diagnostic_sample", range(3))
+def test_actual_pi_uses_fenced_quota_workspace_and_reclaims_scratch(tmp_path, monkeypatch, diagnostic_sample):
     with quota_fixture(tmp_path, PLAN) as (worker, request, profile, grant, root, intent):
         original_control = worker._control
 
@@ -185,6 +186,7 @@ def test_actual_pi_uses_fenced_quota_workspace_and_reclaims_scratch(tmp_path, mo
                                         timeout=15, check=False)
             error = result.stderr.lower()
             print(json.dumps({"qualification": "synthetic-quota-stop-diagnostic",
+                              "sample": diagnostic_sample,
                               "acknowledged": result.returncode == 0,
                               "mentions_paused": b"paused" in error,
                               "mentions_zombie": b"zombie" in error}))
