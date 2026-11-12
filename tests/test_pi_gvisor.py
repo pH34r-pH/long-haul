@@ -67,10 +67,21 @@ def evidence(result, events):
 
 
 def _qualify_synthetic_holder_view(view, worker, guest, holder):
+    first = copy_docker_workspace(worker.docker_path, holder, 15)["fixture/clock"]
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        time.sleep(.1)
+        if copy_docker_workspace(worker.docker_path, holder, 15)["fixture/clock"] != first:
+            break
+    else:
+        raise AssertionError("synthetic guest clock did not advance before pause")
     with view() as root:
         contents = regular_contents(root)
-        assert contents.pop("fixture/clock")
+        paused_clock = contents.pop("fixture/clock")
+        assert paused_clock
         assert contents == {"fixture/a": b"changed", "fixture/new/b": b"created"}
+        time.sleep(.5)
+        assert copy_docker_workspace(worker.docker_path, holder, 15)["fixture/clock"] == paused_clock
     if os.environ.get("GITHUB_ACTIONS") == "true" and os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted":
         captured = _hosted_frozen_holder_capture(worker, guest, holder)
     else:
