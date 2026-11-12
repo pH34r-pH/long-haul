@@ -2877,6 +2877,14 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6837979997",
       "evidence": "Linux: 106 focused and 587 full-suite tests passed, 43 skipped. Pydantic 2.8.2: 35 behavior tests passed; byte-identical schema export fails also on unchanged main.",
       "remaining": "Branch is unmerged; exact-head hosted validation and review remain. Preserve historic manifest hashes, reselect legacy items before delivery, and do not treat source/runtime identity as host attestation."
+    },
+    {
+      "at": "2026-11-12T22:49:53.969872+00:00",
+      "task": "lh-248-interchange",
+      "status": "reopened_after_state_reconciliation",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6838087823",
+      "evidence": "GitHub issue #248 was closed at 21:32 UTC despite incomplete interchange acceptance; reopened. All 30 distinct non-completed ledger issues were checked and are open.",
+      "remaining": "Interchange acceptance, independent consumer qualification, authenticated presence and safe runtime integration remain open; issue state is not completion evidence."
     }
   ]
 }
