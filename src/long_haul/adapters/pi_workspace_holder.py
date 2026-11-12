@@ -28,6 +28,7 @@ class HolderProfile:
     def __post_init__(self):
         if (not re.fullmatch(r"[^\s@]+@sha256:[0-9a-f]{64}", self.image)
                 or not _DIGEST.fullmatch(self.image_id) or not callable(self.verify_runtime)
+                or not isinstance(self.image_environment, tuple)
                 or any(not isinstance(item, str) or "=" not in item for item in self.image_environment)
                 or len({item.split("=", 1)[0] for item in self.image_environment}) != len(self.image_environment)):
             raise ValueError("invalid holder runtime profile")
@@ -88,6 +89,8 @@ def allocate_workspace_holder(root: Path, token, fingerprint, control, profile, 
         intent = load_workspace_intent(root, token, fingerprint)
         if not isinstance(profile, HolderProfile) or not callable(admitted) or admitted(intent.fingerprint) is not True:
             raise ValueError("workspace intent is not scheduler-admitted")
+        if load_workspace_intent(root, token, fingerprint) != intent:
+            raise ValueError("workspace intent changed after admission")
         profile.verify_runtime()
         _daemon(control, intent.daemon_id)
         if any(_objects(control, intent)):

@@ -51,6 +51,20 @@ def test_scheduler_denial_precedes_every_docker_operation(tmp_path):
     assert control.calls == [] and not control.containers and control.volume is None
 
 
+def test_intent_changed_during_admission_prevents_allocation(tmp_path):
+    root, intent, _ = setup(tmp_path)
+    control = AllocationDocker(intent)
+
+    def admit(_):
+        path = root / (intent.token + ".json")
+        path.write_text(path.read_text().replace("fixture-daemon", "other-daemon"))
+        return True
+
+    with pytest.raises(WorkspaceCleanupRequired):
+        allocate_workspace_holder(root, intent.token, intent.fingerprint, control, profile(), admit)
+    assert control.calls == []
+
+
 def test_holder_allocation_requires_absent_names_and_rechecks_started_state(tmp_path, monkeypatch):
     root, intent, _ = setup(tmp_path)
     control, observed = AllocationDocker(intent), []
