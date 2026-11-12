@@ -2786,6 +2786,16 @@
       "pi_gvisor_run": 43164338543,
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6815985700",
       "remaining": "Synthetic freeze/capture and two negative cases passed, but three actual quota repairs failed; full confinement, scoped authority, recovery and private-use qualification remain open."
+    },
+    {
+      "at": "2026-11-12T22:52:47.458209+00:00",
+      "task": "lh-245-security",
+      "status": "scratch_preparation_bounds_draft",
+      "pull_request": 265,
+      "tested_code_commit": "8254b09",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6838151596",
+      "evidence": "Two negative fixtures reproduced unbounded file preparation and removal of a late candidate; after correction 103 focused Linux tests and Ruff passed.",
+      "remaining": "Hosted exact-head checks, authenticated host/daemon, external fencing, race-free cleanup, process containment and private use remain unqualified; draft cannot merge on these tests alone."
     }
   ]
 }
