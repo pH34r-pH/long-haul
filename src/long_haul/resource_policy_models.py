@@ -317,12 +317,22 @@ class ResourceUseRequest(BaseModel):
     contract_id: str | None = None
     repository_id: str | None = None
     audience_id: str | None = None
+    known_absent_context: tuple[Literal["crew_id", "mission_id", "contract_id", "repository_id", "audience_id"], ...] = ()
     fulfilled_duties: list[str] = Field(default_factory=list)
     now: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @field_validator("known_absent_context")
+    @classmethod
+    def canonical_absence(cls, value):
+        if len(value) != len(set(value)):
+            raise ValueError("known absent context fields must be unique")
+        return tuple(sorted(value))
 
     @model_validator(mode="after")
     def validate_now(self) -> ResourceUseRequest:
         _aware(self.now, "now")
+        if any(getattr(self, field) is not None for field in self.known_absent_context):
+            raise ValueError("known absent context cannot also contain a value")
         consequential = {
             ResourceAction.AI_AUGMENT,
             ResourceAction.EVALUATE,
@@ -340,8 +350,11 @@ class ResourceUseRequest(BaseModel):
 
     @property
     def fingerprint(self) -> str:
+        payload = self.model_dump(mode="json")
+        if not self.known_absent_context:
+            payload.pop("known_absent_context")
         return "resource-use-v1:" + hashlib.sha256(
-            canonical_json(self.model_dump(mode="json")).encode()
+            canonical_json(payload).encode()
         ).hexdigest()
 
 
