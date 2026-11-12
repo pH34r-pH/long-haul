@@ -34,6 +34,10 @@ class EvaluatorWorkerAdmission:
         profile = self.profile
         if extension is None or extension.sealed_evaluator is None:
             raise PermissionError("worker evaluator admission requires a sealed evaluator reference")
+        actual_context = (attempt.contract_id, attempt.mission_id, attempt.repository_id)
+        expected_context = (contract.contract_id, contract.mission_id, extension.source.repository_id)
+        if actual_context != expected_context:
+            raise PermissionError("worker evaluator admission belongs to another attempt context")
         if type(profile) not in {PrivateEvaluatorProfile, RepositoryEvaluationProfileV1}:
             raise PermissionError("worker evaluator profile type is not admitted")
         actual = (extension.task, extension.sealed_evaluator.digest, extension.public_evaluation, profile.implementation)
@@ -58,9 +62,10 @@ class EvaluatorWorkerAdmission:
         if policy is None or request is None or now.tzinfo is None or now.utcoffset() is None:
             raise PermissionError("legacy evaluator requires a current public-use admission")
         actual = (policy.fingerprint, request.fingerprint, policy.identity.content_digest,
-                  request.caller_id, request.contract_id, request.mission_id, request.repository_id, request.purpose)
+                  request.caller_id, request.crew_id, request.contract_id, request.mission_id,
+                  request.repository_id, request.purpose)
         expected = (self.expected_policy_fingerprint, self.expected_request_fingerprint, self.profile.fingerprint,
-                    attempt.session_id, contract.contract_id, contract.mission_id,
+                    attempt.session_id, attempt.crew_id, contract.contract_id, contract.mission_id,
                     contract.repository_work.source.repository_id, "public-evaluator-fixture")
         if actual != expected or request.now > now:
             raise PermissionError("legacy evaluator public-use admission is stale or mismatched")
