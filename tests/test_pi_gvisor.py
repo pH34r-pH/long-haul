@@ -183,10 +183,16 @@ def test_actual_pi_uses_fenced_quota_workspace_and_reclaims_scratch(tmp_path, mo
             if record.get("toolName") == "edit" and record.get("isError") is True:
                 error = json.dumps(record.get("result")).lower()
                 print(json.dumps({"qualification": "synthetic-quota-edit-error", "sample": diagnostic_sample,
+                                  "result_type": type(record.get("result")).__name__,
                                   "permission": any(word in error for word in ("eacces", "eperm", "permission")),
                                   "read_only": "read-only" in error or "erofs" in error,
                                   "missing": "enoent" in error or "not found" in error,
-                                  "no_match": "could not find" in error or "no match" in error}))
+                                  "no_match": "could not find" in error or "no match" in error,
+                                  "signals": [term for term in ("invalid", "argument", "edits", "oldtext",
+                                              "newtext", "schema", "validation", "exact", "unique", "string",
+                                              "expected", "content", "operation", "timeout", "abort", "denied",
+                                              "failed", "missing", "not found", "unsupported", "write", "read")
+                                              if term in error]}))
             return original_end(projector, record, *args)
 
         monkeypatch.setattr(PiTrajectoryProjector, "_end", synthetic_end)
