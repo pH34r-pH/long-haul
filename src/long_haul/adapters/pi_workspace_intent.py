@@ -7,11 +7,12 @@ the file alone is not authority to remove resources or release a lease.
 from __future__ import annotations
 
 import os
+import re
 import secrets
 import stat
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from ..work.repository_models import FrozenProjection
 
@@ -21,6 +22,15 @@ class WorkspaceLeaseIntent(FrozenProjection):
     attempt_fingerprint: str = Field(pattern=r"^sha256:[0-9a-f]{64}$", repr=False)
     environment_fingerprint: str = Field(pattern=r"^sha256:[0-9a-f]{64}$", repr=False)
     daemon_id: str = Field(pattern=r"^[A-Za-z0-9:._-]{1,128}$", repr=False)
+    volume_options: str = "size=8m,nr_inodes=1024,mode=0777,nosuid,nodev,noexec"
+
+    @field_validator("volume_options")
+    @classmethod
+    def bounded_volume(cls, value):
+        match = re.fullmatch(r"size=[1-8]m,nr_inodes=([1-9][0-9]{0,3}),mode=0777,nosuid,nodev,noexec", value)
+        if match is None or int(match.group(1)) > 1024:
+            raise ValueError("workspace volume must have bounded tmpfs options")
+        return value
 
     @classmethod
     def generate(cls, attempt_fingerprint, environment_fingerprint, daemon_id):
@@ -43,6 +53,7 @@ class WorkspaceLeaseIntent(FrozenProjection):
         if role not in {"worker", "holder", "volume"}:
             raise ValueError("invalid workspace lease role")
         return {"dev.ph34r.long-haul.lease": self.token,
+                "dev.ph34r.long-haul.intent": self.fingerprint,
                 "dev.ph34r.long-haul.attempt": self.attempt_fingerprint,
                 "dev.ph34r.long-haul.environment": self.environment_fingerprint,
                 "dev.ph34r.long-haul.daemon": self.daemon_id,

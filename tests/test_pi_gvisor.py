@@ -56,15 +56,16 @@ def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
     worker, request, _ = worker_setup(tmp_path, PLAN)
     suffix = uuid4().hex
     daemon = worker._control("info", "--format", "{{.ID}}").strip()
+    options = "size=1m,nr_inodes=32,mode=0777,nosuid,nodev,noexec"
     intent = WorkspaceLeaseIntent(token=suffix, attempt_fingerprint=request.normalizer.attempt.fingerprint,
-                                  environment_fingerprint=worker.environment.fingerprint, daemon_id=daemon)
+                                  environment_fingerprint=worker.environment.fingerprint, daemon_id=daemon,
+                                  volume_options=options)
     recovery_root = (tmp_path / "workspace-recovery").resolve()
     recovery_root.mkdir(mode=0o700)
     persist_workspace_intent(recovery_root, intent)
     volume, holder, guest = intent.volume_name, intent.holder_name, intent.worker_name
     image, runtime = worker.environment.image, worker.environment.runtime
     mount = "type=volume,src=" + volume + ",dst=/workspace"
-    options = "size=1m,nr_inodes=32,mode=0777,nosuid,nodev,noexec"
     common = ["--runtime=" + runtime, "--network=none", "--read-only", "--user=65534:65534",
               "--cap-drop=ALL", "--security-opt=no-new-privileges", "--pids-limit=64", "--memory=128m",
               "--mount=" + mount, "--entrypoint=/usr/local/bin/node", "--pull=never"]

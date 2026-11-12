@@ -40,7 +40,7 @@ def _container(control, name, labels):
     return ids[0]
 
 
-def _volume(control, name, labels):
+def _volume(control, name, labels, options):
     output = control("volume", "ls", "--filter", "name=^" + name + "$", "--format", "{{.Name}}")
     names = output.splitlines()
     if not names:
@@ -49,7 +49,9 @@ def _volume(control, name, labels):
         raise ValueError("workspace volume enumeration is ambiguous")
     info, = json.loads(control("volume", "inspect", name))
     actual = info.get("Labels") or {}
-    if info["Name"] != name or any(actual.get(k) != v for k, v in labels.items()):
+    if (info["Name"] != name or info.get("Driver") != "local" or info.get("Scope") != "local"
+            or info.get("Options") != {"type": "tmpfs", "device": "tmpfs", "o": options}
+            or any(actual.get(k) != v for k, v in labels.items())):
         raise ValueError("workspace volume identity does not match its lease")
     return name
 
@@ -57,7 +59,7 @@ def _volume(control, name, labels):
 def _objects(control, intent):
     return (_container(control, intent.worker_name, intent.labels("worker")),
             _container(control, intent.holder_name, intent.labels("holder")),
-            _volume(control, intent.volume_name, intent.labels("volume")))
+            _volume(control, intent.volume_name, intent.labels("volume"), intent.volume_options))
 
 
 def recover_workspace_lease(root: Path, token: str, expected_fingerprint: str, control):
@@ -72,7 +74,7 @@ def recover_workspace_lease(root: Path, token: str, expected_fingerprint: str, c
                 control("rm", "--force", identity)
         if volume:
             _daemon(control, intent.daemon_id)
-            if _volume(control, intent.volume_name, intent.labels("volume")) != volume:
+            if _volume(control, intent.volume_name, intent.labels("volume"), intent.volume_options) != volume:
                 raise ValueError("workspace volume changed before removal")
             control("volume", "rm", volume)
         _daemon(control, intent.daemon_id)

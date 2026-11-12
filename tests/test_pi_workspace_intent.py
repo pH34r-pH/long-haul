@@ -79,3 +79,10 @@ def test_failed_sync_never_returns_an_admitted_intent(tmp_path, monkeypatch):
     monkeypatch.setattr(os, "fsync", lambda _: (_ for _ in ()).throw(OSError("sync failed")))
     with pytest.raises(OSError, match="sync failed"):
         persist_workspace_intent(root, intent())
+
+
+def test_intent_cannot_authorize_unbounded_volume():
+    with pytest.raises(ValueError, match="bounded tmpfs"):
+        WorkspaceLeaseIntent(token="a" * 32, attempt_fingerprint="sha256:" + "b" * 64,
+                             environment_fingerprint="sha256:" + "c" * 64, daemon_id="fixture-daemon",
+                             volume_options="size=1g")

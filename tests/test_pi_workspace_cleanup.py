@@ -23,6 +23,7 @@ class FakeDocker:
         self.containers = {intent.worker_name: ("a" * 64, intent.labels("worker")),
                            intent.holder_name: ("b" * 64, intent.labels("holder"))}
         self.volume = intent.labels("volume")
+        self.volume_options = intent.volume_options
         self.fail = None
 
     def __call__(self, *args):
@@ -42,7 +43,8 @@ class FakeDocker:
         if args[:2] == ("volume", "ls"):
             return self.intent.volume_name + "\n" if self.volume is not None else ""
         if args[:2] == ("volume", "inspect"):
-            return json.dumps([{"Name": self.intent.volume_name, "Labels": self.volume}])
+            return json.dumps([{"Name": self.intent.volume_name, "Labels": self.volume, "Driver": "local", "Scope": "local",
+                                "Options": {"type": "tmpfs", "device": "tmpfs", "o": self.volume_options}}])
         if args[0] == "rm":
             identity = args[2]
             self.containers = {name: entry for name, entry in self.containers.items() if entry[0] != identity}
@@ -77,7 +79,7 @@ def test_recovery_removes_owned_worker_holder_then_volume_and_syncs_marker(tmp_p
     assert recover(root, intent, docker) == marker  # Rechecks absence before reusing the marker.
 
 
-@pytest.mark.parametrize("change", ["daemon", "worker-label", "holder-label", "volume-label", "fingerprint"])
+@pytest.mark.parametrize("change", ["daemon", "worker-label", "holder-label", "volume-label", "volume-options", "fingerprint"])
 def test_recovery_refuses_foreign_or_unadmitted_objects_before_mutation(tmp_path, change):
     root, intent, docker = setup(tmp_path)
     fingerprint = intent.fingerprint
@@ -87,6 +89,8 @@ def test_recovery_refuses_foreign_or_unadmitted_objects_before_mutation(tmp_path
         fingerprint = "sha256:" + "f" * 64
     elif change == "volume-label":
         docker.volume["dev.ph34r.long-haul.lease"] = "other"
+    elif change == "volume-options":
+        docker.volume_options = "size=1g"
     else:
         name = intent.worker_name if change == "worker-label" else intent.holder_name
         docker.containers[name][1]["dev.ph34r.long-haul.lease"] = "other"
