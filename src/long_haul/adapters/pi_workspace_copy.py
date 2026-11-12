@@ -76,7 +76,12 @@ def copy_docker_workspace(docker_path: Path, container: str, timeout_seconds: fl
             if process is not None:
                 try:
                     if process.poll() is None:
-                        process.kill()
+                        try:
+                            process.kill()
+                        except ProcessLookupError:
+                            pass  # The client may have exited after poll().
                     process.wait(timeout=5)
+                except (OSError, subprocess.SubprocessError):
+                    raise RuntimeError("workspace copy cleanup is unconfirmed; retain the lease") from None
                 finally:
                     process.stdout.close()

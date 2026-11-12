@@ -7,6 +7,7 @@ import time
 
 import pytest
 
+from long_haul.adapters import pi_workspace_copy
 from long_haul.adapters.pi_workspace_copy import copy_docker_workspace
 
 pytestmark = pytest.mark.skipif(os.name != "posix", reason="worker transport requires POSIX pipes")
@@ -52,6 +53,40 @@ def test_copy_terminates_stalled_subprocess_at_deadline(tmp_path):
     with pytest.raises(ValueError):
         copy_docker_workspace(tool, CONTAINER, 0.2)
     assert time.monotonic() - start < 5
+
+
+def test_copy_rejects_complete_archive_when_process_never_finishes(tmp_path):
+    tool = _stub(tmp_path, action="sys.stdout.buffer.write(data); sys.stdout.flush(); time.sleep(30)")
+    with pytest.raises(ValueError):
+        copy_docker_workspace(tool, CONTAINER, 0.2)
+
+
+def test_copy_cleanup_failure_is_sanitized_and_requires_lease_retention(tmp_path, monkeypatch):
+    class FakeProcess:
+        stdout = io.BytesIO()
+
+        def poll(self):
+            return None
+
+        def wait(self, timeout):
+            return 0
+
+        def kill(self):
+            raise OSError("sensitive subprocess detail")
+
+    class FakeReader:
+        def __init__(self, stream, deadline):
+            pass
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(pi_workspace_copy.subprocess, "Popen", lambda *args, **kwargs: FakeProcess())
+    monkeypatch.setattr(pi_workspace_copy, "_DeadlineReader", FakeReader)
+    monkeypatch.setattr(pi_workspace_copy, "read_workspace_archive", lambda _: {})
+    with pytest.raises(RuntimeError, match="retain the lease") as failure:
+        copy_docker_workspace(tmp_path / "docker", CONTAINER, 5)
+    assert "sensitive subprocess detail" not in str(failure.value)
 
 
 def test_copy_rejects_unbounded_archive_stream(tmp_path):
