@@ -234,6 +234,13 @@ def test_actual_pi_uses_fenced_quota_workspace_and_reclaims_scratch(tmp_path, mo
         def synthetic_control(*arguments):
             if len(arguments) != 3 or arguments[:2] != ("kill", "--signal=KILL"):
                 return original_control(*arguments)
+            events = None
+            if os.environ.get("GITHUB_ACTIONS") == "true" and os.environ.get("RUNNER_ENVIRONMENT") == "github-hosted":
+                info, = json.loads(original_control("inspect", arguments[2]))
+                pid = info["State"].get("Pid")
+                assert info["Id"] == arguments[2] and info["State"].get("Running") is True
+                assert type(pid) is int and pid > 0
+                events = _synthetic_container_cgroup(pid, arguments[2]) / "cgroup.events"
             with tempfile.TemporaryDirectory(prefix="lh-synthetic-docker-config-") as config:
                 result = subprocess.run([str(worker.docker_path), "--config", config, *arguments],
                                         env=_control_environment(), capture_output=True,
@@ -245,6 +252,10 @@ def test_actual_pi_uses_fenced_quota_workspace_and_reclaims_scratch(tmp_path, mo
                               "mentions_paused": b"paused" in error,
                               "mentions_zombie": b"zombie" in error}))
             result.check_returncode()
+            if events is not None:
+                population = _wait_synthetic_cgroup_empty(events)
+                print(json.dumps({"qualification": "synthetic-pi-quota-stop-cgroup", "sample": diagnostic_sample,
+                                  "cgroup_observation": population, "production_stop_qualified": False}))
             return result.stdout.decode()
 
         monkeypatch.setattr(worker, "_control", synthetic_control)
