@@ -1,5 +1,6 @@
 """Unconfirmed removal retains private recovery state and denies reuse."""
 import json
+import os
 import subprocess
 from contextlib import nullcontext
 from dataclasses import replace
@@ -172,6 +173,40 @@ def test_recovery_evidence_binds_receipt_bytes_actually_checked(tmp_path):
     evidence = {"recovery": content_digest(original), "container": receipt.container_id, "removed": True,
                 "environment": worker.environment.fingerprint}
     assert cleanup.evidence.digest == content_digest(json.dumps(evidence, sort_keys=True).encode())
+
+
+@pytest.mark.skipif(os.name != "posix", reason="private receipt checks require POSIX filesystem semantics")
+@pytest.mark.parametrize("change", ["symlink", "hardlink", "oversized", "fifo", "file_mode", "directory_mode"])
+def test_recovery_rejects_untrusted_receipt_file_before_control(tmp_path, change):
+    worker, request = fake_executor(tmp_path)
+    with pytest.raises(PiWorkerCleanupRequired) as failure:
+        worker.run(request)
+    path = failure.value.receipt_path
+    receipt = PiWorkerRecovery.model_validate_json(path.read_bytes())
+    if change == "file_mode":
+        path.chmod(0o644)
+    elif change == "directory_mode":
+        path.parent.chmod(0o755)
+    elif change == "fifo":
+        path.unlink()
+        os.mkfifo(path, 0o600)
+    elif change == "oversized":
+        path.write_bytes(b"x" * 262145)
+    else:
+        copied = path.parent / "other.json"
+        copied.write_bytes(path.read_bytes())
+        copied.chmod(0o600)
+        path.unlink()
+        if change == "symlink":
+            path.symlink_to(copied.name)
+        else:
+            os.link(copied, path)
+    calls = []
+    worker._control = lambda *args: calls.append(args)
+    with pytest.raises((OSError, ValueError)):
+        worker.recover()
+    assert not calls and receipt.workspace.exists() and receipt.control.exists()
+    assert worker._cleanup_pending and not worker.lease_releasable
 
 
 @pytest.mark.parametrize("census", ["present", "error"])

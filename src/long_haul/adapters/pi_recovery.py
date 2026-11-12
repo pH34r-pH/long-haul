@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import stat
 import tempfile
 from pathlib import Path
 from typing import Literal
@@ -12,6 +13,9 @@ from pydantic import Field
 
 from ..work.harness import HarnessAttempt, HarnessCleanup
 from ..work.repository_models import DigestReference, FrozenProjection, content_digest
+from .pi_workspace_intent import _open_private_root
+
+MAX_RECOVERY_BYTES = 262144
 
 
 class PiWorkerRecovery(FrozenProjection):
@@ -47,6 +51,33 @@ def confirm_container_absent(control, container_id):
         raise ValueError("worker container removal is unconfirmed")
 
 
+def _read_recovery_receipt(path: Path) -> bytes:
+    """Read bounded bytes; POSIX additionally checks private file and directory metadata.
+
+    The non-POSIX fallback does not qualify equivalent filesystem isolation.
+    """
+    if os.name != "posix":
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("recovery receipt is not a regular file")
+        with path.open("rb") as source:
+            data = source.read(MAX_RECOVERY_BYTES + 1)
+    else:
+        directory = _open_private_root(path.parent)
+        try:
+            descriptor = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
+            with os.fdopen(descriptor, "rb") as source:
+                metadata = os.fstat(source.fileno())
+                if (not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.geteuid()
+                        or metadata.st_nlink != 1 or metadata.st_mode & 0o077 or metadata.st_size > MAX_RECOVERY_BYTES):
+                    raise ValueError("recovery receipt is not private and bounded")
+                data = source.read(MAX_RECOVERY_BYTES + 1)
+        finally:
+            os.close(directory)
+    if len(data) > MAX_RECOVERY_BYTES:
+        raise ValueError("recovery receipt exceeds size limit")
+    return data
+
+
 def recover_worker(executor, receipt_path: Path, expected: PiWorkerRecovery) -> HarnessCleanup:
     """Recover only against a separately trusted expected record.
 
@@ -55,7 +86,7 @@ def recover_worker(executor, receipt_path: Path, expected: PiWorkerRecovery) -> 
     """
     if not isinstance(expected, PiWorkerRecovery):
         raise TypeError("recovery requires an independently trusted expected record")
-    receipt_bytes = receipt_path.read_bytes()
+    receipt_bytes = _read_recovery_receipt(receipt_path)
     receipt = PiWorkerRecovery.model_validate_json(receipt_bytes)
     if receipt != expected:
         raise ValueError("recovery receipt differs from trusted expected record")

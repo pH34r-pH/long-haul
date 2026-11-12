@@ -140,7 +140,8 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
                  "adapters/pi_evaluator_admission.py", "work/private_evaluator.py", "work/repository_evaluator.py",
                  "adapters/pi_trajectory.py", "adapters/harness_trace.py", "work/harness.py", "work/worker_candidate.py",
                  "work/repository_sandbox.py", "work/repository_git.py", "work/repository_candidate.py",
-                 "resource_policy_models.py", "resource_policy_evaluator.py", "adapters/pi_recovery.py", "adapters/pi_rpc.py")
+                 "resource_policy_models.py", "resource_policy_evaluator.py", "adapters/pi_recovery.py", "adapters/pi_rpc.py",
+                 "adapters/pi_workspace_intent.py")
         manifest = {name: content_digest((root / name).read_bytes()) for name in names}
         manifest.update({"adapters/pi_control/" + p.name: content_digest(p.read_bytes()) for p in CONTROL.glob("*.mjs")})
         return DigestReference(reference="urn:long-haul:pi-gvisor-worker-v1", digest=content_digest(
