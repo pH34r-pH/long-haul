@@ -148,6 +148,31 @@ def test_final_capture_holds_if_volume_user_changes_after_stop(monkeypatch):
     assert ("remove",) not in calls
 
 
+@pytest.mark.parametrize("changed_after_copy", [1, 2])
+def test_final_capture_rejects_worker_restart_during_snapshot(monkeypatch, changed_after_copy):
+    worker, calls = stopped_worker_fixture()
+    original_control = worker._control
+    copies = [0]
+
+    def control(*args):
+        if args[0] == "inspect" and copies[0] >= changed_after_copy:
+            return json.dumps([{"Id": "a" * 64, "State": {"Running": True, "Paused": False, "Pid": 42,
+                "Status": "running", "ExitCode": 0, "OOMKilled": False, "Dead": False, "Error": ""}}])
+        return original_control(*args)
+
+    def copy(*_):
+        copies[0] += 1
+        return {"a": b"fixture"}
+
+    worker._control = control
+    view = SimpleNamespace(_check=lambda **_: None, _check_volume_users=lambda: None)
+    monkeypatch.setattr(pi_quota_worker, "copy_docker_workspace", copy)
+    monkeypatch.setattr(pi_quota_worker, "verify_workspace_holder", lambda *args, **kwargs: None)
+    with pytest.raises(ValueError, match="stop is unconfirmed"):
+        worker._capture_and_remove(view, "a" * 64, "b" * 64, object())
+    assert ("remove",) not in calls
+
+
 @pytest.mark.parametrize("expires_at", ["stop", "post_stop_copy", "removal"])
 def test_capture_does_not_return_candidate_after_deadline(monkeypatch, expires_at):
     worker, calls = stopped_worker_fixture()

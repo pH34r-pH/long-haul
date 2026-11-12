@@ -175,14 +175,7 @@ class QuotaPiWorker(DockerGVisorPiWorker):
             raise ValueError("quota worker removal is unconfirmed")
         _daemon(self._control, intent.daemon_id)
 
-    def _capture_and_remove(self, view, container, holder, holder_profile):
-        self._ensure_deadline()
-        view._check(paused=False)
-        acknowledged = True
-        try:
-            self._control("kill", "--signal=KILL", container)
-        except (OSError, subprocess.SubprocessError):
-            acknowledged = False  # Never retry an ambiguous stop; reconcile exact state.
+    def _check_stopped(self, container, acknowledged):
         stopped, = json.loads(self._control("inspect", container))
         state = stopped["State"]
         if (stopped["Id"] != container or state.get("Running") is not False or state.get("Paused") is not False
@@ -192,14 +185,26 @@ class QuotaPiWorker(DockerGVisorPiWorker):
                              f"(ack={acknowledged}, running={state.get('Running') is True}, "
                              f"paused={state.get('Paused') is True}, exit_137={state.get('ExitCode') == 137}, "
                              f"pid_zero={state.get('Pid') == 0})")
+
+    def _capture_and_remove(self, view, container, holder, holder_profile):
+        self._ensure_deadline()
+        view._check(paused=False)
+        acknowledged = True
+        try:
+            self._control("kill", "--signal=KILL", container)
+        except (OSError, subprocess.SubprocessError):
+            acknowledged = False  # Never retry an ambiguous stop; reconcile exact state.
+        self._check_stopped(container, acknowledged)
         self._ensure_deadline()
         verify_workspace_holder(self._control, self._quota_intent, holder_profile, holder, running=True)
         view._check_volume_users()
         files = copy_docker_workspace(self.docker_path, holder, 15)
+        self._check_stopped(container, acknowledged)
         view._check_volume_users()
         self._ensure_deadline()
         verify_workspace_holder(self._control, self._quota_intent, holder_profile, holder, running=True)
         stopped_files = copy_docker_workspace(self.docker_path, holder, 15)
+        self._check_stopped(container, acknowledged)
         view._check_volume_users()
         self._ensure_deadline()
         if stopped_files != files:
