@@ -2877,6 +2877,18 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6838151596",
       "evidence": "Two negative fixtures reproduced unbounded file preparation and removal of a late candidate; after correction 103 focused Linux tests and Ruff passed.",
       "remaining": "Hosted exact-head checks, authenticated host/daemon, external fencing, race-free cleanup, process containment and private use remain unqualified; draft cannot merge on these tests alone."
+    },
+    {
+      "at": "2026-11-12T23:03:54.715529+00:00",
+      "task": "lh-245-security",
+      "status": "synthetic_frozen_clock_failure",
+      "pull_request": 265,
+      "failed_head": "43e5cd33a30953597651ef48e55d0b3c15df6510",
+      "failed_pi_run": 43324299082,
+      "fixture_fix_commit": "520fa552ed76a676ea75e0b8c92c5ca57d88b7af",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6838391046",
+      "evidence": "Hosted Pi run: 30 passed and one frozen synthetic clock was empty; truncate during repeated writes is plausible, not proven. Fixture now writes fixed-length in place while preserving nonempty and stability assertions; Node smoke and Ruff passed.",
+      "remaining": "Fresh hosted checks required; do not infer production process containment, race-free cleanup or private-use qualification."
     }
   ]
 }
