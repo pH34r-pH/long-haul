@@ -84,7 +84,11 @@ def test_workspace_archive_limits_entry_counts_and_depth():
 
 def test_workspace_archive_bounds_trailing_bytes_and_rejects_truncation():
     valid = archive_of([ROOT, ("./a", tarfile.REGTYPE, b"x")])
-    with pytest.raises(ValueError, match="byte limit"):
+    with pytest.raises(ValueError):
         read_workspace_archive(io.BytesIO(valid + b"x" * MAX_ARCHIVE_BYTES))
+    with pytest.raises(ValueError, match="after its terminator"):
+        read_workspace_archive(io.BytesIO(valid + archive_of([ROOT, ("./hidden", tarfile.REGTYPE, b"x")])))
+    with pytest.raises(ValueError, match="byte limit"):
+        read_workspace_archive(io.BytesIO(valid + b"\0" * MAX_ARCHIVE_BYTES))
     with pytest.raises(ValueError):
         read_workspace_archive(io.BytesIO(valid[:700]))

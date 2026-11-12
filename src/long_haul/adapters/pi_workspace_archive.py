@@ -118,9 +118,11 @@ def read_workspace_archive(stream):
         with tarfile.open(fileobj=bounded, mode="r|") as archive:
             for member in archive:
                 snapshot.accept(archive, member)
-        # Drain the complete subprocess stream under the same cap.
-        while bounded.read(65536):
-            pass
+            # Drain the tar reader, including its internal read-ahead buffer.
+            # Only zero padding may follow the first end-of-archive block.
+            while padding := archive.fileobj.read(65536):
+                if any(padding):
+                    raise ValueError("workspace archive has data after its terminator")
     except (tarfile.TarError, EOFError, OSError) as error:
         raise ValueError("invalid or truncated workspace archive") from error
     if bounded.count % 512 or bounded.tail != b"\0" * 1024:
