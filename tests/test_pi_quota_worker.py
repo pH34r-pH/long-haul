@@ -140,6 +140,42 @@ def test_final_capture_holds_if_volume_user_changes_after_stop(monkeypatch):
     assert ("remove",) not in calls
 
 
+@pytest.mark.parametrize("expires_at", ["stop", "post_stop_copy", "removal"])
+def test_capture_does_not_return_candidate_after_deadline(monkeypatch, expires_at):
+    worker, calls = stopped_worker_fixture()
+    worker._execution_deadline = 10
+    clock = [0]
+    original_control = worker._control
+    copies = [0]
+
+    def control(*args):
+        result = original_control(*args)
+        if args[0] == "kill" and expires_at == "stop":
+            clock[0] = 10
+        return result
+
+    def copy(*_):
+        copies[0] += 1
+        if copies[0] == 2 and expires_at == "post_stop_copy":
+            clock[0] = 10
+        return {"a": b"fixture"}
+
+    worker._control = control
+    if expires_at == "removal":
+        def remove(_):
+            calls.append(("remove",))
+            clock[0] = 10
+
+        worker._remove_exact = remove
+    view = SimpleNamespace(_check=lambda **_: None, _check_volume_users=lambda: None)
+    monkeypatch.setattr(pi_quota_worker.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(pi_quota_worker, "copy_docker_workspace", copy)
+    monkeypatch.setattr(pi_quota_worker, "verify_workspace_holder", lambda *args, **kwargs: None)
+    with pytest.raises(TimeoutError, match="deadline"):
+        worker._capture_and_remove(view, "a" * 64, "b" * 64, object())
+    assert (("remove",) in calls) is (expires_at == "removal")
+
+
 @pytest.mark.parametrize("change", [
     {"LogConfig": {"Type": "json-file"}},
     {"RestartPolicy": {"Name": "always"}},

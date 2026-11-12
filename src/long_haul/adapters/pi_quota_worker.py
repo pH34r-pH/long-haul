@@ -195,14 +195,17 @@ class QuotaPiWorker(DockerGVisorPiWorker):
                              f"(ack={acknowledged}, running={state.get('Running') is True}, "
                              f"paused={state.get('Paused') is True}, exit_137={state.get('ExitCode') == 137}, "
                              f"pid_zero={state.get('Pid') == 0})")
+        self._ensure_deadline()
         verify_workspace_holder(self._control, self._quota_intent, holder_profile, holder, running=True)
         view._check_volume_users()
         stopped_files = copy_docker_workspace(self.docker_path, holder, 15)
         view._check_volume_users()
+        self._ensure_deadline()
         if stopped_files != files:
             raise ValueError("quota workspace changed while stopping the worker")
         self._remove_exact(container)
         verify_workspace_holder(self._control, self._quota_intent, holder_profile, holder, running=True)
+        self._ensure_deadline()
         return files, acknowledged
 
     def _run_quota(self, request, grant, projection, holder, holder_profile):
