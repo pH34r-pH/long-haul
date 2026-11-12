@@ -28,6 +28,15 @@ ODRL AI Vocabulary and DPV 2.0 are Community Group outputs, not W3C Recommendati
 
 The reviewed ODRL AI working-draft source is pinned at commit `a4da7f9b42b2c5b02eff2aa644d9180b6e272ad2`; the [source manifest](../contracts/resource-policy/odrl-ai-source-pin.json) records the exact upstream paths and SHA-256 hashes. Run `python scripts/verify_odrl_ai_source.py --source-dir <download-directory>` against the two original upstream files to verify the pin without contacting the network. The pinned HTML describes the actions, but its accompanying Turtle file is a TODO skeleton. The pin is evidence of the source reviewed, not an executable ontology or a qualified interchange mapping. Upgrades require reviewing the source and action hierarchy again.
 
+To obtain the exact source once and then verify it offline:
+
+```sh
+mkdir -p /tmp/long-haul-odrl-ai
+curl -fsSL https://raw.githubusercontent.com/w3c/odrl/a4da7f9b42b2c5b02eff2aa644d9180b6e272ad2/ai-vocab/index.html -o /tmp/long-haul-odrl-ai/index.html
+curl -fsSL https://raw.githubusercontent.com/w3c/odrl/a4da7f9b42b2c5b02eff2aa644d9180b6e272ad2/ai-vocab/ai-vocab.ttl -o /tmp/long-haul-odrl-ai/ai-vocab.ttl
+python scripts/verify_odrl_ai_source.py --source-dir /tmp/long-haul-odrl-ai
+```
+
 Runtime code uses the Pydantic projection in `long_haul.resource_policy`; no RDF store is required. `profile_json_schema()` exports the ordinary JSON/YAML authoring schema. The current JSON-LD export and top-level SHACL assets are preliminary: nested policy semantics, lossless import, executable SHACL validation, and Croissant/SPDX package exports remain open under #248. They are not qualified interchange or dataset/BOM outputs.
 
 The preliminary SHACL shape requires an explicitly typed ODRL policy at the linked policy URI. The current exporter does not produce that policy graph and therefore fails this check. Passing the shape alone does not establish that permissions, constraints, prohibitions, or other policy semantics are complete or safe to enforce.
