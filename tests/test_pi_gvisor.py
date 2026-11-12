@@ -66,15 +66,24 @@ def evidence(result, events):
                       "events": [event.model_dump(mode="json") for event in events]}))
 
 
-def _qualify_synthetic_holder_view(view, worker, guest, holder):
-    first = copy_docker_workspace(worker.docker_path, holder, 15)["fixture/clock"]
+def _wait_synthetic_clock_advance(worker, holder):
+    """Observe only the synthetic clock while its writer is still active."""
     deadline = time.monotonic() + 5
+    first = None
     while time.monotonic() < deadline:
+        value = worker._control("exec", holder, "/usr/local/bin/node", "-e",
+                                "process.stdout.write(require('fs').readFileSync('/workspace/fixture/clock'))").strip()
+        if len(value) == 8 and value.isascii() and value.isdecimal():
+            if first is None:
+                first = int(value)
+            elif int(value) > first:
+                return
         time.sleep(.1)
-        if copy_docker_workspace(worker.docker_path, holder, 15)["fixture/clock"] != first:
-            break
-    else:
-        raise AssertionError("synthetic guest clock did not advance before pause")
+    raise AssertionError("synthetic guest clock did not advance")
+
+
+def _qualify_synthetic_holder_view(view, worker, guest, holder):
+    _wait_synthetic_clock_advance(worker, holder)
     with view() as root:
         contents = regular_contents(root)
         paused_clock = contents.pop("fixture/clock")
@@ -611,14 +620,7 @@ def _begin_synthetic_freeze(worker, guest):
 
 def _hosted_frozen_holder_capture(worker, guest, holder):
     """Observe a synthetic writer before and during a bounded kernel freeze."""
-    before = copy_docker_workspace(worker.docker_path, holder, 15)["fixture/clock"]
-    deadline = time.monotonic() + 5
-    while time.monotonic() < deadline:
-        if copy_docker_workspace(worker.docker_path, holder, 15)["fixture/clock"] != before:
-            break
-        time.sleep(.1)
-    else:
-        raise AssertionError("synthetic writer did not advance before freeze")
+    _wait_synthetic_clock_advance(worker, holder)
     process = _begin_synthetic_freeze(worker, guest)
     try:
         assert select.select([process.stdout], [], [], 20)[0]
