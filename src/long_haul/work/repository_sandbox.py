@@ -191,7 +191,8 @@ class DockerGVisorSandbox:
         expected = (self.environment.runtime, "none", True, "65534:65534", limits.memory_mib * 1048576,
                     limits.memory_mib * 1048576, limits.pids, int(limits.cpus * 1000000000), self.image_id,
                     True, True, self._expected_tmpfs(), False, "", True, True, True)
-        if actual != expected:
+        if (actual != expected or host.get("CapAdd")
+                or any(host.get(key) == "host" for key in ("IpcMode", "UTSMode", "UsernsMode", "CgroupnsMode"))):
             raise ValueError("candidate containment configuration mismatch")
         self._verify_environment(info["Config"].get("Env", []))
         self._verify_mounts(mounts, candidate)

@@ -273,12 +273,15 @@ def test_offline_schema_shapes_match_runtime_models():
         assert retained == expected
 
 
-@pytest.mark.parametrize(("security_opt", "allowed"), [
-    (["no-new-privileges"], True), (["no-new-privileges:true"], True),
-    (["no-new-privileges:false"], False), (["no-new-privileges=false"], False),
-    (["no-new-privileges-disabled"], False), (["no-new-privileges", "seccomp=unconfined"], False),
+@pytest.mark.parametrize(("host_override", "allowed"), [
+    ({"SecurityOpt": ["no-new-privileges"]}, True), ({"SecurityOpt": ["no-new-privileges:true"]}, True),
+    ({"SecurityOpt": ["no-new-privileges:false"]}, False), ({"SecurityOpt": ["no-new-privileges=false"]}, False),
+    ({"SecurityOpt": ["no-new-privileges-disabled"]}, False),
+    ({"SecurityOpt": ["no-new-privileges", "seccomp=unconfined"]}, False),
+    ({"CapAdd": ["SYS_ADMIN"]}, False), ({"IpcMode": "host"}, False), ({"UTSMode": "host"}, False),
+    ({"UsernsMode": "host"}, False), ({"CgroupnsMode": "host"}, False),
 ])
-def test_sandbox_checks_exact_security_options(tmp_path, monkeypatch, security_opt, allowed):
+def test_sandbox_checks_exact_security_options(tmp_path, monkeypatch, host_override, allowed):
     from repository_evaluator_fixture import environment
 
     adapter = DockerGVisorSandbox.__new__(DockerGVisorSandbox)
@@ -288,7 +291,8 @@ def test_sandbox_checks_exact_security_options(tmp_path, monkeypatch, security_o
     host = {"Runtime": adapter.environment.runtime, "NetworkMode": "none", "ReadonlyRootfs": True,
             "Memory": limits.memory_mib * 1048576, "MemorySwap": limits.memory_mib * 1048576,
             "PidsLimit": limits.pids, "NanoCpus": int(limits.cpus * 1000000000),
-            "CapDrop": ["ALL"], "SecurityOpt": security_opt, "Tmpfs": adapter._expected_tmpfs()}
+            "CapDrop": ["ALL"], "SecurityOpt": ["no-new-privileges"], "Tmpfs": adapter._expected_tmpfs()}
+    host.update(host_override)
     info = {"HostConfig": host, "Mounts": [], "Image": adapter.image_id,
             "Config": {"User": "65534:65534", "AttachStdout": True, "AttachStderr": True, "OpenStdin": True}}
     monkeypatch.setattr(adapter, "_control", lambda *args: json.dumps([info]))
