@@ -249,6 +249,17 @@ def test_private_external_and_self_asserted_policy_fail_closed(repository):
     assert not absent.excerpts
 
 
+def test_context_rejects_unverified_consent_even_with_exact_admitted_fingerprint(repository):
+    source = provider(repository)
+    spec = selection(ContextLookup(path="code.py"))
+    binding = admission(source.read("code.py"))
+    binding.profile.privacy.consent_references = ["urn:consent:fixture"]
+    current = ContextAdmission(profile=binding.profile, expected_policy_fingerprint=binding.profile.fingerprint,
+                               request=binding.request)
+    view = select_repository_context(source, spec, {"code.py": current})
+    assert not view.excerpts and view.manifest.omissions[0].reason == "policy_denied"
+
+
 def test_source_candidate_material_or_policy_change_invalidates_context(repository):
     source = provider(repository)
     view, admissions = context(source, selection(ContextLookup(path="code.py")))

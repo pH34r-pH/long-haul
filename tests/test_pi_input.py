@@ -100,8 +100,8 @@ def test_imported_input_acknowledgement_is_bound_to_exact_requested_view(tmp_pat
         HarnessResult.model_validate(payload)
 
 
-@pytest.mark.parametrize("restriction", ["revoked", "expired"])
-def test_revoked_or_expired_trace_admission_precedes_first_prompt_send(tmp_path, restriction):
+@pytest.mark.parametrize("restriction", ["revoked", "expired", "unverified-consent"])
+def test_restricted_trace_admission_precedes_first_prompt_send(tmp_path, restriction):
     _, _, normalizer, root, registry, _ = setup_guard(tmp_path)
     sent = []
     prompt = PiPrompt(lambda _: "PRIVATE_UNSENT", reference("template"), admit_prompt(normalizer, "PRIVATE_UNSENT"))
@@ -109,8 +109,10 @@ def test_revoked_or_expired_trace_admission_precedes_first_prompt_send(tmp_path,
     trace = normalizer.admission
     if restriction == "revoked":
         trace.profile.lifecycle = ResourceLifecycle.RETRACTED
-    else:
+    elif restriction == "expired":
         trace.profile.privacy.retention_until = NOW - timedelta(seconds=1)
+    else:
+        trace.profile.privacy.consent_references = ["urn:consent:fixture"]
     normalizer.admission = replace(trace, expected_policy_fingerprint=trace.profile.fingerprint)
     with pytest.raises(TraceAdmissionDenied):
         harness._begin_prompt(NOW)
