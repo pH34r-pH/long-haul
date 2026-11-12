@@ -21,7 +21,12 @@ from test_private_evaluator_commitments import evidence_admission, summary_admis
 
 from long_haul.adapters.harness_trace import TraceAdmissionDenied, TraceNormalizer
 from long_haul.adapters.pi_rpc import pi_prompt
+from long_haul.adapters.pi_workspace_cleanup import recover_workspace_lease
 from long_haul.adapters.pi_workspace_copy import copy_docker_workspace
+from long_haul.adapters.pi_workspace_intent import (
+    WorkspaceLeaseIntent,
+    persist_workspace_intent,
+)
 from long_haul.adapters.pi_workspace_seed import build_workspace_seed
 from long_haul.adapters.pi_workspace_view import PausedWorkspaceView
 from long_haul.events.store import EventStore
@@ -48,9 +53,15 @@ def evidence(result, events):
 
 def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
     """Qualify only the isolated volume experiment, not worker integration."""
-    worker, _, _ = worker_setup(tmp_path, PLAN)
+    worker, request, _ = worker_setup(tmp_path, PLAN)
     suffix = uuid4().hex
-    volume, holder, guest = ("lh-workspace-" + suffix, "lh-holder-" + suffix, "lh-guest-" + suffix)
+    daemon = worker._control("info", "--format", "{{.ID}}").strip()
+    intent = WorkspaceLeaseIntent(token=suffix, attempt_fingerprint=request.normalizer.attempt.fingerprint,
+                                  environment_fingerprint=worker.environment.fingerprint, daemon_id=daemon)
+    recovery_root = (tmp_path / "workspace-recovery").resolve()
+    recovery_root.mkdir(mode=0o700)
+    persist_workspace_intent(recovery_root, intent)
+    volume, holder, guest = intent.volume_name, intent.holder_name, intent.worker_name
     image, runtime = worker.environment.image, worker.environment.runtime
     mount = "type=volume,src=" + volume + ",dst=/workspace"
     options = "size=1m,nr_inodes=32,mode=0777,nosuid,nodev,noexec"
@@ -66,17 +77,21 @@ def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
       for(let i=0;i<128;i++) fs.rmSync('bomb'+i,{force:true});
       if(!bytes || !inodes) process.exit(2); console.log(JSON.stringify({bytes,inodes}));
       setInterval(()=>{},60000);"""
+    def labels(role):
+        return ["--label=" + key + "=" + value for key, value in intent.labels(role).items()]
+
     try:
-        worker._control("volume", "create", "--driver", "local", "--opt", "type=tmpfs", "--opt", "device=tmpfs",
+        worker._control("volume", "create", *labels("volume"), "--driver", "local", "--opt", "type=tmpfs", "--opt", "device=tmpfs",
                         "--opt", "o=" + options, volume)
-        holder_id = worker._control("create", "--name", holder, *common, image, "-e", "setInterval(()=>{},60000)").strip()
+        holder_id = worker._control("create", "--name", holder, *labels("holder"), *common,
+                                    image, "-e", "setInterval(()=>{},60000)").strip()
         worker._control("start", holder_id)
         seed = build_workspace_seed({"fixture/a", "fixture/new/b"}, {"fixture/a": b"fixture"})
         with tempfile.TemporaryDirectory(prefix="lh-docker-config-") as config:
             subprocess.run([str(worker.docker_path), "--config", config, "cp", "-a", "-", holder_id + ":/workspace"],
                            input=seed, env=_control_environment(), stdout=subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL, timeout=15, check=True)
-        guest_id = worker._control("create", "--name", guest, *common, image, "-e", script).strip()
+        guest_id = worker._control("create", "--name", guest, *labels("worker"), *common, image, "-e", script).strip()
         worker._control("start", guest_id)
         deadline = time.monotonic() + 15
         observed = ""
@@ -105,10 +120,8 @@ def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
             "fixture/a": b"changed", "fixture/new/b": b"created",
         }
     finally:
-        for name in (guest, holder):
-            subprocess.run([str(worker.docker_path), "rm", "--force", name], env=_control_environment(),
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=15, check=False)
-        worker._control("volume", "rm", volume)
+        marker = recover_workspace_lease(recovery_root, intent.token, intent.fingerprint, worker._control)
+        assert marker.is_file()
 
 
 def test_actual_pi_repair_freezes_after_cleanup_then_independent_evaluator(tmp_path):
