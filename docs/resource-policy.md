@@ -28,6 +28,10 @@ ODRL AI Vocabulary and DPV 2.0 are Community Group outputs, not W3C Recommendati
 
 Runtime code uses the Pydantic projection in `long_haul.resource_policy`; no RDF store is required. `profile_json_schema()` exports the ordinary JSON/YAML authoring schema. The current JSON-LD export and top-level SHACL assets are preliminary: nested policy semantics, lossless import, executable SHACL validation, and Croissant/SPDX package exports remain open under #248. They are not qualified interchange or dataset/BOM outputs.
 
+The preliminary SHACL shape requires an explicitly typed ODRL policy at the linked policy URI. The current exporter does not produce that policy graph and therefore fails this check. Passing the shape alone does not establish that permissions, constraints, prohibitions, or other policy semantics are complete or safe to enforce.
+
+Install `contracts/resource-policy/test-requirements.txt` alongside the development dependencies to run the policy conformance tests locally.
+
 ## Local authority classes
 
 External rights and provenance vocabularies do not determine whether Long-Haul may interpret content as institutional control. The profile therefore adds a deliberately small operational class:
