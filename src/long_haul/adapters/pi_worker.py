@@ -33,7 +33,7 @@ from ..work.worker_candidate import (
     MAX_WORKER_TOTAL_BYTES,
     freeze_stopped_worker,
 )
-from .harness_trace import TraceNormalizer, _canonical
+from .harness_trace import TraceAdmissionDenied, TraceNormalizer, _canonical
 from .pi_admission import (
     PiToolAdmission,
     WorkerPromptAdmission,
@@ -373,6 +373,11 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
         start = time.monotonic()
         duration = min(self.environment.limits.wall_seconds, normalizer.contract.budget.wall_seconds)
         deadline = min(start + duration, getattr(self, "_execution_deadline", start + duration))
+        def confirmation_clock():
+            if time.monotonic() >= deadline:
+                raise TraceAdmissionDenied("worker deadline expired before tool confirmation")
+            return datetime.now(UTC)
+        harness.clock = confirmation_clock
         try:
             while harness.projector.state.terminal is None:
                 now, tick = datetime.now(UTC), time.monotonic_ns()

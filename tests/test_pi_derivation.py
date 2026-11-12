@@ -1,4 +1,5 @@
 """Derived bytes keep every current parent restriction through shared intersection."""
+import os
 from dataclasses import replace
 from datetime import timedelta
 
@@ -126,3 +127,20 @@ def test_derived_read_rechecks_parent_retention(tmp_path):
     guard.start(read)
     with pytest.raises(TraceAdmissionDenied):
         guard.authorize(request(attempt, read, ui="later"), root, NOW + timedelta(seconds=2))
+
+
+@pytest.mark.skipif(os.name != "posix", reason="worker filesystem inspection requires POSIX metadata")
+def test_confirmation_rechecks_output_expiry_after_workspace_capture(tmp_path):
+    _, attempt, normalizer, root, registry, _ = setup_guard(tmp_path)
+    binding = registry["fixture/code.py"]
+    output = binding.output_policy
+    output.profile.privacy.retention_until = NOW + timedelta(seconds=1)
+    registry["fixture/code.py"] = replace(binding, output_policy=replace(output,
+        expected_policy_fingerprint=output.profile.fingerprint))
+    guard = PiToolAdmission(normalizer, registry)
+    call = start("write", "write", {"path": "fixture/code.py", "content": "after"})
+    guard.start(call)
+    guard.authorize(request(attempt, call), root, NOW)
+    guard.revalidate_confirmation(NOW)
+    with pytest.raises(TraceAdmissionDenied):
+        guard.revalidate_confirmation(NOW + timedelta(seconds=2))

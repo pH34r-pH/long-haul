@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from contextlib import nullcontext
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 
 from ..work.harness import (
     HarnessAttempt,
@@ -30,13 +30,14 @@ class PiPrompt:
 
 
 class PiCodingHarness:
-    def __init__(self, normalizer, registry, worker, send, receive, prompt):
+    def __init__(self, normalizer, registry, worker, send, receive, prompt, *, clock=None):
         if normalizer.attempt.harness.harness_id != "pi":
             raise ValueError("real Pi adapter requires exact Pi identity")
         self.identity = normalizer.attempt.harness
         self.projector = PiTrajectoryProjector(normalizer, max_pending=1)
         self.guard = PiToolAdmission(normalizer, registry)
         self.worker, self.send, self.receive, self.prompt = worker, send, receive, prompt
+        self.clock = clock or (lambda: datetime.now(UTC))
         # Trusted executor owns the lifetime and consistency of each view.
         self.workspace_view = lambda: nullcontext(worker)
         self._started = False
@@ -141,6 +142,7 @@ class PiCodingHarness:
         try:
             with self.workspace_view() as worker:
                 self.guard.authorize(record, worker, now)
+            self.guard.revalidate_confirmation(self.clock())
         except Exception:
             self.send({"type": "extension_ui_response", "id": record.get("id"), "confirmed": False})
             raise

@@ -337,7 +337,7 @@ def test_native_interlocks_use_executor_owned_workspace_views(tmp_path):
             lifecycle.append("exit")
 
     records = iter([start(), request(attempt), end()])
-    harness = PiCodingHarness(normalizer, registry, root, sent.append, lambda: next(records), lambda _: "task")
+    harness = PiCodingHarness(normalizer, registry, root, sent.append, lambda: next(records), lambda _: "task", clock=lambda: NOW)
     harness.workspace_view = workspace_view
     harness.start(attempt)
     harness._native_session = "synthetic"
@@ -366,6 +366,54 @@ def test_workspace_view_failure_denies_native_confirmation(tmp_path):
     harness.poll(NOW, 1)
     assert harness.projector.state.terminal == "protocol_error"
     assert not any(item.get("confirmed") is True for item in sent)
+
+
+@pytest.mark.parametrize("revoked", [False, True])
+def test_confirmation_rechecks_authority_after_view_release(revoked):
+    lifecycle, sent = [], []
+    harness = object.__new__(PiCodingHarness)
+
+    @contextmanager
+    def view():
+        lifecycle.append("enter")
+        yield object()
+        lifecycle.append("exit")
+
+    class Guard:
+        def authorize(self, record, worker, now):
+            lifecycle.append(("authorize", now))
+
+        def revalidate_confirmation(self, now):
+            lifecycle.append(("revalidate", now))
+            if revoked:
+                raise TraceAdmissionDenied("authority expired while reading workspace")
+
+    later = NOW + timedelta(seconds=10)
+    harness.guard, harness.workspace_view = Guard(), view
+    harness.send, harness.clock = sent.append, lambda: later
+    record = {"id": "fixture"}
+    if revoked:
+        with pytest.raises(TraceAdmissionDenied):
+            harness._confirm(record, NOW)
+    else:
+        harness._confirm(record, NOW)
+    assert lifecycle == ["enter", ("authorize", NOW), "exit", ("revalidate", later)]
+    assert sent == [{"type": "extension_ui_response", "id": "fixture", "confirmed": not revoked}]
+
+
+def test_expired_confirmation_deadline_is_denied():
+    harness = object.__new__(PiCodingHarness)
+    sent = []
+    @contextmanager
+    def view():
+        yield object()
+    def expired():
+        raise TraceAdmissionDenied("deadline expired")
+    harness.guard = SimpleNamespace(authorize=lambda *args: None, revalidate_confirmation=lambda _: None)
+    harness.workspace_view, harness.send, harness.clock = view, sent.append, expired
+    with pytest.raises(TraceAdmissionDenied):
+        harness._confirm({"id": "fixture"}, NOW)
+    assert sent == [{"type": "extension_ui_response", "id": "fixture", "confirmed": False}]
 
 
 @pytest.mark.skipif(os.name != "posix", reason="worker filesystem inspection requires POSIX metadata")

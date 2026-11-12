@@ -179,6 +179,23 @@ class PiToolAdmission:
             self._inputs.update({parent.profile.identity.resource_id: parent for parent in parents})
         return receipt
 
+    def revalidate_confirmation(self, now: datetime) -> None:
+        """Recheck authority after the executor has released the workspace view."""
+        self._exact_contract()
+        self._check_roots()
+        self.normalizer.admission.authorize(self.attempt, now)
+        if self._pending is None or self._authorized is None:
+            raise TraceAdmissionDenied("confirmation lacks an admitted native operation")
+        tool = self._pending[1]
+        actions = (ResourceAction.DERIVE,) if tool == "write" else (ResourceAction.READ, ResourceAction.AI_AUGMENT)
+        if tool == "edit":
+            actions += (ResourceAction.DERIVE,)
+        policies = tuple(self._policy(self._operation_parents, action, now) for action in actions)
+        receipt = self._authorized.model_copy(update={"policies": policies})
+        if not self.receipts or self.receipts[-1] != self._authorized:
+            raise TraceAdmissionDenied("native confirmation receipt changed")
+        self.receipts[-1] = self._authorized = receipt
+
     @staticmethod
     def _identity(binding):
         return binding.identity if isinstance(binding, DerivedResourceBinding) else binding.profile.identity
