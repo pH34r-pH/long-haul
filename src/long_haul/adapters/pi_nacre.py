@@ -12,7 +12,7 @@ import tempfile
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_serializer, model_validator
 
 from ..resource_policy import (
     RESOURCE_POLICY_PROFILE_ID,
@@ -45,6 +45,16 @@ class PiNacrePolicyReceipt(BaseModel):
     mission_id: str | None = None
     contract_id: str | None = None
     reason: str = ""
+    evaluator_implementation: str | None = Field(default=None, pattern=r"^resource-policy-evaluator-v1:sha256:[0-9a-f]{64}$")
+    request_fingerprint: str | None = Field(default=None, pattern=r"^resource-use-v1:[0-9a-f]{64}$")
+
+    @model_serializer(mode="wrap")
+    def serialize_legacy(self, handler):
+        result = handler(self)
+        for field in ("evaluator_implementation", "request_fingerprint"):
+            if getattr(self, field) is None:
+                result.pop(field, None)
+        return result
 
 
 class PiNacreCallerContext(BaseModel):
@@ -119,6 +129,8 @@ def nacre_policy_receipt(
         mission_id=request.mission_id,
         contract_id=request.contract_id,
         reason=decision.reason,
+        evaluator_implementation=decision.evaluator_implementation,
+        request_fingerprint=decision.request_fingerprint,
     )
 
 

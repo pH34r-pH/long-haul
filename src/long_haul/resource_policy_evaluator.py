@@ -2,8 +2,13 @@
 from __future__ import annotations
 
 import hashlib
+import platform
 from collections.abc import Callable, Iterable
+from pathlib import Path
 from typing import Any
+
+import pydantic
+import pydantic_core
 
 from .resource_policy_models import (
     PolicyDecision,
@@ -21,6 +26,25 @@ RequestFactory = Callable[[str], ResourceUseRequest]
 DecisionFields = dict[str, Any]
 
 
+def _implementation_identity():
+    root = Path(__file__).parent
+    files = ("resource_policy.py", "resource_policy_models.py", "resource_policy_evaluator.py")
+    manifest = {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in files}
+    data = canonical_json({"files": manifest, "python": platform.python_version(),
+                           "pydantic": pydantic.__version__, "pydantic_core": pydantic_core.__version__}).encode()
+    return "resource-policy-evaluator-v1:sha256:" + hashlib.sha256(data).hexdigest()
+
+
+_IMPORTED_IMPLEMENTATION = _implementation_identity()
+
+
+def _verified_implementation():
+    current = _implementation_identity()
+    if current != _IMPORTED_IMPLEMENTATION:
+        raise ValueError("policy evaluator implementation changed after import")
+    return current
+
+
 def _decision_fields(
     profile: ResourcePolicyProfile,
     request: ResourceUseRequest,
@@ -32,6 +56,7 @@ def _decision_fields(
         "policy_id": profile.policy_id,
         "policy_fingerprint": profile.fingerprint,
         "evaluated_at": request.now,
+        "evaluator_implementation": _verified_implementation(),
     }
 
 
@@ -258,6 +283,9 @@ def _derived_decision(
     decisions: list[PolicyDecision],
     blocked: list[PolicyDecision] | None,
 ) -> PolicyDecision:
+    implementations = {decision.evaluator_implementation for decision in decisions}
+    if len(implementations) != 1 or None in implementations:
+        raise ValueError("derived decisions require one exact evaluator implementation")
     resource_id = _derived_resource_id(decisions)
     first = min(blocked or decisions, key=lambda item: item.resource_id)
     sources = {item.resource_id: item.policy_fingerprint for item in decisions}
@@ -276,11 +304,17 @@ def _derived_decision(
         policy_fingerprint="derived-policy-v1:" + fingerprint,
         source_policy_fingerprints=sources,
         evaluated_at=first.evaluated_at,
+        evaluator_implementation=first.evaluator_implementation,
     )
 
 
 class ResourcePolicyEvaluator:
     """Evaluate resource-side policy; callers still enforce the result."""
+
+    @staticmethod
+    def implementation_reference() -> str:
+        """Identify observed source and runtime versions; this is not attestation."""
+        return _verified_implementation()
 
     def evaluate(
         self,
