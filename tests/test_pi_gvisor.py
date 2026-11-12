@@ -347,7 +347,9 @@ def test_hosted_synthetic_paused_runtime_state_diagnostic(tmp_path):
         assert info["Id"] == container and info["State"].get("Paused") is True
         runtime_state = "unavailable"
         for root in ("/run/docker/runtime-long-haul-gvisor/moby", "/run/docker/runtime-runc/moby"):
-            if not Path(root).is_dir():
+            exists = subprocess.run(["sudo", "-n", "test", "-d", root], env=_control_environment(),
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10, check=False)
+            if exists.returncode != 0:
                 continue
             result = subprocess.run(["sudo", "-n", str(worker.runsc_path), "--root", root, "state", container],
                                     env=_control_environment(), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
