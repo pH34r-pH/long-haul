@@ -2764,6 +2764,28 @@
       "failed_pi_gvisor_run": 43154563820,
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6814544824",
       "remaining": "Qualify a fail-closed paused-worker stop without untrusted execution, distributed workspace fencing, private authority and the remaining adversarial profile; the draft is not admitted for private use."
+    },
+    {
+      "at": "2026-11-12T06:12:13Z",
+      "task": "lh-248-interchange",
+      "status": "provisional_ai_source_pin_merged",
+      "pull_request": 268,
+      "checked_head": "cdb1a676e667624f9306b01597d64ae4c746cd61",
+      "merge_commit": "f9f34b12a02c168c95ca78f065da059163d46a42",
+      "upstream_revision": "a4da7f9b42b2c5b02eff2aa644d9180b6e272ad2",
+      "review_rule": "owner_authorized_admin_bypass",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6816212896",
+      "remaining": "Turtle is a TODO skeleton; native ODRL interchange, action-hierarchy semantics, DPV pinning, independent evaluation and package projections remain open."
+    },
+    {
+      "at": "2026-11-12T06:12:14Z",
+      "task": "lh-245-security",
+      "status": "hosted_synthetic_freeze_capture_only",
+      "pull_request": 265,
+      "tested_head": "9151dbc1903987789ae7ce32d3cef7da95cadc8f",
+      "pi_gvisor_run": 43164338543,
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6815985700",
+      "remaining": "Synthetic freeze/capture and two negative cases passed, but three actual quota repairs failed; full confinement, scoped authority, recovery and private-use qualification remain open."
     }
   ]
 }
