@@ -298,9 +298,20 @@ def test_synthetic_paused_cgroup_identity_diagnostic(tmp_path):
         cgroup = (root / unified[0].lstrip("/")).resolve()
         assert cgroup.is_relative_to(root) and cgroup != root
         events = dict(line.split() for line in (cgroup / "cgroup.events").read_text().splitlines())
+        members = (cgroup / "cgroup.procs").read_text().splitlines()
+        commands = []
+        for member in members:
+            try:
+                commands.append(Path(f"/proc/{int(member)}/cmdline").read_bytes().lower())
+            except OSError:
+                commands.append(b"")  # An unreadable or exited process makes this inconclusive.
         print(json.dumps({"qualification": "synthetic-paused-cgroup-inspection",
                           "container_leaf": cgroup.name in {container, "docker-" + container + ".scope"},
                           "frozen": events.get("frozen"), "populated": events.get("populated"),
+                          "inspected_pid_is_member": str(pid) in members, "member_count": len(members),
+                          "member_commands_readable": bool(members) and all(bool(command) for command in commands),
+                          "runsc_seen": any(b"runsc" in command for command in commands),
+                          "gofer_seen": any(b"gofer" in command for command in commands),
                           "kill_interface_present": (cgroup / "cgroup.kill").is_file()}))
 
 
