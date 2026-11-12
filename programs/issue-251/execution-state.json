@@ -2899,6 +2899,16 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6838622278",
       "evidence": "Synthetic provider interruption after possible write previously escaped without a locator. Catchable write/readback interruptions now retain an opaque hold; 75 focused Linux tests and Ruff passed.",
       "remaining": "No durable pre-write intent or crash/host recovery; no live Azure principal, authority, lifecycle or private-work qualification. Exact-head hosted checks required."
+    },
+    {
+      "at": "2026-11-12T23:21:52.477246+00:00",
+      "task": "lh-245-security",
+      "status": "evaluator_core_version_identity_draft",
+      "pull_request": 265,
+      "tested_code_commit": "c94a440b7edbe6f7adc675a234cc562fe877efd1",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6838832423",
+      "evidence": "Evaluator reference now binds the Pydantic Core version. Focused regression, Ruff and 78 Linux evaluator, private commitment, key adapter and Pi admission tests passed.",
+      "remaining": "Changes evaluator identities and requires regeneration/readmission of pinned profiles and dependent key references. Exact-head hosted checks and all security/private-use gates remain open."
     }
   ]
 }
