@@ -674,6 +674,57 @@ def test_hosted_actual_pi_synthetic_kernel_capture(tmp_path, monkeypatch):
     print(json.dumps({"qualification": "hosted-actual-pi-synthetic-kernel-capture", "real_model": False}))
 
 
+def _synthetic_runtime_delete_capture(worker, view, guest, holder, holder_profile):
+    """Test-only privileged capture; Docker and host authority are not qualified."""
+    worker._ensure_deadline()
+    worker._control("pause", guest)
+    view._check(paused=True)
+    files = copy_docker_workspace(worker.docker_path, holder, 15)
+    view._check(paused=True)
+    info, = json.loads(worker._control("inspect", guest))
+    pid = info["State"].get("Pid")
+    assert info["Id"] == guest and info["State"].get("Paused") is True and type(pid) is int and pid > 0
+    selected, state = _synthetic_runtime_state(worker, guest)
+    assert selected is not None and state.get("pid") == pid and state.get("status") == "paused"
+    group = _synthetic_container_cgroup(pid, guest)
+    subprocess.run(["sudo", "-n", str(worker.runsc_path), "--root", selected, "delete", "--force", guest],
+                   env=_control_environment(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                   timeout=45, check=True)
+    population = _wait_synthetic_cgroup_empty(group / "cgroup.events")
+    stopped, = json.loads(worker._control("inspect", guest))
+    state = stopped["State"]
+    assert stopped["Id"] == guest and state.get("Running") is False and state.get("Paused") is False
+    assert state.get("Pid") == 0 and state.get("Status") == "exited" and state.get("ExitCode") == 137
+    verify_workspace_holder(worker._control, worker._quota_intent, holder_profile, holder, running=True)
+    view._check_volume_users()
+    assert copy_docker_workspace(worker.docker_path, holder, 15) == files
+    view._check_volume_users()
+    worker._remove_exact(guest)
+    verify_workspace_holder(worker._control, worker._quota_intent, holder_profile, holder, running=True)
+    print(json.dumps({"qualification": "synthetic-runtime-delete-capture", "cgroup_observation": population,
+                      "production_stop_qualified": False}))
+    return files, True
+
+
+def test_hosted_actual_pi_synthetic_runtime_delete_capture(tmp_path, monkeypatch):
+    """Exercise a synthetic workspace only; no production authority is implied."""
+    if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
+        pytest.skip("synthetic runtime deletion requires an ephemeral GitHub-hosted runner")
+    with quota_fixture(tmp_path, PLAN) as (worker, request, profile, grant, root, intent):
+        monkeypatch.setattr(worker, "_capture_and_remove",
+                            lambda view, guest, holder, hp: _synthetic_runtime_delete_capture(worker, view, guest, holder, hp))
+        result, events, snapshot = worker.run_bounded(request, grant)
+        assert result.terminal == "settled" and snapshot is not None and result.cleanup.process_tree_stopped
+        assert [event.outcome.value for event in events if event.phase == "end"] == ["success", "success"]
+        assert b"a + b" in snapshot.contents["program.py"] and not worker.lease_releasable
+        sandbox = DockerGVisorSandbox(environment(), Path(os.environ["LONG_HAUL_RUNSC"]))
+        packet, evaluation = RepositoryEvaluationRunner(sandbox, scratch_root=grant.scratch_root()).evaluate(
+            request.normalizer.contract, snapshot, profile, attempt_id="runtime-delete-fixture", packet_id="runtime-delete-fixture")
+        assert packet.validity == "valid" and evaluation.disposition.value == "ACCEPTED"
+    assert worker.lease_releasable and not (root / (intent.token + ".scratch")).exists()
+    assert (root / (intent.token + ".cleanup.json")).is_file()
+
+
 def test_hosted_actual_pi_synthetic_unpaused_stop(tmp_path, monkeypatch):
     """Explore stop-first capture without asserting a qualified process-tree boundary."""
     if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
