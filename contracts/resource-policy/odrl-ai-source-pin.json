@@ -1,0 +1,18 @@
+{
+  "status": "W3C Community Group working draft; not a W3C Recommendation",
+  "repository": "https://github.com/w3c/odrl",
+  "commit": "a4da7f9b42b2c5b02eff2aa644d9180b6e272ad2",
+  "profile_uri": "https://w3c.github.io/odrl/ai-vocab/",
+  "license": "https://www.w3.org/Consortium/Legal/2015/copyright-software-and-document",
+  "files": {
+    "index.html": {
+      "upstream_path": "ai-vocab/index.html",
+      "sha256": "e10d29197112d424be9ac8f15edc0cdf8fa49876af579f4614765ce54a0f51b7"
+    },
+    "ai-vocab.ttl": {
+      "upstream_path": "ai-vocab/ai-vocab.ttl",
+      "sha256": "c72a020eb89771f52bdc13eea8ad9c851707e6c2668cbdd883e07808a90075a0"
+    }
+  },
+  "machine_readable_vocabulary": "The pinned Turtle source is a TODO skeleton, not an ontology."
+}
