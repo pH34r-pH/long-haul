@@ -278,6 +278,41 @@ def test_synthetic_gvisor_paused_kill_diagnostic(tmp_path):
             worker._control("rm", "--force", container)
 
 
+def test_synthetic_paused_cgroup_identity_diagnostic(tmp_path):
+    """Inspect only the disposable guest's cgroup; do not alter it."""
+    worker, _, _ = worker_setup(tmp_path, PLAN)
+    name = "lh-cgroup-diagnostic-" + uuid4().hex
+    container = None
+    try:
+        container = worker._control("create", "--name=" + name, "--runtime=long-haul-gvisor", "--network=none",
+            "--read-only", "--user=65534:65534", "--cap-drop=ALL", "--security-opt=no-new-privileges",
+            "--entrypoint=/usr/local/bin/node", "--pull=never", worker.environment.image,
+            "-e", "setInterval(()=>{},60000)").strip()
+        worker._control("start", container)
+        worker._control("pause", container)
+        info, = json.loads(worker._control("inspect", container))
+        pid = info["State"]["Pid"]
+        assert info["Id"] == container and info["State"]["Paused"] is True and isinstance(pid, int) and pid > 0
+        rows = Path(f"/proc/{pid}/cgroup").read_text().splitlines()
+        unified = [row.removeprefix("0::") for row in rows if row.startswith("0::")]
+        assert len(unified) == 1
+        root = Path("/sys/fs/cgroup").resolve()
+        cgroup = (root / unified[0].lstrip("/")).resolve()
+        assert cgroup.is_relative_to(root) and cgroup != root
+        events = dict(line.split() for line in (cgroup / "cgroup.events").read_text().splitlines())
+        print(json.dumps({"qualification": "synthetic-paused-cgroup-inspection",
+                          "container_leaf": cgroup.name in {container, "docker-" + container + ".scope"},
+                          "frozen": events.get("frozen"), "populated": events.get("populated"),
+                          "kill_interface_present": (cgroup / "cgroup.kill").is_file()}))
+    finally:
+        if container is not None:
+            try:
+                worker._control("unpause", container)
+            except subprocess.SubprocessError:
+                pass
+            worker._control("rm", "--force", container)
+
+
 def _wait_for_quota_guest(control, name, process):
     deadline = time.monotonic() + 55
     while time.monotonic() < deadline:
