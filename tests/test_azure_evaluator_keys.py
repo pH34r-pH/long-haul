@@ -7,7 +7,8 @@ from types import SimpleNamespace
 import pytest
 from azure.core.exceptions import ServiceRequestError
 from azure.core.pipeline.policies import RetryPolicy
-from azure.keyvault.secrets import KeyVaultSecret, SecretProperties
+from azure.core.pipeline.transport import HttpTransport
+from azure.keyvault.secrets import KeyVaultSecret, SecretClient, SecretProperties
 from azure.keyvault.secrets._generated.models import SecretAttributes
 from repository_evaluator_fixture import setup
 from test_repository_evaluator import FixtureSandbox
@@ -126,6 +127,38 @@ def test_pinned_sdk_retry_policy_disables_retry_for_ambiguous_network_failure():
     settings = policy.configure_retries({"retry_total": 0})
     assert not policy.increment(settings, response=SimpleNamespace(http_request=object()),
                                 error=ServiceRequestError("synthetic network failure"))
+
+
+def test_pinned_sdk_pipeline_does_not_retry_an_ambiguous_key_write(tmp_path):
+    class OfflineTransport(HttpTransport):
+        def __init__(self):
+            self.calls = 0
+
+        def open(self):
+            pass
+
+        def close(self):
+            pass
+
+        def __exit__(self, *_args):
+            self.close()
+
+        def send(self, _request, **_kwargs):
+            self.calls += 1
+            raise ServiceRequestError("synthetic network failure")
+
+    class OfflineCredential:
+        def get_token(self, *_args, **_kwargs):
+            raise AssertionError("no token or network access is permitted")
+
+    _, contract, _, source = setup(tmp_path, FixtureSandbox.identity)
+    transport = OfflineTransport()
+    client = SecretClient(vault_url=VAULT, credential=OfflineCredential(), transport=transport, retry_total=3)
+    authority = KeyVaultEvaluatorKeys(client, VAULT)
+    with pytest.raises(KeyVaultWriteUncertain):
+        authority.freeze(source, contract, key_admission(source, contract, "retain"),
+                         key_admission(source, contract, "read"))
+    assert transport.calls == 1
 
 
 def test_key_vault_rejects_wrong_policy_and_endpoint_before_access(tmp_path):
