@@ -46,12 +46,14 @@ class PiNacrePolicyReceipt(BaseModel):
     contract_id: str | None = None
     reason: str = ""
     evaluator_implementation: str | None = Field(default=None, pattern=r"^resource-policy-evaluator-v1:sha256:[0-9a-f]{64}$")
+    request_fingerprint: str | None = Field(default=None, pattern=r"^resource-use-v1:[0-9a-f]{64}$")
 
     @model_serializer(mode="wrap")
     def serialize_legacy(self, handler):
         result = handler(self)
-        if self.evaluator_implementation is None:
-            result.pop("evaluator_implementation", None)
+        for field in ("evaluator_implementation", "request_fingerprint"):
+            if getattr(self, field) is None:
+                result.pop(field, None)
         return result
 
 
@@ -128,6 +130,7 @@ def nacre_policy_receipt(
         contract_id=request.contract_id,
         reason=decision.reason,
         evaluator_implementation=decision.evaluator_implementation,
+        request_fingerprint=decision.request_fingerprint,
     )
 
 

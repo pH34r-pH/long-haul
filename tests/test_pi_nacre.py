@@ -102,7 +102,9 @@ def policy_receipt():
     )
     decision = ResourcePolicyEvaluator().evaluate(profile, request)
     assert decision.status is PolicyDecisionStatus.ALLOW
-    return nacre_policy_receipt(request, decision)
+    receipt = nacre_policy_receipt(request, decision)
+    assert receipt.request_fingerprint == request.fingerprint
+    return receipt
 
 
 def launch_context():
@@ -130,14 +132,18 @@ def test_build_context_binds_authoritative_work_identity():
     assert context.scopes == [PiNacreScope(scope_type="crew", scope_id="crew-1")]
     assert context.policy_decisions[0].status == "ALLOW"
     assert context.policy_decisions[0].evaluator_implementation == ResourcePolicyEvaluator.implementation_reference()
+    assert context.policy_decisions[0].request_fingerprint.startswith("resource-use-v1:")
     assert json.loads(context.model_dump_json())["policy_decisions"][0]["evaluator_implementation"] == (
         ResourcePolicyEvaluator.implementation_reference())
+    assert json.loads(context.model_dump_json())["policy_decisions"][0]["request_fingerprint"] == (
+        context.policy_decisions[0].request_fingerprint)
     assert context.capture_proposals is True
 
 
 def test_policy_receipt_preserves_legacy_unversioned_serialization():
-    legacy = policy_receipt().model_copy(update={"evaluator_implementation": None})
+    legacy = policy_receipt().model_copy(update={"evaluator_implementation": None, "request_fingerprint": None})
     assert "evaluator_implementation" not in json.loads(legacy.model_dump_json())
+    assert "request_fingerprint" not in json.loads(legacy.model_dump_json())
     assert "evaluator_implementation" in json.loads(policy_receipt().model_dump_json())
 
 
