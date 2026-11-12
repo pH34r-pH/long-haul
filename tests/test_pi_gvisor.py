@@ -246,9 +246,8 @@ def _test_docker_control(config, *arguments):
     return result.stdout.decode()
 
 
-def test_synthetic_gvisor_paused_kill_diagnostic(tmp_path):
-    """Record provider behavior only; this does not qualify a stop boundary."""
-    worker, _, _ = worker_setup(tmp_path, PLAN)
+@contextmanager
+def _paused_synthetic_guest(worker):
     name = "lh-paused-diagnostic-" + uuid4().hex
     container = None
     try:
@@ -258,6 +257,20 @@ def test_synthetic_gvisor_paused_kill_diagnostic(tmp_path):
             "-e", "setInterval(()=>{},60000)").strip()
         worker._control("start", container)
         worker._control("pause", container)
+        yield container, name
+    finally:
+        if container is not None:
+            try:
+                worker._control("unpause", container)
+            except subprocess.SubprocessError:
+                pass  # Only this synthetic guest may be resumed for cleanup.
+            worker._control("rm", "--force", container)
+
+
+def test_synthetic_gvisor_paused_kill_diagnostic(tmp_path):
+    """Record provider behavior only; this does not qualify a stop boundary."""
+    worker, _, _ = worker_setup(tmp_path, PLAN)
+    with _paused_synthetic_guest(worker) as (container, name):
         with tempfile.TemporaryDirectory(prefix="lh-test-docker-config-") as config:
             result = subprocess.run(["/usr/bin/docker", "--config", config, "kill", "--signal=KILL", container],
                                     env=_control_environment(), stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
@@ -269,27 +282,12 @@ def test_synthetic_gvisor_paused_kill_diagnostic(tmp_path):
         print(json.dumps({"qualification": "synthetic-paused-kill-diagnostic", "returncode": result.returncode,
                           "running": state.get("Running"), "paused": state.get("Paused"), "stderr": message}))
         assert isinstance(state.get("Running"), bool) and isinstance(state.get("Paused"), bool)
-    finally:
-        if container is not None:
-            try:
-                worker._control("unpause", container)
-            except subprocess.SubprocessError:
-                pass  # A successfully killed synthetic guest is not paused.
-            worker._control("rm", "--force", container)
 
 
 def test_synthetic_paused_cgroup_identity_diagnostic(tmp_path):
     """Inspect only the disposable guest's cgroup; do not alter it."""
     worker, _, _ = worker_setup(tmp_path, PLAN)
-    name = "lh-cgroup-diagnostic-" + uuid4().hex
-    container = None
-    try:
-        container = worker._control("create", "--name=" + name, "--runtime=long-haul-gvisor", "--network=none",
-            "--read-only", "--user=65534:65534", "--cap-drop=ALL", "--security-opt=no-new-privileges",
-            "--entrypoint=/usr/local/bin/node", "--pull=never", worker.environment.image,
-            "-e", "setInterval(()=>{},60000)").strip()
-        worker._control("start", container)
-        worker._control("pause", container)
+    with _paused_synthetic_guest(worker) as (container, _):
         info, = json.loads(worker._control("inspect", container))
         pid = info["State"]["Pid"]
         assert info["Id"] == container and info["State"]["Paused"] is True and isinstance(pid, int) and pid > 0
@@ -304,13 +302,6 @@ def test_synthetic_paused_cgroup_identity_diagnostic(tmp_path):
                           "container_leaf": cgroup.name in {container, "docker-" + container + ".scope"},
                           "frozen": events.get("frozen"), "populated": events.get("populated"),
                           "kill_interface_present": (cgroup / "cgroup.kill").is_file()}))
-    finally:
-        if container is not None:
-            try:
-                worker._control("unpause", container)
-            except subprocess.SubprocessError:
-                pass
-            worker._control("rm", "--force", container)
 
 
 _HOSTED_CGROUP_KILL = r"""
@@ -360,15 +351,7 @@ def test_hosted_synthetic_cgroup_kill_experiment(tmp_path):
     if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
         pytest.skip("synthetic privileged experiment requires an ephemeral GitHub-hosted runner")
     worker, _, _ = worker_setup(tmp_path, PLAN)
-    name = "lh-cgroup-kill-diagnostic-" + uuid4().hex
-    container = None
-    try:
-        container = worker._control("create", "--name=" + name, "--runtime=long-haul-gvisor", "--network=none",
-            "--read-only", "--user=65534:65534", "--cap-drop=ALL", "--security-opt=no-new-privileges",
-            "--entrypoint=/usr/local/bin/node", "--pull=never", worker.environment.image,
-            "-e", "setInterval(()=>{},60000)").strip()
-        worker._control("start", container)
-        worker._control("pause", container)
+    with _paused_synthetic_guest(worker) as (container, _):
         info, = json.loads(worker._control("inspect", container))
         assert info["Id"] == container and info["State"]["Paused"] is True
         result = subprocess.run(["sudo", "-n", "python3", "-c", _HOSTED_CGROUP_KILL,
@@ -377,13 +360,6 @@ def test_hosted_synthetic_cgroup_kill_experiment(tmp_path):
         print(json.dumps({"qualification": "synthetic-hosted-cgroup-kill", "exit_code": result.returncode,
                           "identity_mismatch": b'exact Docker systemd scope' in result.stderr}))
         assert result.returncode == 0
-    finally:
-        if container is not None:
-            try:
-                worker._control("unpause", container)
-            except subprocess.SubprocessError:
-                pass
-            worker._control("rm", "--force", container)
 
 
 def _wait_for_quota_guest(control, name, process):
