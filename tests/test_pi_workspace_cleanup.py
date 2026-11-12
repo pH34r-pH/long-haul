@@ -139,6 +139,32 @@ def test_recovery_stops_before_later_resources_if_container_removal_is_unconfirm
         assert ("rm", "--force", "b" * 64) not in docker.calls
 
 
+@pytest.mark.parametrize("replace_worker", [False, True])
+def test_recovery_does_not_remove_a_replaced_container(tmp_path, replace_worker):
+    root, intent, docker = setup(tmp_path)
+    replaced = False
+    name = intent.worker_name if replace_worker else intent.holder_name
+    original_id = "a" * 64 if replace_worker else "b" * 64
+
+    def control(*args):
+        nonlocal replaced
+        result = docker(*args)
+        trigger = (args[:2] == ("volume", "inspect") if replace_worker
+                   else args == ("rm", "--force", "a" * 64))
+        if trigger and not replaced:
+            docker.containers[name] = ("f" * 64, intent.labels("worker" if replace_worker else "holder"))
+            replaced = True
+        return result
+
+    with pytest.raises(WorkspaceCleanupRequired):
+        recover(root, intent, control)
+    assert replaced and docker.containers[name][0] == "f" * 64
+    assert ("rm", "--force", original_id) not in docker.calls
+    assert ("rm", "--force", "f" * 64) not in docker.calls
+    assert docker.volume is not None and (root / "active.json").exists()
+    assert not (root / (intent.token + ".cleanup.json")).exists()
+
+
 @pytest.mark.parametrize("change", ["daemon", "volume"])
 def test_recovery_stops_when_daemon_or_volume_changes_mid_cleanup(tmp_path, change):
     root, intent, docker = setup(tmp_path)
