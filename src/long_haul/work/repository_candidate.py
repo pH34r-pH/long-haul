@@ -24,9 +24,9 @@ class CandidateSnapshot:
     contents: Mapping[str, bytes]
 
     @contextmanager
-    def materialize(self):
+    def materialize(self, *, scratch_root: Path | None = None):
         """Create a fresh executor-owned tree; no worker path is mounted."""
-        with tempfile.TemporaryDirectory(prefix="long-haul-evaluator-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="long-haul-evaluator-", dir=scratch_root) as temporary:
             root = Path(temporary)
             for item in self.candidate.files:
                 data = self.contents[item.path]

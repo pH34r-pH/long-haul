@@ -97,6 +97,20 @@ class WorkspaceFenceGrant:
         _write_once(self._directory, self._fence.token + ".worker-started", b"worker-started")
         self._worker_started = True
 
+    def scratch_root(self):
+        self._assert_current()
+        name = self._fence.token + ".scratch"
+        metadata = os.stat(name, dir_fd=self._directory, follow_symlinks=False)
+        if not stat.S_ISDIR(metadata.st_mode) or metadata.st_uid != os.geteuid() or metadata.st_mode & 0o077:
+            raise ValueError("workspace scratch is not private")
+        descriptor = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=self._directory)
+        try:
+            if not _matches(descriptor, ".workspace-owner", self._fence._active_payload()):
+                raise ValueError("workspace scratch ownership changed")
+        finally:
+            os.close(descriptor)
+        return self._fence.root / name
+
     def cleanup(self, control):
         self._assert_current()
         marker = recover_workspace_lease(self._fence.root, self._fence.token, self._fence.fingerprint, control, self)
@@ -146,6 +160,13 @@ class LocalWorkspaceFence:
                 raise WorkspaceCleanupRequired()
             _write_once(directory, self.token + ".used", b"used")
             _write_once(directory, "active.json", self._active_payload())
+            os.mkdir(self.token + ".scratch", mode=0o700, dir_fd=directory)
+            scratch = os.open(self.token + ".scratch", os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
+            try:
+                _write_once(scratch, ".workspace-owner", self._active_payload())
+            finally:
+                os.close(scratch)
+            os.fsync(directory)
             grant = WorkspaceFenceGrant(self, directory, lock)
             try:
                 yield grant

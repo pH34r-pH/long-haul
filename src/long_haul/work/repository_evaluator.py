@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import time
 from datetime import UTC, datetime
+from pathlib import Path
 
 from ..events.store import Event
 from ..resource_policy_models import canonical_json
@@ -139,8 +140,9 @@ def _legacy_evidence(contract, snapshot, profile, observations, attempt_id, pack
 class RepositoryEvaluationRunner:
     """Sealed definitions remain here; untrusted code receives only current SUT inputs."""
 
-    def __init__(self, sandbox: SandboxAdapter):
+    def __init__(self, sandbox: SandboxAdapter, *, scratch_root: Path | None = None):
         self.sandbox = sandbox
+        self.scratch_root = scratch_root
 
     def evaluate(self, contract: WorkContract, snapshot: CandidateSnapshot,
                  profile: RepositoryEvaluationProfileV1, *, attempt_id: str, packet_id: str):
@@ -152,7 +154,7 @@ class RepositoryEvaluationRunner:
         _validate_binding(contract, snapshot, profile, self.sandbox)
         started = time.monotonic()
         scope_valid = all(contract.permits_path(path) for path in snapshot.candidate.changed_paths)
-        with snapshot.materialize() as target:
+        with snapshot.materialize(scratch_root=self.scratch_root) as target:
             observations = tuple(_observe_check(check, snapshot, target, self.sandbox, scope_valid, profile)
                                  for check in profile.checks)
         invalid = tuple(check.predicate_id + ":" + check.outcome + (":" + check.diagnostic if check.diagnostic else "") for check in observations

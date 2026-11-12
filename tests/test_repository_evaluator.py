@@ -79,6 +79,24 @@ def run_fixture(tmp_path, **options):
     return root, work, snapshot, profile, sandbox, packet, result
 
 
+def test_evaluator_materializes_only_under_owned_scratch(tmp_path):
+    _, work, snapshot, profile = setup(tmp_path, FixtureSandbox.identity)
+    scratch = tmp_path / "owned-scratch"
+    scratch.mkdir(mode=0o700)
+
+    class ScratchSandbox(FixtureSandbox):
+        def execute(self, target, command):
+            assert target.parent == scratch
+            return super().execute(target, command)
+
+    sandbox = ScratchSandbox(profile.environment)
+    packet, _ = RepositoryEvaluationRunner(sandbox, scratch_root=scratch).evaluate(
+        work, snapshot, profile, attempt_id="attempt-1", packet_id="packet-1",
+    )
+    assert packet.validity == "valid" and sandbox.calls
+    assert list(scratch.iterdir()) == []
+
+
 def public_evidence_admission(work, profile, packet):
     policy = ResourcePolicyProfile(
         identity=ResourceIdentity(resource_id="urn:fixture:public-packet", resource_type="public-evidence",

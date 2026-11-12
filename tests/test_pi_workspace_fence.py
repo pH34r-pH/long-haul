@@ -30,6 +30,8 @@ def test_fence_sequences_one_seed_worker_and_cleanup(tmp_path):
     root, intent, docker = setup(tmp_path)
     fence = LocalWorkspaceFence(root, intent.token, intent.fingerprint)
     with fence.launch() as grant:
+        scratch = grant.scratch_root()
+        (scratch / "private-fixture").write_text("synthetic")
         assert grant.admit(intent.fingerprint)
         with pytest.raises(ValueError, match="not ready"):
             grant.begin_worker()
@@ -43,6 +45,7 @@ def test_fence_sequences_one_seed_worker_and_cleanup(tmp_path):
             grant.begin_worker()
         assert grant.cleanup(docker).exists()
     assert not (root / "active.json").exists()
+    assert not scratch.exists()
     with pytest.raises(ValueError, match="no longer held"):
         grant.admit(intent.fingerprint)
     with pytest.raises(FileExistsError), fence.launch():
@@ -93,13 +96,31 @@ def test_tampered_active_marker_cannot_authorize_cleanup(tmp_path):
     assert not any(call[0] == "rm" or call[:2] == ("volume", "rm") for call in docker.calls)
 
 
+def test_unowned_scratch_symlink_is_never_followed_or_deleted(tmp_path):
+    root, intent, docker = setup(tmp_path)
+    fence = LocalWorkspaceFence(root, intent.token, intent.fingerprint)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "keep").write_text("fixture")
+    with pytest.raises(WorkspaceCleanupRequired), fence.launch() as grant:
+        scratch = grant.scratch_root()
+        (scratch / ".workspace-owner").unlink()
+        scratch.rmdir()
+        scratch.symlink_to(outside, target_is_directory=True)
+    with pytest.raises(WorkspaceCleanupRequired):
+        fence.recover(docker)
+    assert (outside / "keep").read_text() == "fixture" and (root / "active.json").exists()
+
+
 def test_crashed_controller_leaves_fence_until_recovery(tmp_path):
     root, intent, docker = setup(tmp_path)
     other = second_intent(root, intent)
     script = ("import sys,time; from pathlib import Path; "
               "from long_haul.adapters.pi_workspace_fence import LocalWorkspaceFence; "
               "f=LocalWorkspaceFence(Path(sys.argv[1]),sys.argv[2],sys.argv[3]); "
-              "ctx=f.launch(); ctx.__enter__(); print('held',flush=True); time.sleep(30)")
+              "ctx=f.launch(); grant=ctx.__enter__(); "
+              "(grant.scratch_root()/'private-fixture').write_text('synthetic'); "
+              "print('held',flush=True); time.sleep(30)")
     process = subprocess.Popen([sys.executable, "-c", script, str(root), intent.token, intent.fingerprint],
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
@@ -112,4 +133,7 @@ def test_crashed_controller_leaves_fence_until_recovery(tmp_path):
         process.communicate(timeout=5)
     with pytest.raises(WorkspaceCleanupRequired), LocalWorkspaceFence(root, other.token, other.fingerprint).launch():
         pass
+    scratch = root / (intent.token + ".scratch")
+    assert (scratch / "private-fixture").exists()
     assert LocalWorkspaceFence(root, intent.token, intent.fingerprint).recover(docker).exists()
+    assert not scratch.exists()

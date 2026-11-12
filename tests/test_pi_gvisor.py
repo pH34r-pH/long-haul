@@ -59,10 +59,9 @@ def evidence(result, events):
 def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
     """Qualify only the isolated volume experiment, not worker integration."""
     worker, request, _ = worker_setup(tmp_path, PLAN)
-    suffix = uuid4().hex
     daemon = worker._control("info", "--format", "{{.ID}}").strip()
     options = "size=1m,nr_inodes=32,mode=0777,nosuid,nodev,noexec"
-    intent = WorkspaceLeaseIntent(token=suffix, attempt_fingerprint=request.normalizer.attempt.fingerprint,
+    intent = WorkspaceLeaseIntent(token=uuid4().hex, attempt_fingerprint=request.normalizer.attempt.fingerprint,
                                   environment_fingerprint=worker.environment.fingerprint, daemon_id=daemon,
                                   volume_options=options)
     recovery_root = (tmp_path / "workspace-recovery").resolve()
@@ -88,6 +87,8 @@ def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
 
     with LocalWorkspaceFence(recovery_root, intent.token, intent.fingerprint).launch() as grant, ExitStack() as cleanup:
         cleanup.callback(grant.cleanup, worker._control)
+        scratch = grant.scratch_root()
+        (scratch / "synthetic-host-artifact").write_text("fixture")
         holder_profile = HolderProfile(image, worker.image_id,
                                        tuple(key + "=" + value for key, value in worker.image_environment.items()),
                                        worker._verify_runtime)
@@ -129,6 +130,7 @@ def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
             "fixture/a": b"changed", "fixture/new/b": b"created",
         }
     assert (recovery_root / (intent.token + ".cleanup.json")).is_file()
+    assert not scratch.exists()
 
 
 def test_actual_pi_repair_freezes_after_cleanup_then_independent_evaluator(tmp_path):
@@ -142,9 +144,12 @@ def test_actual_pi_repair_freezes_after_cleanup_then_independent_evaluator(tmp_p
     assert all(event.execution_admission is not None for event in events if event.phase == "end")
     assert b"a + b" in snapshot.contents["program.py"]
     sandbox = DockerGVisorSandbox(environment(), Path(os.environ["LONG_HAUL_RUNSC"]))
-    packet, evaluation = RepositoryEvaluationRunner(sandbox).evaluate(
+    scratch = tmp_path / "evaluator-scratch"
+    scratch.mkdir(mode=0o700)
+    packet, evaluation = RepositoryEvaluationRunner(sandbox, scratch_root=scratch).evaluate(
         request.normalizer.contract, snapshot, profile, attempt_id="independent-after-pi", packet_id="independent-after-pi")
     assert evaluation.disposition.value == "ACCEPTED" and packet.validity == "valid"
+    assert list(scratch.iterdir()) == []
     print(json.dumps({"qualification": "independent-evaluation-after-actual-pi", "packet": packet.model_dump(mode="json")}))
 
 

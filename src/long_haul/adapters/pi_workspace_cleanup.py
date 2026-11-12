@@ -7,10 +7,17 @@ substitute for a scheduler-owned lease.
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
+import stat
 from pathlib import Path
 
-from .pi_workspace_intent import load_workspace_intent, persist_workspace_cleanup
+from .pi_workspace_intent import (
+    _open_private_root,
+    load_workspace_intent,
+    persist_workspace_cleanup,
+)
 
 _CONTAINER = re.compile(r"[0-9a-f]{64}\Z")
 
@@ -62,6 +69,34 @@ def _objects(control, intent):
             _volume(control, intent.volume_name, intent.labels("volume"), intent.volume_options))
 
 
+def _remove_scratch(root, intent):
+    """Delete only the intent's private scratch via symlink-resistant dirfd APIs."""
+    if not shutil.rmtree.avoids_symlink_attacks:
+        raise ValueError("safe workspace scratch cleanup is unavailable")
+    directory = _open_private_root(root)
+    try:
+        name = intent.token + ".scratch"
+        try:
+            metadata = os.stat(name, dir_fd=directory, follow_symlinks=False)
+        except FileNotFoundError:
+            return
+        if not stat.S_ISDIR(metadata.st_mode) or metadata.st_uid != os.geteuid() or metadata.st_mode & 0o077:
+            raise ValueError("workspace scratch identity is not private")
+        scratch = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory)
+        try:
+            from .pi_workspace_fence import _matches
+
+            payload = (intent.token + ":" + intent.fingerprint).encode("ascii")
+            if not _matches(scratch, ".workspace-owner", payload):
+                raise ValueError("workspace scratch ownership is not admitted")
+        finally:
+            os.close(scratch)
+        shutil.rmtree(name, dir_fd=directory)
+        os.fsync(directory)
+    finally:
+        os.close(directory)
+
+
 def recover_workspace_lease(root: Path, token: str, expected_fingerprint: str, control, grant):
     """Remove exact owned resources under the exclusive local workspace fence."""
     try:
@@ -84,6 +119,10 @@ def recover_workspace_lease(root: Path, token: str, expected_fingerprint: str, c
         _daemon(control, intent.daemon_id)
         if any(_objects(control, intent)):
             raise ValueError("workspace resources still exist")
+        _daemon(control, intent.daemon_id)
+        _remove_scratch(root, intent)
+        if any(_objects(control, intent)):
+            raise ValueError("workspace resources returned during scratch cleanup")
         _daemon(control, intent.daemon_id)
         return persist_workspace_cleanup(root, intent)
     except Exception:  # noqa: BLE001 -- provider errors may contain private identifiers.

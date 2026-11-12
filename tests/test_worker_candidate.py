@@ -31,6 +31,31 @@ def test_worker_freeze_preserves_unprojected_base_and_exact_git_identity(tmp_pat
     assert repeated.candidate == snapshot.candidate
 
 
+def test_candidate_scratch_stays_within_executor_owned_root(tmp_path, monkeypatch):
+    from long_haul.work import worker_candidate
+
+    root, work, _, _ = setup(tmp_path, reference("sandbox"))
+    base = freeze_repository_candidate(root, work.repository_work.source.commit, work)
+    worker, scratch = tmp_path / "worker", tmp_path / "private-scratch"
+    worker.mkdir()
+    scratch.mkdir(mode=0o700)
+    (worker / "program.py").write_bytes(PROGRAM)
+    git_roots, original_git = [], worker_candidate._git
+
+    def checked_git(git_root, *args, **kwargs):
+        git_roots.append(git_root)
+        assert git_root.parent == scratch
+        return original_git(git_root, *args, **kwargs)
+
+    monkeypatch.setattr(worker_candidate, "_git", checked_git)
+    snapshot = freeze_stopped_worker(root, base, worker, {"program.py"}, work, scratch_root=scratch)
+    assert git_roots and list(scratch.iterdir()) == []
+    with snapshot.materialize(scratch_root=scratch) as materialized:
+        assert materialized.parent == scratch
+        assert (materialized / "program.py").read_bytes() == PROGRAM
+    assert list(scratch.iterdir()) == []
+
+
 def test_worker_freeze_cannot_add_unadmitted_path(tmp_path):
     root, work, base, _ = setup(tmp_path, reference("sandbox"))
     worker = tmp_path / "worker"

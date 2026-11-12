@@ -119,7 +119,8 @@ def _tree(root, files):
 
 
 def freeze_stopped_worker(source_root: Path, base: CandidateSnapshot, worker: Path,
-                          projected_paths: set[str], contract: WorkContract) -> CandidateSnapshot:
+                          projected_paths: set[str], contract: WorkContract, *,
+                          scratch_root: Path | None = None) -> CandidateSnapshot:
     """Caller must supply the exact successful container-removal receipt first."""
     contents = regular_contents(worker)
     if not set(contents) <= projected_paths:
@@ -138,7 +139,7 @@ def freeze_stopped_worker(source_root: Path, base: CandidateSnapshot, worker: Pa
     # Existing bounded evaluator freeze rechecks the exact base, all objects, file
     # count, byte limits and ancestry. Git sees only trusted arguments and stdin.
     source_objects = _GitObjects(source_root).run("rev-parse", "--path-format=absolute", "--git-path", "objects").decode()
-    with tempfile.TemporaryDirectory(prefix="long-haul-worker-git-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="long-haul-worker-git-", dir=scratch_root) as temporary:
         root = Path(temporary)
         _git(root, "init", "--bare", "-q", "--object-format=" + ("sha256" if len(base.candidate.base.commit) == 64 else "sha1"))
         (root / "objects/info/alternates").write_text(source_objects + "\n")
