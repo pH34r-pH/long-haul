@@ -256,6 +256,29 @@ def test_key_vault_ambiguous_write_is_never_retried(tmp_path, failure):
     assert sum(call[0] == "set" for call in client.calls) == 1
 
 
+@pytest.mark.parametrize("interruption", [KeyboardInterrupt, SystemExit])
+@pytest.mark.parametrize("stage", ["write", "readback"])
+def test_key_vault_interrupted_write_retains_recovery_locator(tmp_path, interruption, stage):
+    _, contract, _, source = setup(tmp_path, FixtureSandbox.identity)
+    client = FakeSecretClient()
+
+    def interrupt():
+        raise interruption("SYNTHETIC_SECRET_DO_NOT_DISCLOSE")
+
+    if stage == "write":
+        client.on_set = interrupt
+    else:
+        client.on_get = interrupt
+    with pytest.raises(KeyVaultWriteUncertain) as caught:
+        KeyVaultEvaluatorKeys(client, VAULT).freeze(
+            source, contract, key_admission(source, contract, "retain"), key_admission(source, contract, "read")
+        )
+    assert len(client.records) == 1 and sum(call[0] == "set" for call in client.calls) == 1
+    assert caught.value.secret_name == client.calls[0][1]
+    assert caught.value.secret_version == (None if stage == "write" else "a" * 32)
+    assert "SYNTHETIC_SECRET_DO_NOT_DISCLOSE" not in str(caught.value)
+
+
 def test_key_reference_repr_never_exposes_locator():
     reference = FrozenKeyReference(VAULT, "secret-name", "secret-version", "fingerprint", "implementation")
     assert "secret-name" not in repr(reference) and "secret-version" not in repr(reference)

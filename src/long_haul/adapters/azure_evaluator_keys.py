@@ -190,9 +190,10 @@ class KeyVaultEvaluatorKeys:
                 raise ValueError("private key version readback changed")
             retention.authorize(source, contract, ResourceAction.RETAIN, datetime.now(UTC))
             reading.authorize(source, contract, ResourceAction.READ, datetime.now(UTC))
-        # A provider failure may follow a successful write and may contain the
-        # request body. Preserve an opaque recovery handle without retrying.
-        except Exception:  # noqa: BLE001
+        # A provider failure or interruption may follow a successful write and
+        # may contain the request body. Retain an opaque handle without retrying.
+        # Abrupt process death still requires a durable pre-write intent.
+        except BaseException:  # noqa: BLE001 -- cancellation must not lose the recovery handle.
             raise KeyVaultWriteUncertain(name, version if isinstance(version, str) and _VERSION.fullmatch(version) else None) from None
         return profile, reference
 
