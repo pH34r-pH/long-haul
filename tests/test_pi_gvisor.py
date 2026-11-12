@@ -337,6 +337,32 @@ def test_synthetic_gvisor_paused_kill_diagnostic(tmp_path):
         assert isinstance(state.get("Running"), bool) and isinstance(state.get("Paused"), bool)
 
 
+def test_hosted_synthetic_paused_runtime_state_diagnostic(tmp_path):
+    """Observe Docker and runsc states without claiming a containment boundary."""
+    if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
+        pytest.skip("synthetic state inspection requires an ephemeral GitHub-hosted runner")
+    worker, _, _ = worker_setup(tmp_path, PLAN)
+    with _paused_synthetic_guest(worker) as (container, _):
+        info, = json.loads(worker._control("inspect", container))
+        assert info["Id"] == container and info["State"].get("Paused") is True
+        runtime_state = "unavailable"
+        for root in ("/run/docker/runtime-long-haul-gvisor/moby", "/run/docker/runtime-runc/moby"):
+            if not Path(root).is_dir():
+                continue
+            result = subprocess.run(["sudo", "-n", str(worker.runsc_path), "--root", root, "state", container],
+                                    env=_control_environment(), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                    timeout=15, check=False)
+            if result.returncode != 0:
+                continue
+            state = json.loads(result.stdout)
+            assert state.get("id") == container
+            assert state.get("status") in {"created", "running", "paused", "stopped"}
+            runtime_state = state["status"]
+            break
+        print(json.dumps({"qualification": "synthetic-paused-runtime-state", "docker_paused": True,
+                          "runtime_state": runtime_state}))
+
+
 def _wait_synthetic_cgroup_empty(events):
     deadline = time.monotonic() + 10
     while True:
