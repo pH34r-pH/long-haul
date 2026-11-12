@@ -446,6 +446,58 @@ def _hosted_frozen_holder_capture(worker, guest, holder):
             process.wait(timeout=55)
 
 
+def _synthetic_kernel_capture(worker, view, guest, holder, holder_profile):
+    """Hosted-only experiment, not a privileged production capture authority."""
+    worker._control("pause", guest)
+    view._check(paused=True)
+    info, = json.loads(worker._control("inspect", guest))
+    assert info["Id"] == guest and info["State"]["Paused"] is True
+    process = subprocess.Popen(["sudo", "-n", "python3", "-c", _HOSTED_CGROUP_KILL,
+                                str(info["State"]["Pid"]), guest, "capture"],
+                               env=_control_environment(), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                               stderr=subprocess.DEVNULL, text=True)
+    try:
+        assert select.select([process.stdout], [], [], 20)[0]
+        assert json.loads(process.stdout.readline()).get("kernel_freeze_confirmed") is True
+        view._check(paused=True)
+        files = copy_docker_workspace(worker.docker_path, holder, 15)
+        view._check(paused=True)
+        output, _ = process.communicate("kill\n", timeout=20)
+        assert process.returncode == 0 and json.loads(output).get("cgroup_observation") in {"empty", "removed"}
+        stopped, = json.loads(worker._control("inspect", guest))
+        state = stopped["State"]
+        assert (stopped["Id"] == guest and state["Running"] is False and state["Paused"] is False
+                and state["Pid"] == 0 and state["Status"] == "exited" and state["ExitCode"] == 137)
+        verify_workspace_holder(worker._control, worker._quota_intent, holder_profile, holder, running=True)
+        assert copy_docker_workspace(worker.docker_path, holder, 15) == files
+        worker._remove_exact(guest)
+        return files, True
+    finally:
+        if process.poll() is None:
+            process.stdin.close()
+            process.wait(timeout=55)
+
+
+def test_hosted_actual_pi_synthetic_kernel_capture(tmp_path, monkeypatch):
+    """Test-only privileged path; no production admission or isolation claim."""
+    if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
+        pytest.skip("synthetic privileged experiment requires an ephemeral GitHub-hosted runner")
+    with quota_fixture(tmp_path, PLAN) as (worker, request, profile, grant, root, intent):
+        monkeypatch.setattr(worker, "_capture_and_remove",
+                            lambda view, guest, holder, hp: _synthetic_kernel_capture(worker, view, guest, holder, hp))
+        result, events, snapshot = worker.run_bounded(request, grant)
+        assert result.terminal == "settled" and snapshot is not None and result.cleanup.process_tree_stopped
+        assert all(event.outcome.value == "success" for event in events if event.phase == "end")
+        assert b"a + b" in snapshot.contents["program.py"] and not worker.lease_releasable
+        sandbox = DockerGVisorSandbox(environment(), Path(os.environ["LONG_HAUL_RUNSC"]))
+        packet, evaluation = RepositoryEvaluationRunner(sandbox, scratch_root=grant.scratch_root()).evaluate(
+            request.normalizer.contract, snapshot, profile, attempt_id="kernel-fixture", packet_id="kernel-fixture")
+        assert packet.validity == "valid" and evaluation.disposition.value == "ACCEPTED"
+    assert worker.lease_releasable and not (root / (intent.token + ".scratch")).exists()
+    assert (root / (intent.token + ".cleanup.json")).is_file()
+    print(json.dumps({"qualification": "hosted-actual-pi-synthetic-kernel-capture", "real_model": False}))
+
+
 def _assert_synthetic_capture_abort_thaws(pid, container):
     process = subprocess.Popen(["sudo", "-n", "python3", "-c", _HOSTED_CGROUP_KILL,
                                 str(pid), container, "capture"], env=_control_environment(),
