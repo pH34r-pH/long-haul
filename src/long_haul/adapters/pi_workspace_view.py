@@ -77,6 +77,9 @@ class PausedWorkspaceView:
             raise ValueError("paused workspace binding changed")
         _mount(worker, self.volume, volume["Mountpoint"])
         _mount(holder, self.volume, volume["Mountpoint"])
+        self._check_volume_users()
+
+    def _check_volume_users(self):
         # Point-in-time Docker census only; it does not fence new attachments
         # or detect host processes and bind mounts of the backing path.
         users = self.control("container", "ls", "--all", "--no-trunc", "--filter", "volume=" + self.volume,

@@ -75,7 +75,7 @@ def test_candidate_requires_matching_post_stop_snapshot(monkeypatch, changed):
 
     worker._control = control
     worker._remove_exact = lambda _: calls.append(("remove",))
-    view = SimpleNamespace(_check=lambda **_: calls.append(("check",)))
+    view = SimpleNamespace(_check=lambda **_: calls.append(("check",)), _check_volume_users=lambda: None)
     snapshots = iter([{"a": b"before"}, {"a": b"after" if changed else b"before"}])
     monkeypatch.setattr(pi_quota_worker, "copy_docker_workspace", lambda *_: next(snapshots))
     monkeypatch.setattr(pi_quota_worker, "verify_workspace_holder", lambda *args, **kwargs: None)
@@ -107,7 +107,7 @@ def test_ambiguous_kill_is_never_retried_and_requires_exact_stopped_state(monkey
 
     worker._control = control
     worker._remove_exact = lambda _: calls.append(("remove",))
-    view = SimpleNamespace(_check=lambda **_: None)
+    view = SimpleNamespace(_check=lambda **_: None, _check_volume_users=lambda: None)
     monkeypatch.setattr(pi_quota_worker, "copy_docker_workspace", lambda *_: {"a": b"fixture"})
     monkeypatch.setattr(pi_quota_worker, "verify_workspace_holder", lambda *args, **kwargs: None)
     if stopped:
@@ -118,6 +118,34 @@ def test_ambiguous_kill_is_never_retried_and_requires_exact_stopped_state(monkey
             worker._capture_and_remove(view, "a" * 64, "b" * 64, object())
         assert ("remove",) not in calls
     assert sum(call[0] == "kill" for call in calls) == 1
+
+
+def test_final_capture_holds_if_volume_user_changes_after_stop(monkeypatch):
+    worker = object.__new__(QuotaPiWorker)
+    worker._execution_deadline = float("inf")
+    worker.docker_path, worker._quota_intent = "/fixture/docker", object()
+    calls = []
+
+    def control(*args):
+        calls.append(args)
+        if args[0] == "inspect":
+            return json.dumps([{"Id": "a" * 64, "State": {"Running": False, "Paused": False, "Pid": 0,
+                "Status": "exited", "ExitCode": 137, "OOMKilled": False, "Dead": False, "Error": ""}}])
+        return ""
+
+    def volume_users():
+        calls.append(("users",))
+        if sum(call == ("users",) for call in calls) == 2:
+            raise ValueError("workspace volume users changed")
+
+    worker._control = control
+    worker._remove_exact = lambda _: calls.append(("remove",))
+    view = SimpleNamespace(_check=lambda **_: None, _check_volume_users=volume_users)
+    monkeypatch.setattr(pi_quota_worker, "copy_docker_workspace", lambda *_: {"a": b"fixture"})
+    monkeypatch.setattr(pi_quota_worker, "verify_workspace_holder", lambda *args, **kwargs: None)
+    with pytest.raises(ValueError, match="volume users changed"):
+        worker._capture_and_remove(view, "a" * 64, "b" * 64, object())
+    assert ("remove",) not in calls
 
 
 @pytest.mark.parametrize("change", [
