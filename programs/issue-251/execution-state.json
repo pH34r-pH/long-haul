@@ -2947,6 +2947,25 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839138732",
       "evidence": "All exact-head hosted checks passed or were intentionally skipped.",
       "remaining": "The subsequent conflict fix was not included; full security acceptance remains open."
+    },
+    {
+      "at": "2026-11-12T23:44:49.093316+00:00",
+      "task": "lh-245-security",
+      "status": "projected_sources_derivation_draft",
+      "pull_request": 265,
+      "tested_code_commit": "064acca7efbb4b9a7be10ec28c0990e73ac912ad",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839238047",
+      "evidence": "Synthetic fixture showed projected unread source restriction omitted from derivation. All projected files are now tracked as input parents and conflicting projections deny before copying; 104 focused and 792 full Linux tests passed, 64 skipped, plus Ruff.",
+      "remaining": "Conservative rule may deny writes for unrelated projected inputs. Exact-head hosted checks, host/daemon trust, races, containment and private-use qualification remain open."
+    },
+    {
+      "at": "2026-11-12T23:44:49.093316+00:00",
+      "task": "lh-245-security",
+      "status": "prior_input_conflict_hosted_checks_passed",
+      "head": "d31737d080998e9a50fc1bfb260f4645d37efd43",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839287611",
+      "evidence": "All hosted checks passed or were intentionally skipped on that exact head.",
+      "remaining": "Subsequent projected-source change not included; full security acceptance remains open."
     }
   ]
 }
