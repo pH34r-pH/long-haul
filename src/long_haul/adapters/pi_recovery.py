@@ -47,9 +47,17 @@ def confirm_container_absent(control, container_id):
         raise ValueError("worker container removal is unconfirmed")
 
 
-def recover_worker(executor, receipt_path: Path) -> HarnessCleanup:
-    """Explicit retry; no result, candidate or reuse right exists until rm succeeds."""
+def recover_worker(executor, receipt_path: Path, expected: PiWorkerRecovery) -> HarnessCleanup:
+    """Recover only against a separately trusted expected record.
+
+    The caller must authenticate and retain that record independently; the
+    on-disk receipt cannot authorize its own container or deletion paths.
+    """
+    if not isinstance(expected, PiWorkerRecovery):
+        raise TypeError("recovery requires an independently trusted expected record")
     receipt = PiWorkerRecovery.model_validate_json(receipt_path.read_bytes())
+    if receipt != expected:
+        raise ValueError("recovery receipt differs from trusted expected record")
     if receipt.environment.digest != executor.environment.fingerprint:
         raise ValueError("recovery requires the exact worker environment")
     executor._control("rm", "--force", "--volumes", receipt.container_id)

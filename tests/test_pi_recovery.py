@@ -113,6 +113,45 @@ def test_acknowledged_removal_must_confirm_absence_before_recovery_or_reuse(tmp_
     assert not (failure.value.receipt_path.parent / "cleanup.json").exists()
 
 
+@pytest.mark.parametrize("field", ["workspace", "control", "container_id"])
+def test_mutated_recovery_receipt_cannot_redirect_cleanup(tmp_path, field):
+    worker, request = fake_executor(tmp_path)
+    with pytest.raises(PiWorkerCleanupRequired) as failure:
+        worker.run(request)
+    path = failure.value.receipt_path
+    original = PiWorkerRecovery.model_validate_json(path.read_bytes())
+    decoy = tmp_path / "unrelated-directory"
+    decoy.mkdir()
+    (decoy / "keep").write_text("synthetic")
+    value = "f" * 64 if field == "container_id" else decoy
+    path.write_text(original.model_copy(update={field: value}).model_dump_json())
+    worker.fail_removal = False
+    calls = []
+    control = worker._control
+    worker._control = lambda *args: (calls.append(args), control(*args))[1]
+    with pytest.raises(ValueError, match="recovery"):
+        worker.recover()
+    assert not calls
+    assert (decoy / "keep").read_text() == "synthetic"
+    assert original.workspace.exists() and original.control.exists()
+    assert worker._cleanup_pending and not worker.lease_releasable
+
+
+def test_fresh_executor_recovery_requires_independent_expected_record(tmp_path):
+    worker, request = fake_executor(tmp_path)
+    with pytest.raises(PiWorkerCleanupRequired) as failure:
+        worker.run(request)
+    path = failure.value.receipt_path
+    expected = worker._recovery
+    worker._recovery, worker.recovery_path = None, None
+    worker.fail_removal = False
+    with pytest.raises(TypeError, match="trusted expected record"):
+        worker.recover(path)
+    assert expected.workspace.exists() and expected.control.exists()
+    cleanup = worker.recover(path, expected_recovery=expected)
+    assert cleanup.process_tree_stopped and not expected.workspace.exists() and not expected.control.exists()
+
+
 @pytest.mark.parametrize("census", ["present", "error"])
 def test_acknowledged_removal_does_not_allow_unconfirmed_initial_cleanup(tmp_path, census):
     worker, request = fake_executor(tmp_path)

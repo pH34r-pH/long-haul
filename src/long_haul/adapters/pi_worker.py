@@ -229,13 +229,16 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
                 shutil.rmtree(worker)
                 self._control_root = None
 
-    def recover(self, receipt_path: Path | None = None):
+    def recover(self, receipt_path: Path | None = None, *, expected_recovery: PiWorkerRecovery | None = None):
         path = receipt_path or self.recovery_path
         if path is None and self._recovery is not None:
             path = self.recovery_path = retain_recovery(self._recovery)
         if path is None or self.recovery_path is not None and path != self.recovery_path:
             raise ValueError("no matching pending worker cleanup")
-        cleanup = recover_worker(self, path)
+        if self._recovery is not None and expected_recovery is not None and expected_recovery != self._recovery:
+            raise ValueError("recovery expectation differs from pending worker")
+        expected = self._recovery if self._recovery is not None else expected_recovery
+        cleanup = recover_worker(self, path, expected)
         self._cleanup_pending = False
         self._recovery = None
         self._control_root = None
