@@ -24,7 +24,7 @@ from ..work.harness import HarnessCleanup
 from ..work.repository_candidate import CandidateSnapshot
 from ..work.repository_evaluation_models import EvaluatorEnvironment
 from ..work.repository_models import DigestReference, content_digest
-from ..work.repository_sandbox import DockerGVisorSandbox
+from ..work.repository_sandbox import DockerGVisorSandbox, SandboxCleanupRequired
 from ..work.worker_candidate import (
     MAX_WORKER_DEPTH,
     MAX_WORKER_DIRECTORIES,
@@ -211,6 +211,9 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
 
     def run(self, request: PiWorkerRequest):
         """Synchronous bounded execution; no caller transcript or control secrets mount."""
+        pending = getattr(self, "_pending_cleanup", None)
+        if pending is not None:
+            raise SandboxCleanupRequired(*pending)
         if self._cleanup_pending:
             raise PiWorkerCleanupRequired(self.recovery_path)
         self._validate_request(request)
@@ -247,7 +250,7 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
 
     @property
     def lease_releasable(self):
-        return not self._cleanup_pending
+        return not self._cleanup_pending and getattr(self, "_pending_cleanup", None) is None
 
     @property
     def pending_recovery(self):

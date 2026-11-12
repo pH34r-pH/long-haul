@@ -50,6 +50,27 @@ class SandboxAdapter(Protocol):
     def execute(self, candidate: Path, command: CandidateCommand) -> SandboxResult: ...
 
 
+class SandboxCleanupRequired(RuntimeError):
+    """Private recovery information; do not release the candidate or lease."""
+
+    def __init__(self, container_id: str, workspace: Path):
+        super().__init__("sandbox cleanup is unconfirmed; retain the workspace and lease")
+        self.container_id = container_id
+        self.workspace = workspace
+        self.lease_releasable = False
+        self.workspace_mode_restricted = None
+
+
+def confirm_container_absent(control, container_id):
+    """Require a point-in-time Docker census after acknowledged removal."""
+    if len(container_id) != 64 or any(char not in "0123456789abcdef" for char in container_id):
+        raise ValueError("invalid sandbox container identity")
+    output = control("container", "ls", "--all", "--no-trunc", "--filter", "id=" + container_id,
+                     "--format", "{{.ID}}")
+    if output.strip():
+        raise ValueError("sandbox container removal is unconfirmed")
+
+
 def _control_environment() -> dict[str, str]:
     # Do not forward credentials, caller environment, proxies, or Docker endpoints.
     return {"PATH": os.defpath, "LANG": "C.UTF-8"}
@@ -217,7 +238,13 @@ class DockerGVisorSandbox:
                 or any(m["Destination"] != "/tmp" for m in mounts if m["Type"] == "tmpfs")):
             raise ValueError("candidate containment configuration mismatch")
 
+    def assert_ready(self):
+        pending = getattr(self, "_pending_cleanup", None)
+        if pending is not None:
+            raise SandboxCleanupRequired(*pending)
+
     def execute(self, candidate, command):
+        self.assert_ready()
         container = None
         result = SandboxResult("invalid", diagnostic="sandbox_invalid", outputs_observed=False)
         removed = False
@@ -234,9 +261,11 @@ class DockerGVisorSandbox:
             if container is not None:
                 try:
                     self._control("rm", "--force", "--volumes", container)
+                    confirm_container_absent(self._control, container)
                     removed = True
-                except (OSError, ValueError, subprocess.SubprocessError):
-                    pass
+                except BaseException:  # noqa: BLE001 -- interruptions also leave cleanup unconfirmed.
+                    self._pending_cleanup = (container, Path(candidate))
+                    raise SandboxCleanupRequired(*self._pending_cleanup) from None
         return self._retained_result(container, result, removed)
 
     @contextmanager

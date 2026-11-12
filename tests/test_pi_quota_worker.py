@@ -12,8 +12,23 @@ from long_haul.adapters.pi_quota_worker import QuotaPiWorker
 from long_haul.adapters.pi_worker import DockerGVisorPiWorker
 from long_haul.adapters.pi_workspace_cleanup import WorkspaceCleanupRequired
 from long_haul.adapters.pi_workspace_fence import LocalWorkspaceFence
+from long_haul.work.repository_sandbox import SandboxCleanupRequired
 
 pytestmark = pytest.mark.skipif(os.name != "posix", reason="workspace recovery requires POSIX filesystem semantics")
+
+
+@pytest.mark.parametrize("worker_type", [DockerGVisorPiWorker, QuotaPiWorker])
+def test_worker_cannot_bypass_pending_evaluator_cleanup(tmp_path, worker_type):
+    worker = object.__new__(worker_type)
+    worker._cleanup_pending = False
+    worker._pending_cleanup = ("c" * 64, tmp_path)
+    assert not worker.lease_releasable
+    with pytest.raises(SandboxCleanupRequired) as failure:
+        if worker_type is QuotaPiWorker:
+            worker.run_bounded(None, None)
+        else:
+            worker.run(None)
+    assert failure.value.workspace == tmp_path and not failure.value.lease_releasable
 
 
 def test_quota_executor_never_falls_back_to_legacy_run():

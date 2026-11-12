@@ -30,7 +30,7 @@ from .repository_evaluation_models import (
 )
 from .repository_evidence_admission import PublicEvidenceAdmission
 from .repository_models import DigestReference, content_digest
-from .repository_sandbox import SandboxAdapter, SandboxResult
+from .repository_sandbox import SandboxAdapter, SandboxCleanupRequired, SandboxResult
 
 
 def public_evaluator_reference(profile: RepositoryEvaluationProfileV1) -> DigestReference:
@@ -111,6 +111,8 @@ def _observe_check(check, snapshot, target, sandbox, scope_valid, profile):
     else:
         try:
             result = sandbox.execute(target, check.command)
+        except SandboxCleanupRequired:
+            raise  # Preserve the candidate and lease; no later checks may run.
         except (OSError, ValueError, RuntimeError):
             result = SandboxResult("invalid")
         state, outcome = _result_state(result, check.command)
@@ -152,6 +154,9 @@ class RepositoryEvaluationRunner:
 
     def _evaluate(self, contract, snapshot, profile, *, attempt_id, packet_id):
         _validate_binding(contract, snapshot, profile, self.sandbox)
+        assert_ready = getattr(self.sandbox, "assert_ready", None)
+        if callable(assert_ready):
+            assert_ready()
         started = time.monotonic()
         scope_valid = all(contract.permits_path(path) for path in snapshot.candidate.changed_paths)
         with snapshot.materialize(scratch_root=self.scratch_root) as target:

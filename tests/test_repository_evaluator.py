@@ -39,6 +39,7 @@ from long_haul.work.repository_sandbox import (
     PYTHON_BOOTSTRAP,
     START_MARKER,
     DockerGVisorSandbox,
+    SandboxCleanupRequired,
     SandboxResult,
     _bounded_output,
     _startup_receipt,
@@ -323,9 +324,103 @@ def test_failed_container_cleanup_remains_invalid_and_unresolved(tmp_path, monke
     monkeypatch.setattr(adapter, "_control", control)
     monkeypatch.setattr(adapter, "_verify_configuration", lambda *args: None)
     monkeypatch.setattr(adapter, "_execute", lambda *args: SandboxResult("completed", b"3\n", b"", 0))
-    result = adapter.execute(tmp_path, CandidateCommand(program="program.py", expected_stdout_digest=reference("out").digest))
-    assert result.outcome == "invalid" and result.diagnostic == "cleanup_failed"
-    assert result.execution_receipt.cleanup == "failed" and result.execution_receipt.process_stopped is None
+    command = CandidateCommand(program="program.py", expected_stdout_digest=reference("out").digest)
+    with pytest.raises(RuntimeError, match="cleanup") as failure:
+        adapter.execute(tmp_path, command)
+    assert failure.value.container_id == "c" * 64 and failure.value.workspace == tmp_path
+    assert failure.value.lease_releasable is False
+    with pytest.raises(RuntimeError, match="cleanup"):
+        adapter.execute(tmp_path, command)
+
+
+def test_evaluator_reports_cleanup_only_after_exact_absence_census(tmp_path, monkeypatch):
+    from repository_evaluator_fixture import environment
+
+    from long_haul.work.repository_evaluation_models import CandidateCommand
+
+    adapter = DockerGVisorSandbox.__new__(DockerGVisorSandbox)
+    adapter.environment, adapter.image_id = environment(), "sha256:" + "a" * 64
+    (tmp_path / "program.py").write_text("print(3)\n")
+    calls = []
+
+    def control(*arguments):
+        calls.append(arguments)
+        if arguments[0] == "create":
+            return "c" * 64
+        if arguments[0] == "rm" or arguments[:2] == ("container", "ls"):
+            return ""
+        raise AssertionError("unexpected control operation")
+
+    monkeypatch.setattr(adapter, "_control", control)
+    monkeypatch.setattr(adapter, "_verify_configuration", lambda *args: None)
+    monkeypatch.setattr(adapter, "_execute", lambda *args: SandboxResult("completed", b"3\n", b"", 0))
+    command = CandidateCommand(program="program.py", expected_stdout_digest=reference("out").digest)
+    result = adapter.execute(tmp_path, command)
+    assert result.execution_receipt.cleanup == "removed" and result.execution_receipt.process_stopped is True
+    assert ("container", "ls", "--all", "--no-trunc", "--filter", "id=" + "c" * 64, "--format", "{{.ID}}") in calls
+
+
+@pytest.mark.parametrize("census", ["present", "error", "unexpected", "interrupted", "mode_error", "mode_interrupt"])
+def test_evaluator_holds_candidate_when_acknowledged_removal_is_unconfirmed(tmp_path, monkeypatch, census):
+    from pathlib import Path
+
+    _, work, snapshot, profile = setup(tmp_path, FixtureSandbox.identity)
+    scratch = tmp_path / "owned-scratch"
+    scratch.mkdir(mode=0o700)
+    sandbox = DockerGVisorSandbox.__new__(DockerGVisorSandbox)
+    sandbox.environment, sandbox.identity = profile.environment, FixtureSandbox.identity
+    sandbox.image_id = "sha256:" + "a" * 64
+    calls = []
+    if census in {"mode_error", "mode_interrupt"}:
+        original_chmod = Path.chmod
+
+        def chmod(path, mode, *args, **kwargs):
+            if path.parent == scratch and mode == 0o700:
+                if census == "mode_interrupt":
+                    raise KeyboardInterrupt()
+                raise OSError("private chmod failure")
+            return original_chmod(path, mode, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "chmod", chmod)
+
+    def control(*arguments):
+        calls.append(arguments)
+        if arguments[0] == "create":
+            return "c" * 64
+        if arguments[0] == "rm":
+            return ""  # Acknowledgment alone does not prove the container is gone.
+        if arguments[:2] == ("container", "ls"):
+            if census == "error":
+                raise subprocess.CalledProcessError(1, ["docker", "container", "ls"])
+            if census == "unexpected":
+                raise RuntimeError("sensitive provider detail")
+            if census == "interrupted":
+                raise KeyboardInterrupt()
+            return "c" * 64 + "\n"
+        raise AssertionError("unexpected control operation")
+
+    monkeypatch.setattr(sandbox, "_control", control)
+    monkeypatch.setattr(sandbox, "_verify_configuration", lambda *args: None)
+    monkeypatch.setattr(sandbox, "_execute", lambda *args: SandboxResult("completed", b"3\n", b"", 0, startup_verified=True))
+    runner = RepositoryEvaluationRunner(sandbox, scratch_root=scratch)
+    with pytest.raises(SandboxCleanupRequired, match="cleanup") as failure:
+        runner.evaluate(
+            work, snapshot, profile, attempt_id="attempt-1", packet_id="packet-1")
+    assert failure.value.workspace.parent == scratch and failure.value.workspace.is_dir()
+    assert failure.value.lease_releasable is False
+    assert "sensitive provider detail" not in str(failure.value)
+    assert (failure.value.workspace / "program.py").is_file()
+    if census in {"mode_error", "mode_interrupt"}:
+        assert failure.value.workspace_mode_restricted is False
+    elif sys.platform != "win32":
+        assert failure.value.workspace.stat().st_mode & 0o777 == 0o700
+        assert failure.value.workspace_mode_restricted is True
+    assert sum(call[0] == "create" for call in calls) == 1
+    with pytest.raises(SandboxCleanupRequired) as retry:
+        runner.evaluate(work, snapshot, profile, attempt_id="attempt-2", packet_id="packet-2")
+    assert retry.value.workspace == failure.value.workspace
+    assert list(scratch.iterdir()) == [failure.value.workspace]
+    assert sum(call[0] == "create" for call in calls) == 1
 
 
 def test_pass_cannot_wrap_invalid_sandbox_outcome(tmp_path):

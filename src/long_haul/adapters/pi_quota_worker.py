@@ -14,6 +14,7 @@ from pathlib import Path
 
 from ..work.harness import HarnessCleanup
 from ..work.repository_models import DigestReference, content_digest
+from ..work.repository_sandbox import SandboxCleanupRequired
 from ..work.worker_candidate import freeze_stopped_worker
 from .harness_trace import _canonical
 from .pi_harness import PiPrompt
@@ -54,7 +55,7 @@ class QuotaPiWorker(DockerGVisorPiWorker):
     @property
     def lease_releasable(self):
         grant = getattr(self, "_quota_grant", None)
-        return grant is None or grant.cleaned
+        return (grant is None or grant.cleaned) and getattr(self, "_pending_cleanup", None) is None
 
     @staticmethod
     def implementation_reference():
@@ -112,6 +113,9 @@ class QuotaPiWorker(DockerGVisorPiWorker):
 
     def run_bounded(self, request, grant):
         """Run one synthetic/admitted attempt while the caller retains its fence."""
+        pending = getattr(self, "_pending_cleanup", None)
+        if pending is not None:
+            raise SandboxCleanupRequired(*pending)
         if not isinstance(grant, WorkspaceFenceGrant):
             raise TypeError("quota Pi worker requires an active workspace fence")
         if not self.lease_releasable:

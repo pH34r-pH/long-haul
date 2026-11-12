@@ -13,6 +13,7 @@ from pydantic import Field
 
 from ..work.harness import HarnessAttempt, HarnessCleanup
 from ..work.repository_models import DigestReference, FrozenProjection, content_digest
+from ..work.repository_sandbox import confirm_container_absent
 from .pi_workspace_intent import _open_private_root
 
 MAX_RECOVERY_BYTES = 262144
@@ -41,14 +42,6 @@ def retain_recovery(receipt: PiWorkerRecovery):
     with os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as output:
         output.write(receipt.model_dump_json())
     return path
-
-
-def confirm_container_absent(control, container_id):
-    """Require a point-in-time Docker census after acknowledged removal."""
-    output = control("container", "ls", "--all", "--no-trunc", "--filter", "id=" + container_id,
-                     "--format", "{{.ID}}")
-    if output.strip():
-        raise ValueError("worker container removal is unconfirmed")
 
 
 def _read_recovery_receipt(path: Path) -> bytes:
