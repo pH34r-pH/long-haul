@@ -156,10 +156,15 @@ class KeyVaultEvaluatorKeys:
     def implementation_fingerprint():
         return content_digest(Path(__file__).read_bytes())
 
+    def _assert_client(self):
+        if _vault_url(self._client.vault_url) != self._vault_url:
+            raise ValueError("Key Vault client origin changed")
+
     def freeze(self, source, contract, retention, reading):
         if (type(source) is not RepositoryEvaluationProfileV1
                 or not isinstance(retention, KeyUseAdmission) or not isinstance(reading, KeyUseAdmission)):
             raise TypeError("private evaluator keys require trusted retention and read admission")
+        self._assert_client()
         retention.authorize(source, contract, ResourceAction.RETAIN, datetime.now(UTC))
         reading.authorize(source, contract, ResourceAction.READ, datetime.now(UTC))
         profile = PrivateEvaluatorProfile.generate(source)
@@ -173,13 +178,13 @@ class KeyVaultEvaluatorKeys:
         version = None
         try:
             secret = self._client.set_secret(name, payload, enabled=True, content_type=_CONTENT_TYPE,
-                                              logging_enable=False)
+                                              logging_enable=False, retry_total=0)
             version = secret.properties.version
             reference = _reference(self._vault_url, name, version, profile.fingerprint,
                                    self.implementation_fingerprint())
             _metadata(secret, reference, datetime.now(UTC))
             reading.authorize(source, contract, ResourceAction.READ, datetime.now(UTC))
-            replay = self._client.get_secret(name, reference.version, logging_enable=False)
+            replay = self._client.get_secret(name, reference.version, logging_enable=False, retry_total=0)
             _metadata(replay, reference, datetime.now(UTC))
             if _decode(source, reference, replay.value).fingerprint != profile.fingerprint:
                 raise ValueError("private key version readback changed")
@@ -195,6 +200,7 @@ class KeyVaultEvaluatorKeys:
         if (type(source) is not RepositoryEvaluationProfileV1
                 or not isinstance(admission, KeyUseAdmission) or not isinstance(reference, FrozenKeyReference)):
             raise TypeError("private evaluator keys require trusted admission and versioned reference")
+        self._assert_client()
         if reference.vault_url != self._vault_url:
             raise ValueError("private key reference targets another vault")
         _reference(reference.vault_url, reference.name, reference.version, reference.evaluator_fingerprint,
@@ -203,7 +209,7 @@ class KeyVaultEvaluatorKeys:
             raise ValueError("private key authority implementation changed")
         admission.authorize(source, contract, ResourceAction.READ, datetime.now(UTC))
         try:
-            secret = self._client.get_secret(reference.name, reference.version, logging_enable=False)
+            secret = self._client.get_secret(reference.name, reference.version, logging_enable=False, retry_total=0)
             _metadata(secret, reference, datetime.now(UTC))
             profile = _decode(source, reference, secret.value)
         # SDK exceptions are not safe to publish: they can contain provider data.

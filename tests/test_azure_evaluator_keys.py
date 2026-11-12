@@ -5,6 +5,10 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
+from azure.core.exceptions import ServiceRequestError
+from azure.core.pipeline.policies import RetryPolicy
+from azure.keyvault.secrets import KeyVaultSecret, SecretProperties
+from azure.keyvault.secrets._generated.models import SecretAttributes
 from repository_evaluator_fixture import setup
 from test_repository_evaluator import FixtureSandbox
 
@@ -36,8 +40,8 @@ class FakeSecretClient:
         self.fail_after_set = False
         self.tamper_read = False
 
-    def set_secret(self, name, value, *, enabled, content_type, logging_enable):
-        assert logging_enable is False
+    def set_secret(self, name, value, *, enabled, content_type, logging_enable, retry_total):
+        assert logging_enable is False and retry_total == 0
         version = "a" * 32
         properties = SimpleNamespace(version=version, enabled=enabled, content_type=content_type,
                                      not_before=None, expires_on=None)
@@ -50,14 +54,27 @@ class FakeSecretClient:
             raise RuntimeError("SYNTHETIC_SECRET_DO_NOT_DISCLOSE")
         return secret
 
-    def get_secret(self, name, version, *, logging_enable):
-        assert logging_enable is False
+    def get_secret(self, name, version, *, logging_enable, retry_total):
+        assert logging_enable is False and retry_total == 0
         self.calls.append(("get", name, version))
         secret = self.records[(name, version)]
         if self.on_get:
             self.on_get()
         if self.tamper_read:
             return SimpleNamespace(id=secret.id, properties=secret.properties, value="not-json")
+        return secret
+
+
+class SDKModelSecretClient(FakeSecretClient):
+    """Exercise real pinned SDK response models without network or credentials."""
+
+    def set_secret(self, name, value, *, enabled, content_type, logging_enable, retry_total):
+        original = super().set_secret(name, value, enabled=enabled, content_type=content_type,
+                                      logging_enable=logging_enable, retry_total=retry_total)
+        properties = SecretProperties(attributes=SecretAttributes(enabled=enabled), vault_id=original.id,
+                                      content_type=content_type)
+        secret = KeyVaultSecret(properties, value)
+        self.records[(name, properties.version)] = secret
         return secret
 
 
@@ -96,6 +113,21 @@ def test_key_vault_freeze_and_exact_version_replay(tmp_path):
     assert second.fingerprint != private.fingerprint and another.name != reference.name
 
 
+def test_key_vault_adapter_accepts_pinned_sdk_response_models_offline(tmp_path):
+    _, contract, _, source = setup(tmp_path, FixtureSandbox.identity)
+    authority = KeyVaultEvaluatorKeys(SDKModelSecretClient(), VAULT)
+    private, reference = authority.freeze(source, contract, key_admission(source, contract, "retain"),
+                                          key_admission(source, contract, "read"))
+    assert authority.load(source, contract, key_admission(source, contract, "read"), reference).fingerprint == private.fingerprint
+
+
+def test_pinned_sdk_retry_policy_disables_retry_for_ambiguous_network_failure():
+    policy = RetryPolicy()
+    settings = policy.configure_retries({"retry_total": 0})
+    assert not policy.increment(settings, response=SimpleNamespace(http_request=object()),
+                                error=ServiceRequestError("synthetic network failure"))
+
+
 def test_key_vault_rejects_wrong_policy_and_endpoint_before_access(tmp_path):
     _, contract, _, source = setup(tmp_path, FixtureSandbox.identity)
     client = FakeSecretClient()
@@ -107,6 +139,11 @@ def test_key_vault_rejects_wrong_policy_and_endpoint_before_access(tmp_path):
     denied = replace(denied, policy=revoked, expected_policy_fingerprint=revoked.fingerprint)
     with pytest.raises(PermissionError, match="not currently allowed"):
         authority.freeze(source, contract, denied, key_admission(source, contract, "read"))
+    assert client.calls == []
+    client.vault_url = "https://other-vault.vault.azure.net"
+    with pytest.raises(ValueError, match="origin changed"):
+        authority.freeze(source, contract, key_admission(source, contract, "retain"),
+                         key_admission(source, contract, "read"))
     assert client.calls == []
 
 
