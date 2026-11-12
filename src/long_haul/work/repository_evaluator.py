@@ -33,8 +33,11 @@ from .repository_sandbox import SandboxAdapter, SandboxResult
 
 
 def public_evaluator_reference(profile: RepositoryEvaluationProfileV1) -> DigestReference:
+    digest = content_digest(canonical_json(profile.public_projection()).encode())
+    if isinstance(profile, PrivateEvaluatorProfile):
+        digest = profile.binding_commitment("public-evaluation", digest)
     return DigestReference(reference="urn:long-haul:repository-evaluator:public",
-                           digest=content_digest(canonical_json(profile.public_projection()).encode()))
+                           digest=digest)
 
 
 def _validate_binding(contract, snapshot, profile, sandbox):
@@ -184,6 +187,11 @@ class RepositoryEvaluationRunner:
 
 def _private_summary(packet, profile):
     definitions = {check.requirement.predicate_id: check for check in profile.checks}
+    expected = {name: (check.requirement.classification, evaluator_check_fingerprint(profile, check))
+                for name, check in definitions.items()}
+    actual = {observed.predicate_id: (observed.classification, observed.check_fingerprint) for observed in packet.checks}
+    if actual != expected:
+        raise ValueError("private observations do not match frozen evaluator checks")
     checks = tuple(PrivateEvidenceCheck(
         predicate_id=observed.predicate_id, classification=observed.classification,
         check_commitment=observed.check_fingerprint, state=observed.state.value, outcome=observed.outcome,
@@ -225,17 +233,24 @@ def repository_evidence_event(packet: RepositoryEvidencePacketV1, *, contract=No
     })
 
 
-def private_repository_evidence_event(summary, *, contract, packet, candidate, profile):
+def private_repository_evidence_event(summary, *, contract, packet, candidate, profile, admission=None):
     """Verify private evidence against exact inputs before emitting its redacted event."""
     if not isinstance(profile, PrivateEvaluatorProfile) or not isinstance(summary, PrivateEvidenceSummary):
         raise TypeError("private evidence requires a keyed profile and summary")
+    if not isinstance(admission, PublicEvidenceAdmission):
+        raise TypeError("private summary requires explicit public disclosure admission")
     if packet.evaluator_profile.reference != PRIVATE_PROFILE_REFERENCE:
         raise ValueError("private evidence packet has the wrong profile")
+    if contract.repository_work is None or contract.repository_work.sealed_evaluator is None:
+        raise ValueError("private evidence lacks the versioned evaluator binding")
+    if contract.repository_work.sealed_evaluator.reference != PRIVATE_PROFILE_REFERENCE:
+        raise ValueError("private evidence lacks the versioned evaluator binding")
     packet = RepositoryEvidencePacketV1.model_validate(packet.model_dump())
     if not _packet_binding_matches(contract, packet, candidate, profile) or _private_summary(packet, profile) != summary:
         raise ValueError("private evidence does not match its verified summary")
     if packet.validity == "valid":
         evaluate_repository_packet(contract, packet, candidate, profile)
+    admission.authorize_summary(summary, contract, profile, datetime.now(UTC))
     return Event(event_type="work_evidence", source="repository-evaluator-private-v2", payload={
         "contract_id": summary.contract_id, "attempt_id": summary.attempt_id,
         "repository_evidence": summary.model_dump(mode="json"),

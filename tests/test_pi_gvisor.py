@@ -13,7 +13,7 @@ from pi_worker_fixture import (
     worker_setup,
 )
 from repository_evaluator_fixture import PROGRAM, environment
-from test_private_evaluator_commitments import evidence_admission
+from test_private_evaluator_commitments import evidence_admission, summary_admission
 
 from long_haul.adapters.harness_trace import TraceAdmissionDenied, TraceNormalizer
 from long_haul.adapters.pi_rpc import pi_prompt
@@ -67,7 +67,8 @@ def test_actual_pi_keyed_evaluator_has_no_sealed_output_in_public_event(tmp_path
         contract, snapshot, profile, attempt_id="private-fixture", packet_id="private-fixture", private_sink=admission)
     assert evaluation.disposition.value == "ACCEPTED" and len(packets) == 1
     event = private_repository_evidence_event(summary, contract=contract, packet=packets[0],
-                                              candidate=snapshot.candidate, profile=profile)
+                                              candidate=snapshot.candidate, profile=profile,
+                                              admission=summary_admission(contract, profile, summary))
     public = event.model_dump_json()
     assert "[-5, 2]" not in public and content_digest(b"-3\n") not in public
     print(json.dumps({"qualification": "actual-pi-keyed-synthetic", "summary": summary.model_dump(mode="json")}))

@@ -14,6 +14,7 @@ from long_haul.resource_policy import (
     ResourcePolicyProfile,
     ResourceUseRequest,
 )
+from long_haul.resource_policy_models import canonical_json
 from long_haul.work.private_evaluator import (
     PRIVATE_PROFILE_REFERENCE,
     PrivateEvaluatorProfile,
@@ -26,6 +27,10 @@ from long_haul.work.repository_evaluator import (
     private_repository_evidence_event,
     public_evaluator_reference,
     repository_evidence_event,
+)
+from long_haul.work.repository_evidence_admission import (
+    PublicEvidenceAdmission,
+    evidence_packet_digest,
 )
 from long_haul.work.repository_models import DigestReference, content_digest
 
@@ -68,6 +73,24 @@ def evidence_admission(contract, evaluator, attempt_id, writer):
                                     evaluator_fingerprint=evaluator.fingerprint, attempt_id=attempt_id, writer=writer)
 
 
+def summary_admission(contract, evaluator, summary):
+    policy = ResourcePolicyProfile(
+        identity=ResourceIdentity(resource_id="urn:fixture:public-summary", resource_type="public-evidence",
+                                  content_digest=evidence_packet_digest(summary)),
+        policy_id="urn:fixture:summary-policy", policy_assigner="urn:fixture:controller", lifecycle="active",
+        permissions=[PolicyRule(rule_id="publish-summary", actions=["distribute"],
+                                purposes=["public-evaluator-summary"], principal_ids=[evaluator.evaluator_id],
+                                contract_ids=[contract.contract_id])],
+    )
+    request = ResourceUseRequest(
+        request_id="public-evidence:" + summary.attempt_id, resource_id=policy.identity.resource_id,
+        action="distribute", purpose="public-evaluator-summary", caller_id=evaluator.evaluator_id,
+        contract_id=contract.contract_id, mission_id=contract.mission_id,
+        repository_id=contract.repository_work.source.repository_id, now=datetime.now(UTC) - timedelta(seconds=1),
+    )
+    return PublicEvidenceAdmission(policy, policy.fingerprint, request, request.fingerprint)
+
+
 def test_sealed_commitment_is_stable_private_and_not_an_enumeration_oracle():
     private = synthetic_profile(4)
     key = b"synthetic-test-only-per-check-key!"
@@ -87,6 +110,9 @@ def test_sealed_commitment_is_stable_private_and_not_an_enumeration_oracle():
     assert sealed.fingerprint != PrivateEvaluatorProfile.from_profile(private, synthetic_keys(b"different-test-key-at-least-32-bytes")).fingerprint
     assert sealed.binding_commitment("candidate", "guessable") == replay.binding_commitment("candidate", "guessable")
     assert sealed.binding_commitment("candidate", "guessable") != sealed.binding_commitment("task", "guessable")
+    bare_public = content_digest(canonical_json(sealed.public_projection()).encode())
+    assert public_evaluator_reference(sealed).digest != bare_public
+    assert public_evaluator_reference(sealed) == public_evaluator_reference(replay)
     assert sealed.check_fingerprint(private.checks[-1]) != private.checks[-1].fingerprint
     assert private.checks[-1].requirement.description not in json.dumps(sealed.public_projection())
     guessed_inspection = {private.checks[-1].model_copy(update={"artifact_digest": content_digest(str(value).encode())}).fingerprint
@@ -152,15 +178,25 @@ def test_private_evaluation_redacts_hidden_output_and_rejects_raw_public_event(t
     assert result.disposition.value == "ACCEPTED" and len(private_packets) == 1
     with pytest.raises(ValueError, match="private raw"):
         repository_evidence_event(private_packets[0])
+    with pytest.raises(TypeError, match="explicit public disclosure admission"):
+        private_repository_evidence_event(summary, contract=contract, packet=private_packets[0],
+                                          candidate=snapshot.candidate, profile=private)
+    public_admission = summary_admission(contract, private, summary)
     event = private_repository_evidence_event(summary, contract=contract, packet=private_packets[0],
-                                              candidate=snapshot.candidate, profile=private)
+                                              candidate=snapshot.candidate, profile=private, admission=public_admission)
     with pytest.raises(ValueError, match="verified summary"):
         private_repository_evidence_event(summary.model_copy(update={"attempt_id": "forged"}), contract=contract,
-                                          packet=private_packets[0], candidate=snapshot.candidate, profile=private)
+                                          packet=private_packets[0], candidate=snapshot.candidate, profile=private,
+                                          admission=public_admission)
     rotated = PrivateEvaluatorProfile.from_profile(old_profile, synthetic_keys(b"other-synthetic-key-at-least-32-bytes"))
     with pytest.raises(ValueError, match="verified summary"):
         private_repository_evidence_event(summary, contract=contract, packet=private_packets[0],
-                                          candidate=snapshot.candidate, profile=rotated)
+                                          candidate=snapshot.candidate, profile=rotated, admission=public_admission)
+    revoked = public_admission.policy.model_copy(update={"lifecycle": ResourceLifecycle.RETRACTED})
+    revoked_admission = replace(public_admission, policy=revoked, expected_policy_fingerprint=revoked.fingerprint)
+    with pytest.raises(PermissionError, match="distribution is not currently allowed"):
+        private_repository_evidence_event(summary, contract=contract, packet=private_packets[0],
+                                          candidate=snapshot.candidate, profile=private, admission=revoked_admission)
     public = summary.model_dump_json() + event.model_dump_json()
     assert "[-5, 2]" not in public and content_digest(b"-3\n") not in public
     assert snapshot.candidate.fingerprint not in public and private.task.digest not in public
@@ -209,6 +245,28 @@ def test_private_evidence_admission_fails_closed_on_denial_and_revocation(tmp_pa
         RepositoryEvaluationRunner(RevokingSandbox(private.environment)).evaluate_private(
             contract, snapshot, private, attempt_id="revoked-during-run", packet_id="revoked", private_sink=revoked)
     assert revoked_packets == []
+
+
+def test_invalid_private_packet_cannot_relabel_or_replace_a_check_commitment(tmp_path):
+    _, private, contract, snapshot, runner = private_evaluation_fixture(tmp_path)
+    packets = []
+    sink = evidence_admission(contract, private, "private-attempt", packets.append)
+    summary, _ = runner.evaluate_private(contract, snapshot, private, attempt_id="private-attempt",
+                                         packet_id="private-packet", private_sink=sink)
+    public = summary_admission(contract, private, summary)
+    observations = list(packets[0].checks)
+    observations[1] = observations[1].model_copy(update={"classification": "PUBLIC",
+                                                          "check_fingerprint": content_digest(b"private-test")})
+    forged = packets[0].model_copy(update={"checks": tuple(observations), "validity": "invalid",
+                                           "invalid_reasons": ("synthetic failure",)})
+    with pytest.raises(ValueError, match="do not match frozen evaluator checks"):
+        private_repository_evidence_event(summary, contract=contract, packet=forged,
+                                          candidate=snapshot.candidate, profile=private, admission=public)
+    extension = contract.repository_work.model_copy(update={"sealed_evaluator":
+        contract.repository_work.sealed_evaluator.model_copy(update={"reference": "urn:legacy"})})
+    with pytest.raises(ValueError, match="versioned evaluator binding"):
+        private_repository_evidence_event(summary, contract=contract.model_copy(update={"repository_work": extension}),
+                                          packet=packets[0], candidate=snapshot.candidate, profile=private, admission=public)
 
 
 def test_private_evaluation_requires_explicit_sink():

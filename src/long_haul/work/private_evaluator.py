@@ -200,7 +200,7 @@ class PrivateEvaluatorProfile:
 
     def binding_commitment(self, domain, value):
         """Create a domain-separated opaque binding without exposing a bare hash."""
-        if domain not in {"candidate", "task", "contract", "environment", "sandbox"}:
+        if domain not in {"candidate", "task", "contract", "environment", "sandbox", "public-evaluation"}:
             raise ValueError("unsupported private binding domain")
         key_material = canonical_json([[name, self._keys[name].hex()] for name in sorted(self._keys)]).encode()
         extracted = hmac.new(b"long-haul-private-binding-extract-v2", key_material, hashlib.sha256).digest()
