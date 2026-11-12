@@ -194,6 +194,17 @@
             "main_checks": "passed: CI 43131560240, Pi 43131560488, evaluator 43131560153, governance, requirements and Azure",
             "review_rule": "owner_authorized_admin_bypass",
             "issue": "open"
+          },
+          "current_draft": {
+            "pull_request": 265,
+            "head": "9b9184f0d7c93e5769d542315411c5d6e66b2c1a",
+            "status": "draft",
+            "previous_checked_head": "3dbe44f",
+            "previous_checks": "all hosted checks passed; package/release intentionally skipped",
+            "current_head_checks": "all hosted checks passed; package/release intentionally skipped",
+            "evidence": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6837419503",
+            "remaining": "Durable evaluator recovery, authenticated host/daemon control, external attachment fencing and private-work containment remain unqualified.",
+            "checks_evidence": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6837558535"
           }
         },
         {
@@ -358,7 +369,34 @@
           "acceptance": "Complete #248 lossless JSON-LD round-trip, executable SHACL and standards-native corpus/BOM projections using the merged shared Compiler lifecycle core. Preserve source semantics for final Compiler corpus profile qualification; close only with every acceptance item evidenced.",
           "baseline_commit": "458bc2f1ec669392963b7fe29e4c252e2e70776c",
           "shared_compiler_commit": "a471d390a81193324098abb1fc85324c7f0f894c",
-          "scope": "disjoint native standards adapters and executable conformance; no competing implementation PR"
+          "scope": "disjoint native standards adapters and executable conformance; no competing implementation PR",
+          "merged_slices": [
+            {
+              "pull_request": 271,
+              "checked_head": "554cf5b44e1deae63a8d1230c97df92b8035c0fc",
+              "merge_commit": "1b5edce88402b4a6928e2f5676df564f44b4e47b",
+              "scope": "DPV 2.0 source pin"
+            },
+            {
+              "pull_request": 272,
+              "checked_head": "2ced66a20b2f53ca93c9b92a0d182c562bce958d",
+              "merge_commit": "6d16b9f29cf757fd74775a842f7902bfacfdead7",
+              "scope": "unknown identity and audience context"
+            },
+            {
+              "pull_request": 273,
+              "checked_head": "a7e69ef5f06f2222c92b7ce491e85f26cacb0adf",
+              "merge_commit": "50ad8feda9f135b21443f6cb05155f7d88c69f9d",
+              "scope": "optional-purpose presence"
+            },
+            {
+              "pull_request": 274,
+              "checked_head": "721b6cb86eb679a951322d2a7664c0492327ca3f",
+              "merge_commit": "17d689ab7f33ee921143ad007ebd378198268007",
+              "scope": "observed policy implementation identity and Pi/Nacre request binding"
+            }
+          ],
+          "remaining_current": "Authenticated context and absence, compatibility for purpose-free callers including deletion, trusted expected evaluator identity, source authority, independent ODRL consumer safety and complete standards/interoperability acceptance remain open."
         },
         {
           "id": "dsl-842",
@@ -2786,6 +2824,49 @@
       "pi_gvisor_run": 43164338543,
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6815985700",
       "remaining": "Synthetic freeze/capture and two negative cases passed, but three actual quota repairs failed; full confinement, scoped authority, recovery and private-use qualification remain open."
+    },
+    {
+      "at": "2026-11-12T22:17:46+00:00",
+      "task": "lh-248-interchange",
+      "status": "shared_policy_slices_merged",
+      "pull_requests": [
+        271,
+        272,
+        273,
+        274
+      ],
+      "main": "17d689ab7f33ee921143ad007ebd378198268007",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-6837416924",
+      "evidence": "All exact-head hosted checks passed before each merge; owner-authorized review bypass used. All six main workflows passed after each of 271-274.",
+      "remaining": "Each slice is partial; #248 remains open. Absence claims need authenticated control; identity and request references are not attestations or enforcement."
+    },
+    {
+      "at": "2026-11-12T22:17:46+00:00",
+      "task": "lh-248-interchange",
+      "status": "consumer_isolation_finding",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-6836006097",
+      "evidence": "In synthetic isolated tests, the tested unmodified ODRL consumer produced one active report linked to matching and mismatching permission nodes, including inside one Request.",
+      "remaining": "Do not use that consumer/encoding for authorization; package provenance, request isolation, duties, conflicts and enforcement remain unqualified."
+    },
+    {
+      "at": "2026-11-12T22:17:46+00:00",
+      "task": "lh-245-security",
+      "status": "security_draft_reconciled",
+      "pull_request": 265,
+      "head": "9b9184f0d7c93e5769d542315411c5d6e66b2c1a",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6837419503",
+      "evidence": "Draft incorporated policy slices, passed 206 focused Linux tests and Ruff locally, and passed all exact-head hosted checks; package/release intentionally skipped.",
+      "remaining": "No durable evaluator recovery, authenticated host/daemon, external attachment fencing or private-work containment qualification. Do not merge the draft based on green tests alone.",
+      "checks_evidence": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6837558535"
+    },
+    {
+      "at": "2026-11-12T22:22:57+00:00",
+      "task": "lh-248-interchange",
+      "status": "policy_identity_main_checks_passed",
+      "merge_commit": "17d689ab7f33ee921143ad007ebd378198268007",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-6837523825",
+      "evidence": "All six post-merge main workflows passed.",
+      "remaining": "Authentication, evaluator and source trust, independent consumer safety and full interoperability remain open."
     },
     {
       "at": "2026-11-12T22:52:47.458209+00:00",
