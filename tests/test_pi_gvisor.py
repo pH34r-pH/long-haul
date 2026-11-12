@@ -27,6 +27,7 @@ from long_haul.adapters.pi_harness import PiCodingHarness
 from long_haul.adapters.pi_quota_worker import QuotaPiWorker
 from long_haul.adapters.pi_rpc import pi_prompt
 from long_haul.adapters.pi_trajectory import PiTrajectoryProjector
+from long_haul.adapters.pi_worker import _Wire
 from long_haul.adapters.pi_workspace_copy import copy_docker_workspace
 from long_haul.adapters.pi_workspace_fence import LocalWorkspaceFence
 from long_haul.adapters.pi_workspace_holder import (
@@ -244,9 +245,18 @@ def test_actual_pi_uses_fenced_quota_workspace_and_reclaims_scratch(tmp_path, mo
 
 def _record_synthetic_admission_latency(monkeypatch, sample):
     original = PiCodingHarness._confirm
+    original_read = _Wire.read
+    first_seen = {}
+
+    def measured_read(wire):
+        original_read(wire)
+        for record in wire.records:
+            if record.get("type") == "extension_ui_request":
+                first_seen.setdefault(record.get("id"), time.monotonic())
 
     def measured(harness, record, now):
         start = time.monotonic()
+        queued_ms = round((start - first_seen.pop(record.get("id"), start)) * 1000)
         outcome = "exception"
         try:
             result = original(harness, record, now)
@@ -254,8 +264,10 @@ def _record_synthetic_admission_latency(monkeypatch, sample):
             return result
         finally:
             print(json.dumps({"qualification": "synthetic-admission-latency", "sample": sample,
-                              "duration_ms": round((time.monotonic() - start) * 1000), "host_result": outcome}))
+                              "queue_ms": queued_ms, "duration_ms": round((time.monotonic() - start) * 1000),
+                              "host_result": outcome}))
 
+    monkeypatch.setattr(_Wire, "read", measured_read)
     monkeypatch.setattr(PiCodingHarness, "_confirm", measured)
 
 
