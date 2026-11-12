@@ -337,6 +337,64 @@ def test_synthetic_gvisor_paused_kill_diagnostic(tmp_path):
         assert isinstance(state.get("Running"), bool) and isinstance(state.get("Paused"), bool)
 
 
+def _wait_synthetic_cgroup_empty(events):
+    deadline = time.monotonic() + 10
+    while True:
+        try:
+            populated = dict(line.split() for line in events.read_text().splitlines())["populated"]
+        except FileNotFoundError:
+            populated = "removed"
+        if populated in {"0", "removed"}:
+            return populated
+        if time.monotonic() >= deadline:
+            raise AssertionError("synthetic guest cgroup remained populated")
+        time.sleep(.1)
+
+
+@pytest.mark.parametrize("detached", [False, True])
+def test_hosted_synthetic_unpaused_stop_empties_guest_cgroup(tmp_path, detached):
+    """Observe a disposable guest with a live child; this is not production admission."""
+    if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
+        pytest.skip("cgroup experiment requires an ephemeral GitHub-hosted runner")
+    worker, _, _ = worker_setup(tmp_path, PLAN)
+    name = "lh-stop-tree-" + uuid4().hex
+    child = "process.stdout.write('child-ready\\n'); setInterval(()=>{},60000)"
+    script = ("const {spawn}=require('child_process'); const child=spawn(process.execPath,['-e'," +
+              json.dumps(child) + "],{detached:" + json.dumps(detached) + ",stdio:'inherit'}); " +
+              "child.unref(); setTimeout(()=>{process.kill(child.pid,0); console.log('child-verified')},500); " +
+              "setInterval(()=>{},60000)")
+    container = worker._control("create", "--name=" + name, "--runtime=long-haul-gvisor", "--network=none",
+        "--read-only", "--user=65534:65534", "--cap-drop=ALL", "--security-opt=no-new-privileges",
+        "--pids-limit=64", "--memory=256m", "--entrypoint=/usr/local/bin/node", "--pull=never",
+        worker.environment.image, "-e", script).strip()
+    try:
+        worker._control("start", container)
+        deadline = time.monotonic() + 20
+        while "child-verified" not in worker._control("logs", container):
+            if time.monotonic() >= deadline:
+                raise AssertionError("synthetic child did not start")
+            time.sleep(.1)
+        assert "child-ready" in worker._control("logs", container)
+        info, = json.loads(worker._control("inspect", container))
+        state = info["State"]
+        assert info["Id"] == container and state["Running"] is True and state["Paused"] is False
+        pid = state["Pid"]
+        assert isinstance(pid, int) and pid > 1
+        relative = "/system.slice/docker-" + container + ".scope"
+        assert "0::" + relative in Path(f"/proc/{pid}/cgroup").read_text().splitlines()
+        events = Path("/sys/fs/cgroup") / relative.lstrip("/") / "cgroup.events"
+        assert dict(line.split() for line in events.read_text().splitlines())["populated"] == "1"
+        worker._control("kill", "--signal=KILL", container)
+        stopped, = json.loads(worker._control("inspect", container))
+        assert stopped["Id"] == container and stopped["State"]["Running"] is False
+        assert stopped["State"]["Paused"] is False and stopped["State"]["Pid"] == 0
+        populated = _wait_synthetic_cgroup_empty(events)
+        print(json.dumps({"qualification": "hosted-synthetic-unpaused-stop-tree", "detached": detached,
+                          "child_started": True, "cgroup_observation": populated}))
+    finally:
+        worker._control("rm", "--force", container)
+
+
 def test_synthetic_paused_cgroup_identity_diagnostic(tmp_path):
     """Inspect only the disposable guest's cgroup; do not alter it."""
     worker, _, _ = worker_setup(tmp_path, PLAN)
