@@ -49,6 +49,15 @@ def _validate_binding(contract, snapshot, profile, sandbox):
                 profile.sandbox, evaluator_implementation_reference())
     if actual != expected:
         raise ValueError("repository evaluator task/source/contract/profile/environment binding mismatch")
+    _validate_requirements(contract, profile)
+    if not any(check.kind == "scope" for check in profile.checks):
+        raise ValueError("repository evaluator requires trusted scope evidence")
+    commands = sum(check.kind == "command" for check in profile.checks)
+    if commands * profile.environment.limits.wall_seconds > contract.budget.wall_seconds:
+        raise ValueError("evaluator worst-case wall budget exceeds work contract")
+
+
+def _validate_requirements(contract, profile):
     predicates = {predicate.predicate_id: predicate for predicate in contract.success_predicates}
     if set(predicates) != {check.requirement.predicate_id for check in profile.checks}:
         raise ValueError("evaluator requirements differ from work contract")
@@ -61,11 +70,6 @@ def _validate_binding(contract, snapshot, profile, sandbox):
         if (predicates[requirement.predicate_id].evaluator_reference != reference
                 or predicates[requirement.predicate_id].description != description):
             raise ValueError("repository predicates must use exact evaluator requirement references")
-    if not any(check.kind == "scope" for check in profile.checks):
-        raise ValueError("repository evaluator requires trusted scope evidence")
-    commands = sum(check.kind == "command" for check in profile.checks)
-    if commands * profile.environment.limits.wall_seconds > contract.budget.wall_seconds:
-        raise ValueError("evaluator worst-case wall budget exceeds work contract")
 
 
 def _result_state(result, command):

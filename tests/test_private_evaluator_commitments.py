@@ -104,7 +104,7 @@ def test_private_profile_rejects_key_reuse_between_sealed_checks():
         PrivateEvaluatorProfile.from_profile(profile_v1, {"sealed": b"x" * 32, "second": b"x" * 32})
 
 
-def test_private_evaluation_redacts_hidden_output_and_rejects_raw_public_event(tmp_path):
+def private_evaluation_fixture(tmp_path):
     root, old_contract, _, old_profile = setup(tmp_path, FixtureSandbox.identity)
     private = PrivateEvaluatorProfile.from_profile(old_profile, {"sealed": b"synthetic-only-key-is-at-least-32"})
     extension = old_contract.repository_work.model_copy(update={
@@ -120,6 +120,11 @@ def test_private_evaluation_redacts_hidden_output_and_rejects_raw_public_event(t
     contract = old_contract.model_copy(update={"repository_work": extension, "success_predicates": predicates})
     snapshot = freeze_repository_candidate(root, git(root, "rev-parse", "HEAD"), contract)
     runner = RepositoryEvaluationRunner(FixtureSandbox(private.environment))
+    return old_profile, private, contract, snapshot, runner
+
+
+def test_private_evaluation_redacts_hidden_output_and_rejects_raw_public_event(tmp_path):
+    old_profile, private, contract, snapshot, runner = private_evaluation_fixture(tmp_path)
     with pytest.raises(TypeError, match="evaluate_private"):
         runner.evaluate(contract, snapshot, private, attempt_id="private-attempt", packet_id="private-packet")
     private_packets = []
@@ -144,6 +149,11 @@ def test_private_evaluation_redacts_hidden_output_and_rejects_raw_public_event(t
     public = summary.model_dump_json() + event.model_dump_json()
     assert "[-5, 2]" not in public and content_digest(b"-3\n") not in public
     assert private.check_fingerprint(private.checks[1]) in public
+
+
+def test_private_evidence_admission_fails_closed_on_denial_and_revocation(tmp_path):
+    _, private, contract, snapshot, runner = private_evaluation_fixture(tmp_path)
+    admission = evidence_admission(contract, private, "private-attempt", lambda _packet: None)
 
     def failed_private_sink(_packet):
         raise RuntimeError("private storage unavailable")

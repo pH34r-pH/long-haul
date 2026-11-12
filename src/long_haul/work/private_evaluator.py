@@ -50,19 +50,17 @@ class PrivateEvidenceAdmission:
 
         request = self.request
         extension = contract.repository_work
-        if (now.tzinfo is None or now.utcoffset() is None or extension is None
-                or not callable(self.writer) or attempt_id != self.attempt_id
-                or self.policy.fingerprint != self.expected_policy_fingerprint
-                or request.fingerprint != self.expected_request_fingerprint
-                or self.contract_fingerprint != work_contract_fingerprint(contract)
-                or self.evaluator_fingerprint != profile.fingerprint
-                or self.policy.identity.content_digest != profile.fingerprint
-                or request.request_id != "private-evidence:" + attempt_id
-                or request.action is not ResourceAction.RETAIN
-                or request.purpose != "repository-evaluator-evidence"
-                or request.caller_id != profile.evaluator_id
-                or request.contract_id != contract.contract_id or request.mission_id != contract.mission_id
-                or request.repository_id != extension.source.repository_id or request.now > now):
+        if now.tzinfo is None or now.utcoffset() is None or extension is None or not callable(self.writer):
+            raise PermissionError("private evidence lacks exact current retention admission")
+        actual = (self.attempt_id, self.policy.fingerprint, request.fingerprint, self.contract_fingerprint,
+                  self.evaluator_fingerprint, self.policy.identity.content_digest, request.request_id,
+                  request.action, request.purpose, request.caller_id, request.contract_id, request.mission_id,
+                  request.repository_id)
+        expected = (attempt_id, self.expected_policy_fingerprint, self.expected_request_fingerprint,
+                    work_contract_fingerprint(contract), profile.fingerprint, profile.fingerprint,
+                    "private-evidence:" + attempt_id, ResourceAction.RETAIN, "repository-evaluator-evidence",
+                    profile.evaluator_id, contract.contract_id, contract.mission_id, extension.source.repository_id)
+        if actual != expected or request.now > now:
             raise PermissionError("private evidence lacks exact current retention admission")
         fresh = request.model_copy(update={"now": now})
         if ResourcePolicyEvaluator().evaluate(self.policy, fresh).status is not PolicyDecisionStatus.ALLOW:
