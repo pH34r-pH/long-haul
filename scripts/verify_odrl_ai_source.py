@@ -15,6 +15,8 @@ FILES = {"index.html": "ai-vocab/index.html", "ai-vocab.ttl": "ai-vocab/ai-vocab
 
 
 def _source_files(manifest: dict, source_dir: Path) -> tuple[str, dict, dict]:
+    if not isinstance(manifest, dict):
+        raise TypeError("invalid ODRL AI source pin")
     revision = manifest.get("commit", "")
     files = manifest.get("files", {})
     if (not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision)
@@ -49,7 +51,9 @@ def verify_sources(manifest: dict, source_dir: Path) -> dict:
     revision, files, content = _source_files(manifest, source_dir)
     _verify_actions(content["index.html"])
     ttl = content["ai-vocab.ttl"]
-    if "TODO" not in ttl or re.search(r"(?m)^\s*odrl:[\w-]+\s+(?:a|rdf:type)\s", ttl):
+    statements = [line.strip() for line in ttl.splitlines() if line.strip() and not line.lstrip().startswith("#")]
+    if "TODO" not in ttl or any(not re.fullmatch(r"PREFIX\s+[A-Za-z][\w-]*:\s*<[^>]+>", line, re.IGNORECASE)
+                                for line in statements):
         raise ValueError("Turtle source changed; review its machine-readable vocabulary")
     return {"commit": revision, "files": {name: files[name]["sha256"] for name in FILES},
             "actions_checked": list(ACTIONS), "generative_included_in_training": True,

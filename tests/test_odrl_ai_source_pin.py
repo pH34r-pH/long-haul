@@ -46,3 +46,13 @@ def test_verifier_rejects_changed_hierarchy_even_with_matching_hash(tmp_path):
     manifest["files"]["index.html"]["sha256"] = hashlib.sha256(data).hexdigest()
     with pytest.raises(ValueError, match="hierarchy missing"):
         verify_sources(manifest, tmp_path)
+
+
+def test_verifier_requires_review_when_turtle_gains_a_statement(tmp_path):
+    manifest = _fixture(tmp_path)
+    path = tmp_path / "ai-vocab.ttl"
+    data = path.read_bytes() + b"<urn:fixture:a> <urn:fixture:b> <urn:fixture:c> .\n"
+    path.write_bytes(data)
+    manifest["files"]["ai-vocab.ttl"]["sha256"] = hashlib.sha256(data).hexdigest()
+    with pytest.raises(ValueError, match="review its machine-readable vocabulary"):
+        verify_sources(manifest, tmp_path)
