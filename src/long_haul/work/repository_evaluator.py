@@ -17,6 +17,7 @@ from .private_evaluator import (
 )
 from .repository_candidate import CandidateSnapshot
 from .repository_evaluation_models import (
+    FrozenRepositoryCandidate,
     RepositoryCheckEvidence,
     RepositoryEvaluationProfileV1,
     RepositoryEvidencePacketV1,
@@ -26,6 +27,7 @@ from .repository_evaluation_models import (
     evaluator_implementation_reference,
     work_contract_fingerprint,
 )
+from .repository_evidence_admission import PublicEvidenceAdmission
 from .repository_models import DigestReference, content_digest
 from .repository_sandbox import SandboxAdapter, SandboxResult
 
@@ -197,13 +199,23 @@ def _private_summary(packet, profile):
     )
 
 
-def repository_evidence_event(packet: RepositoryEvidencePacketV1) -> Event:
-    """Append to the existing event history; no separate evidence store."""
+def repository_evidence_event(packet: RepositoryEvidencePacketV1, *, contract=None, candidate=None,
+                              profile=None, admission=None) -> Event:
+    """Create a V1 public event only for an explicitly admitted exact packet."""
     if isinstance(packet, PrivateEvidenceSummary):
         raise TypeError("private summaries require a verified private evidence event")
     if packet.evaluator_profile.reference == PRIVATE_PROFILE_REFERENCE:
         raise ValueError("private raw evaluator evidence cannot enter the public event stream")
+    if (not isinstance(admission, PublicEvidenceAdmission) or type(profile) is not RepositoryEvaluationProfileV1
+            or not isinstance(contract, WorkContract) or not isinstance(candidate, FrozenRepositoryCandidate)):
+        raise TypeError("legacy evidence requires explicit public disclosure admission")
     checked = RepositoryEvidencePacketV1.model_validate(packet.model_dump())
+    if (checked.evaluator_profile.reference != "urn:long-haul:evaluator:sealed"
+            or not _packet_binding_matches(contract, checked, candidate, profile)):
+        raise ValueError("legacy evidence does not match the exact evaluator binding")
+    if checked.validity == "valid":
+        evaluate_repository_packet(contract, checked, candidate, profile)
+    admission.authorize(checked, contract, profile, datetime.now(UTC))
     return Event(event_type="work_evidence", source="repository-evaluator-v1", payload={
         "contract_id": checked.evidence.contract_id, "attempt_id": checked.evidence.attempt_id,
         "repository_evidence": checked.model_dump(mode="json"),

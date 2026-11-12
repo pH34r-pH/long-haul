@@ -2,11 +2,20 @@
 import json
 import subprocess
 import sys
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from pydantic import ValidationError
 from repository_evaluator_fixture import git, reference, setup
 
+from long_haul.resource_policy import (
+    PolicyRule,
+    ResourceIdentity,
+    ResourceLifecycle,
+    ResourcePolicyProfile,
+    ResourceUseRequest,
+)
 from long_haul.work import WorkContract
 from long_haul.work.repository_candidate import freeze_repository_candidate
 from long_haul.work.repository_evaluation_models import (
@@ -20,6 +29,10 @@ from long_haul.work.repository_evaluation_models import (
 from long_haul.work.repository_evaluator import (
     RepositoryEvaluationRunner,
     repository_evidence_event,
+)
+from long_haul.work.repository_evidence_admission import (
+    PublicEvidenceAdmission,
+    evidence_packet_digest,
 )
 from long_haul.work.repository_models import DigestReference, content_digest
 from long_haul.work.repository_sandbox import (
@@ -66,6 +79,23 @@ def run_fixture(tmp_path, **options):
     return root, work, snapshot, profile, sandbox, packet, result
 
 
+def public_evidence_admission(work, profile, packet):
+    policy = ResourcePolicyProfile(
+        identity=ResourceIdentity(resource_id="urn:fixture:public-packet", resource_type="public-evidence",
+                                  content_digest=evidence_packet_digest(packet)),
+        lifecycle="active", policy_id="urn:fixture:public-packet-policy", policy_assigner="urn:fixture:controller",
+        permissions=[PolicyRule(rule_id="public", actions=["distribute"], purposes=["public-evaluator-evidence"],
+                                principal_ids=[profile.evaluator_id], contract_ids=[work.contract_id])],
+    )
+    request = ResourceUseRequest(
+        request_id="public-evidence:" + packet.evidence.attempt_id, resource_id=policy.identity.resource_id,
+        action="distribute", purpose="public-evaluator-evidence", caller_id=profile.evaluator_id,
+        contract_id=work.contract_id, mission_id=work.mission_id,
+        repository_id=work.repository_work.source.repository_id, now=datetime.now(UTC) - timedelta(seconds=1),
+    )
+    return PublicEvidenceAdmission(policy, policy.fingerprint, request, request.fingerprint)
+
+
 def test_mixed_public_sealed_policy_inspection_and_v1_round_trip(tmp_path):
     _, work, snapshot, profile, sandbox, packet, result = run_fixture(tmp_path)
     assert result.disposition.value == "ACCEPTED"
@@ -78,10 +108,36 @@ def test_mixed_public_sealed_policy_inspection_and_v1_round_trip(tmp_path):
     assert "[-5, 2]" not in json.dumps(profile.public_projection())
     assert "[-5, 2]" not in work.model_dump_json() + packet.model_dump_json()
     assert all(not c.command for c in packet.evidence.checks)
-    from long_haul.events import EventStore
+    from long_haul.events import Event, EventStore
     history = EventStore(tmp_path / "events.jsonl")
-    history.append(repository_evidence_event(packet))
+    # Historical V1 records remain readable without authorizing a new disclosure.
+    historical = Event(event_type="work_evidence", payload={"repository_evidence": packet.model_dump(mode="json")})
+    history.path.write_text(historical.model_dump_json() + "\n")
     assert RepositoryEvidencePacketV1.model_validate(history.events()[0].payload["repository_evidence"]) == packet
+    with pytest.raises(TypeError, match="explicit public disclosure admission"):
+        repository_evidence_event(packet)
+    admission = public_evidence_admission(work, profile, packet)
+    history.append(repository_evidence_event(packet, contract=work, candidate=snapshot.candidate,
+                                             profile=profile, admission=admission))
+    assert RepositoryEvidencePacketV1.model_validate(history.events()[1].payload["repository_evidence"]) == packet
+    revoked = admission.policy.model_copy(update={"lifecycle": ResourceLifecycle.RETRACTED})
+    with pytest.raises(PermissionError, match="exact current disclosure admission"):
+        repository_evidence_event(packet, contract=work, candidate=snapshot.candidate, profile=profile,
+                                  admission=replace(admission, policy=revoked))
+
+
+def test_legacy_public_event_requires_current_exact_packet_distribution_policy(tmp_path):
+    _, work, snapshot, profile, _, packet, _ = run_fixture(tmp_path)
+    admission = public_evidence_admission(work, profile, packet)
+    changed = packet.model_copy(update={"producing_attempt_references": (reference("another-attempt"),)})
+    with pytest.raises(PermissionError, match="exact current disclosure admission"):
+        repository_evidence_event(changed, contract=work, candidate=snapshot.candidate,
+                                  profile=profile, admission=admission)
+    revoked = admission.policy.model_copy(update={"lifecycle": ResourceLifecycle.RETRACTED})
+    admission = replace(admission, policy=revoked, expected_policy_fingerprint=revoked.fingerprint)
+    with pytest.raises(PermissionError, match="distribution is not currently allowed"):
+        repository_evidence_event(packet, contract=work, candidate=snapshot.candidate,
+                                  profile=profile, admission=admission)
 
 
 @pytest.mark.parametrize("outcome", ["timeout", "output_limit", "resource_exhausted", "invalid"])
