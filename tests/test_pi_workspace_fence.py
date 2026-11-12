@@ -19,6 +19,40 @@ pytestmark = pytest.mark.skipif(os.name != "posix", reason="local fencing requir
 DIGEST = "sha256:" + "f" * 64
 
 
+@pytest.mark.parametrize("target", ["intent", "active", "cleanup", "owner"])
+def test_fifo_recovery_files_are_rejected_without_blocking(tmp_path, target):
+    root, intent, _ = setup(tmp_path)
+    fence = LocalWorkspaceFence(root, intent.token, intent.fingerprint)
+    if target == "intent":
+        path = root / (intent.token + ".json")
+        path.unlink()
+    elif target == "cleanup":
+        path = root / (intent.token + ".cleanup.json")
+    elif target == "active":
+        path = root / "active.json"
+    else:
+        with pytest.raises(WorkspaceCleanupRequired), fence.launch():
+            pass
+        path = root / (intent.token + ".scratch") / ".workspace-owner"
+        path.unlink()
+    os.mkfifo(path, 0o600)
+    script = ("import sys; from pathlib import Path; "
+              "from long_haul.adapters.pi_workspace_intent import load_workspace_intent,persist_workspace_cleanup; "
+              "from long_haul.adapters.pi_workspace_fence import LocalWorkspaceFence,_matches; "
+              "from long_haul.adapters.pi_workspace_cleanup import WorkspaceCleanupRequired; "
+              "root=Path(sys.argv[1]); token=sys.argv[2]; fingerprint=sys.argv[3]; target=sys.argv[4]; "
+              "exec(\"try:\\n"
+              " if target == 'intent': load_workspace_intent(root,token,fingerprint)\\n"
+              " elif target == 'active': LocalWorkspaceFence(root,token,fingerprint).launch().__enter__()\\n"
+              " elif target == 'cleanup': persist_workspace_cleanup(root,load_workspace_intent(root,token,fingerprint))\\n"
+              " else:\\n  import os\\n  fd=os.open(root/(token+'.scratch'),os.O_RDONLY|os.O_DIRECTORY)\\n"
+              "  try: _matches(fd,'.workspace-owner',b'fixture')\\n  finally: os.close(fd)\\n"
+              "except (ValueError,WorkspaceCleanupRequired): pass\\n"
+              "else: raise AssertionError('FIFO was accepted')\")")
+    subprocess.run([sys.executable, "-c", script, str(root), intent.token, intent.fingerprint, target],
+                   check=True, timeout=10)
+
+
 def second_intent(root, first):
     other = WorkspaceLeaseIntent(token="9" * 32, attempt_fingerprint=first.attempt_fingerprint,
                                  environment_fingerprint=first.environment_fingerprint, daemon_id=first.daemon_id)

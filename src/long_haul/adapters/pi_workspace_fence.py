@@ -21,7 +21,7 @@ from .pi_workspace_intent import _open_private_root, load_workspace_intent
 
 
 def _private_file(directory, name, flags):
-    descriptor = os.open(name, flags | os.O_NOFOLLOW, 0o600, dir_fd=directory)
+    descriptor = os.open(name, flags | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600, dir_fd=directory)
     metadata = os.fstat(descriptor)
     if (not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.geteuid()
             or metadata.st_nlink != 1 or metadata.st_mode & 0o077):

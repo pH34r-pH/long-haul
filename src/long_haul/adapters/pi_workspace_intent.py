@@ -99,7 +99,7 @@ def load_workspace_intent(root: Path, token: str, expected_fingerprint: str):
         raise ValueError("invalid workspace recovery token")
     directory = _open_private_root(root)
     try:
-        descriptor = os.open(token + ".json", os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory)
+        descriptor = os.open(token + ".json", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
         with os.fdopen(descriptor, "rb") as source:
             metadata = os.fstat(source.fileno())
             if (not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.geteuid()
@@ -122,7 +122,7 @@ def persist_workspace_cleanup(root: Path, intent: WorkspaceLeaseIntent):
         try:
             descriptor = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=directory)
         except FileExistsError:
-            descriptor = os.open(name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory)
+            descriptor = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
             with os.fdopen(descriptor, "rb") as source:
                 metadata = os.fstat(source.fileno())
                 if (not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.geteuid()
