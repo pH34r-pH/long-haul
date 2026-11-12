@@ -5,10 +5,8 @@ import pytest
 from test_pi_workspace_cleanup import FakeDocker, setup
 
 from long_haul.adapters import pi_workspace_holder
-from long_haul.adapters.pi_workspace_cleanup import (
-    WorkspaceCleanupRequired,
-    recover_workspace_lease,
-)
+from long_haul.adapters.pi_workspace_cleanup import WorkspaceCleanupRequired
+from long_haul.adapters.pi_workspace_fence import LocalWorkspaceFence
 from long_haul.adapters.pi_workspace_holder import (
     HolderProfile,
     allocate_workspace_holder,
@@ -54,15 +52,20 @@ def test_scheduler_denial_precedes_every_docker_operation(tmp_path):
 def test_intent_changed_during_admission_prevents_allocation(tmp_path):
     root, intent, _ = setup(tmp_path)
     control = AllocationDocker(intent)
+    path = root / (intent.token + ".json")
+    original = path.read_text()
 
     def admit(_):
-        path = root / (intent.token + ".json")
-        path.write_text(path.read_text().replace("fixture-daemon", "other-daemon"))
+        path.write_text(original.replace("fixture-daemon", "other-daemon"))
         return True
 
-    with pytest.raises(WorkspaceCleanupRequired):
-        allocate_workspace_holder(root, intent.token, intent.fingerprint, control, profile(), admit)
-    assert control.calls == []
+    with LocalWorkspaceFence(root, intent.token, intent.fingerprint).launch() as grant:
+        grant.admit = admit
+        with pytest.raises(WorkspaceCleanupRequired):
+            allocate_workspace_holder(root, intent.token, intent.fingerprint, control, profile(), grant)
+        assert control.calls == []
+        path.write_text(original)
+        grant.cleanup(control)
 
 
 def test_holder_allocation_requires_absent_names_and_rechecks_started_state(tmp_path, monkeypatch):
@@ -70,11 +73,11 @@ def test_holder_allocation_requires_absent_names_and_rechecks_started_state(tmp_
     control, observed = AllocationDocker(intent), []
     monkeypatch.setattr(pi_workspace_holder, "verify_workspace_holder",
                         lambda *args, running: observed.append((running, control.started)))
-    holder = allocate_workspace_holder(root, intent.token, intent.fingerprint, control, profile(),
-                                       lambda fingerprint: fingerprint == intent.fingerprint)
-    assert holder == "b" * 64 and observed == [(False, False), (True, True)]
-    assert control.volume == intent.labels("volume")
-    assert recover_workspace_lease(root, intent.token, intent.fingerprint, control).exists()
+    with LocalWorkspaceFence(root, intent.token, intent.fingerprint).launch() as grant:
+        holder = allocate_workspace_holder(root, intent.token, intent.fingerprint, control, profile(), grant)
+        assert holder == "b" * 64 and observed == [(False, False), (True, True)]
+        assert control.volume == intent.labels("volume")
+        assert grant.cleanup(control).exists()
 
 
 def test_interrupted_allocation_retains_intent_until_explicit_recovery(tmp_path, monkeypatch):
@@ -85,12 +88,13 @@ def test_interrupted_allocation_retains_intent_until_explicit_recovery(tmp_path,
         raise ValueError("private runtime detail")
 
     monkeypatch.setattr(pi_workspace_holder, "verify_workspace_holder", fail_verify)
-    with pytest.raises(WorkspaceCleanupRequired) as failure:
-        allocate_workspace_holder(root, intent.token, intent.fingerprint, control, profile(), lambda _: True)
-    assert "private runtime detail" not in str(failure.value)
-    assert control.volume is not None and control.containers
-    assert not (root / (intent.token + ".cleanup.json")).exists()
-    assert recover_workspace_lease(root, intent.token, intent.fingerprint, control).exists()
+    with LocalWorkspaceFence(root, intent.token, intent.fingerprint).launch() as grant:
+        with pytest.raises(WorkspaceCleanupRequired) as failure:
+            allocate_workspace_holder(root, intent.token, intent.fingerprint, control, profile(), grant)
+        assert "private runtime detail" not in str(failure.value)
+        assert control.volume is not None and control.containers
+        assert not (root / (intent.token + ".cleanup.json")).exists()
+        assert grant.cleanup(control).exists()
 
 
 @pytest.mark.parametrize("change", [

@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .pi_workspace_cleanup import WorkspaceCleanupRequired, _daemon, _objects, _volume
+from .pi_workspace_fence import WorkspaceFenceGrant
 from .pi_workspace_intent import load_workspace_intent
 
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}\Z")
@@ -83,11 +84,12 @@ def verify_workspace_holder(control, intent, profile, holder_id, *, running):
         raise ValueError("workspace holder has unexpected mounts")
 
 
-def allocate_workspace_holder(root: Path, token, fingerprint, control, profile, admitted):
+def allocate_workspace_holder(root: Path, token, fingerprint, control, profile, grant):
     """Allocate after durable intent and scheduler admission; retain lease on error."""
     try:
         intent = load_workspace_intent(root, token, fingerprint)
-        if not isinstance(profile, HolderProfile) or not callable(admitted) or admitted(intent.fingerprint) is not True:
+        if (not isinstance(profile, HolderProfile) or not isinstance(grant, WorkspaceFenceGrant)
+                or not grant.belongs(root, token, fingerprint) or not grant.admit(intent.fingerprint)):
             raise ValueError("workspace intent is not scheduler-admitted")
         if load_workspace_intent(root, token, fingerprint) != intent:
             raise ValueError("workspace intent changed after admission")

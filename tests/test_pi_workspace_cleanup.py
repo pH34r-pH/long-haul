@@ -9,8 +9,10 @@ from long_haul.adapters.pi_workspace_cleanup import (
     WorkspaceCleanupRequired,
     recover_workspace_lease,
 )
+from long_haul.adapters.pi_workspace_fence import LocalWorkspaceFence
 from long_haul.adapters.pi_workspace_intent import (
     WorkspaceLeaseIntent,
+    persist_workspace_cleanup,
     persist_workspace_intent,
 )
 
@@ -64,8 +66,12 @@ def setup(tmp_path):
     return root, intent, FakeDocker(intent)
 
 
-def recover(root, intent, control):
-    return recover_workspace_lease(root, intent.token, intent.fingerprint, control)
+def recover(root, intent, control, fingerprint=None):
+    fence = LocalWorkspaceFence(root, intent.token, intent.fingerprint)
+    with fence.launch() as grant:
+        if fingerprint is not None:
+            return recover_workspace_lease(root, intent.token, fingerprint, control, grant)
+        return grant.cleanup(control)
 
 
 def test_recovery_removes_owned_worker_holder_then_volume_and_syncs_marker(tmp_path):
@@ -76,7 +82,8 @@ def test_recovery_removes_owned_worker_holder_then_volume_and_syncs_marker(tmp_p
     assert not docker.containers and docker.volume is None
     assert marker.read_text() == '{"intent":"' + intent.fingerprint + '","state":"absent"}'
     assert marker.stat().st_mode & 0o777 == 0o600
-    assert recover(root, intent, docker) == marker  # Rechecks absence before reusing the marker.
+    with pytest.raises(WorkspaceCleanupRequired):
+        LocalWorkspaceFence(root, intent.token, intent.fingerprint).recover(docker)
 
 
 @pytest.mark.parametrize("change", ["daemon", "worker-label", "holder-label", "volume-label", "volume-options", "fingerprint"])
@@ -95,7 +102,7 @@ def test_recovery_refuses_foreign_or_unadmitted_objects_before_mutation(tmp_path
         name = intent.worker_name if change == "worker-label" else intent.holder_name
         docker.containers[name][1]["dev.ph34r.long-haul.lease"] = "other"
     with pytest.raises(WorkspaceCleanupRequired) as failure:
-        recover_workspace_lease(root, intent.token, fingerprint, docker)
+        recover(root, intent, docker, fingerprint)
     assert intent.token not in str(failure.value)
     assert not any(call[0] == "rm" or call[:2] == ("volume", "rm") for call in docker.calls)
     assert not (root / (intent.token + ".cleanup.json")).exists()
@@ -109,7 +116,7 @@ def test_recovery_retries_partial_failure_without_claiming_cleanup(tmp_path):
     assert len(docker.containers) == 2 and docker.volume is not None
     assert not (root / (intent.token + ".cleanup.json")).exists()
     docker.fail = None
-    assert recover(root, intent, docker).exists()
+    assert LocalWorkspaceFence(root, intent.token, intent.fingerprint).recover(docker).exists()
 
 
 @pytest.mark.parametrize("change", ["daemon", "volume"])
@@ -136,5 +143,12 @@ def test_tampered_cleanup_marker_cannot_release_lease(tmp_path):
     root, intent, docker = setup(tmp_path)
     marker = recover(root, intent, docker)
     marker.write_text("changed")
+    with pytest.raises(ValueError, match="not exact and private"):
+        persist_workspace_cleanup(root, intent)
+
+
+def test_cleanup_cannot_run_without_held_fence(tmp_path):
+    root, intent, docker = setup(tmp_path)
     with pytest.raises(WorkspaceCleanupRequired):
-        recover(root, intent, docker)
+        recover_workspace_lease(root, intent.token, intent.fingerprint, docker, None)
+    assert docker.calls == []

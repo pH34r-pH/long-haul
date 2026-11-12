@@ -2,6 +2,7 @@
 import json
 import os
 import time
+from contextlib import ExitStack
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -19,8 +20,8 @@ from test_private_evaluator_commitments import evidence_admission, summary_admis
 
 from long_haul.adapters.harness_trace import TraceAdmissionDenied, TraceNormalizer
 from long_haul.adapters.pi_rpc import pi_prompt
-from long_haul.adapters.pi_workspace_cleanup import recover_workspace_lease
 from long_haul.adapters.pi_workspace_copy import copy_docker_workspace
+from long_haul.adapters.pi_workspace_fence import LocalWorkspaceFence
 from long_haul.adapters.pi_workspace_holder import (
     HolderProfile,
     allocate_workspace_holder,
@@ -85,17 +86,19 @@ def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
     def labels(role):
         return ["--label=" + key + "=" + value for key, value in intent.labels(role).items()]
 
-    try:
+    with LocalWorkspaceFence(recovery_root, intent.token, intent.fingerprint).launch() as grant, ExitStack() as cleanup:
+        cleanup.callback(grant.cleanup, worker._control)
         holder_profile = HolderProfile(image, worker.image_id,
                                        tuple(key + "=" + value for key, value in worker.image_environment.items()),
                                        worker._verify_runtime)
         holder_id = allocate_workspace_holder(recovery_root, intent.token, intent.fingerprint, worker._control,
-                                             holder_profile, lambda fingerprint: fingerprint == intent.fingerprint)
+                                             holder_profile, grant)
         targets, contents = {"fixture/a", "fixture/new/b"}, {"fixture/a": b"fixture"}
         digest = content_digest(build_workspace_seed(targets, contents))
         seeder = HolderSeeder(recovery_root, intent.token, intent.fingerprint, worker._control, worker.docker_path,
-                              holder_id, holder_profile, lambda fingerprint: fingerprint == digest)
+                              holder_id, holder_profile, lambda fingerprint: fingerprint == digest, grant)
         seeder.seed(targets, contents)
+        grant.begin_worker()
         guest_id = worker._control("create", "--name", guest, *labels("worker"), *common, image, "-e", script).strip()
         worker._control("start", guest_id)
         deadline = time.monotonic() + 15
@@ -125,9 +128,7 @@ def test_gvisor_tmpfs_holder_seed_quotas_and_bounded_snapshot(tmp_path):
         assert copy_docker_workspace(worker.docker_path, holder_id, 15) == {
             "fixture/a": b"changed", "fixture/new/b": b"created",
         }
-    finally:
-        marker = recover_workspace_lease(recovery_root, intent.token, intent.fingerprint, worker._control)
-        assert marker.is_file()
+    assert (recovery_root / (intent.token + ".cleanup.json")).is_file()
 
 
 def test_actual_pi_repair_freezes_after_cleanup_then_independent_evaluator(tmp_path):

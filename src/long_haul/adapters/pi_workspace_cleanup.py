@@ -62,9 +62,13 @@ def _objects(control, intent):
             _volume(control, intent.volume_name, intent.labels("volume"), intent.volume_options))
 
 
-def recover_workspace_lease(root: Path, token: str, expected_fingerprint: str, control):
-    """Remove exact owned resources, verify absence, then sync a private marker."""
+def recover_workspace_lease(root: Path, token: str, expected_fingerprint: str, control, grant):
+    """Remove exact owned resources under the exclusive local workspace fence."""
     try:
+        from .pi_workspace_fence import WorkspaceFenceGrant
+
+        if (not isinstance(grant, WorkspaceFenceGrant) or not grant.belongs(root, token, expected_fingerprint)):
+            raise ValueError("workspace recovery lacks the held local fence")
         intent = load_workspace_intent(root, token, expected_fingerprint)
         _daemon(control, intent.daemon_id)
         worker, holder, volume = _objects(control, intent)

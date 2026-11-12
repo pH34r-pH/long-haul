@@ -15,6 +15,7 @@ from ..work.repository_models import content_digest
 from ..work.repository_sandbox import _control_environment
 from .pi_workspace_cleanup import WorkspaceCleanupRequired, _container, _daemon
 from .pi_workspace_copy import copy_docker_workspace
+from .pi_workspace_fence import WorkspaceFenceGrant
 from .pi_workspace_holder import HolderProfile, verify_workspace_holder
 from .pi_workspace_intent import load_workspace_intent
 from .pi_workspace_seed import build_workspace_seed
@@ -30,9 +31,12 @@ class HolderSeeder:
     holder_id: str = field(repr=False)
     profile: HolderProfile = field(repr=False)
     admit: Callable = field(repr=False)
+    grant: WorkspaceFenceGrant = field(repr=False)
 
     def _check(self, intent, seed_digest):
-        if (not isinstance(self.profile, HolderProfile) or not callable(self.admit)
+        if (not isinstance(self.profile, HolderProfile) or not isinstance(self.grant, WorkspaceFenceGrant)
+                or not self.grant.belongs(self.root, self.token, self.intent_fingerprint)
+                or not self.grant.admit_seed(seed_digest) or not callable(self.admit)
                 or self.admit(seed_digest) is not True):
             raise ValueError("workspace seed lacks current admission")
         if load_workspace_intent(self.root, self.token, self.intent_fingerprint) != intent:
@@ -49,6 +53,9 @@ class HolderSeeder:
             targets, contents = set(targets), dict(contents)
             payload = build_workspace_seed(targets, contents)
             digest = content_digest(payload)  # Private control binding; never a public event.
+            if not isinstance(self.grant, WorkspaceFenceGrant) or not self.grant.belongs(self.root, self.token, self.intent_fingerprint):
+                raise ValueError("workspace seed lacks its held local fence")
+            self.grant.begin_seed(digest)
             self._check(intent, digest)
             if copy_docker_workspace(self.docker_path, self.holder_id, 15):
                 raise ValueError("workspace holder was not empty before seed")
@@ -61,5 +68,6 @@ class HolderSeeder:
             if copy_docker_workspace(self.docker_path, self.holder_id, 15) != contents:
                 raise ValueError("workspace seed readback differs from admitted bytes")
             self._check(intent, digest)
+            self.grant.finish_seed(digest)
         except Exception:  # noqa: BLE001 -- ambiguous provider effects require recovery and a held lease.
             raise WorkspaceCleanupRequired() from None
