@@ -13,6 +13,7 @@ from pi_worker_fixture import (
     worker_setup,
 )
 from repository_evaluator_fixture import PROGRAM, environment
+from test_private_evaluator_commitments import evidence_admission
 
 from long_haul.adapters.harness_trace import TraceAdmissionDenied, TraceNormalizer
 from long_haul.adapters.pi_rpc import pi_prompt
@@ -20,7 +21,11 @@ from long_haul.events.store import EventStore
 from long_haul.resource_policy import ResourceAction, ResourceLifecycle
 from long_haul.work import WorkCheckpoint, WorkSession, render_digest
 from long_haul.work.harness import resume_harness_attempt
-from long_haul.work.repository_evaluator import RepositoryEvaluationRunner
+from long_haul.work.repository_evaluator import (
+    RepositoryEvaluationRunner,
+    private_repository_evidence_event,
+)
+from long_haul.work.repository_models import content_digest
 from long_haul.work.repository_sandbox import DockerGVisorSandbox
 
 pytestmark = pytest.mark.skipif(os.environ.get("LONG_HAUL_REQUIRE_PI_GVISOR") != "1",
@@ -48,6 +53,31 @@ def test_actual_pi_repair_freezes_after_cleanup_then_independent_evaluator(tmp_p
         request.normalizer.contract, snapshot, profile, attempt_id="independent-after-pi", packet_id="independent-after-pi")
     assert evaluation.disposition.value == "ACCEPTED" and packet.validity == "valid"
     print(json.dumps({"qualification": "independent-evaluation-after-actual-pi", "packet": packet.model_dump(mode="json")}))
+
+
+def test_actual_pi_keyed_evaluator_has_no_sealed_output_in_public_event(tmp_path):
+    worker, request, profile = worker_setup(tmp_path, PLAN, private=True)
+    result, _, snapshot = worker.run(request)
+    assert result.terminal == "settled" and snapshot is not None
+    packets = []
+    contract = request.normalizer.contract
+    admission = evidence_admission(contract, profile, "private-fixture", packets.append)
+    sandbox = DockerGVisorSandbox(environment(), Path(os.environ["LONG_HAUL_RUNSC"]))
+    summary, evaluation = RepositoryEvaluationRunner(sandbox).evaluate_private(
+        contract, snapshot, profile, attempt_id="private-fixture", packet_id="private-fixture", private_sink=admission)
+    assert evaluation.disposition.value == "ACCEPTED" and len(packets) == 1
+    event = private_repository_evidence_event(summary, contract=contract, packet=packets[0],
+                                              candidate=snapshot.candidate, profile=profile)
+    public = event.model_dump_json()
+    assert "[-5, 2]" not in public and content_digest(b"-3\n") not in public
+    print(json.dumps({"qualification": "actual-pi-keyed-synthetic", "summary": summary.model_dump(mode="json")}))
+
+
+def test_actual_pi_rejects_missing_evaluator_admission_before_launch(tmp_path):
+    worker, request, _ = worker_setup(tmp_path, PLAN)
+    with pytest.raises(ValueError, match="trusted worker admission"):
+        worker.run(replace(request, evaluator_admission=None))
+    assert worker.lease_releasable and worker.pending_recovery is None
 
 
 def test_actual_pi_write_read_edit_keeps_derived_policy_and_operation_identity(tmp_path):

@@ -38,6 +38,7 @@ from long_haul.resource_policy import (
 )
 from long_haul.work import WorkSession
 from long_haul.work.harness import harness_attempt
+from long_haul.work.private_evaluator import PrivateEvaluatorProfile
 from long_haul.work.repository_candidate import freeze_repository_candidate
 from long_haul.work.repository_models import DigestReference, content_digest
 from long_haul.work.repository_sandbox import DockerGVisorSandbox
@@ -87,7 +88,7 @@ def installed_assets():
                            DigestReference(reference="artifact:pi-acquisition", digest=content_digest(receipt_path.read_bytes())))
 
 
-def worker_setup(tmp_path, plan, *, seconds=20):
+def worker_setup(tmp_path, plan, *, seconds=20, private=False):
     assets = installed_assets()
     inherited = environment().model_dump()
     for key in ("image", "candidate_access", "toolchain"):
@@ -97,6 +98,8 @@ def worker_setup(tmp_path, plan, *, seconds=20):
     worker = DockerGVisorPiWorker(PiWorkerEnvironment(**inherited), Path(os.environ["LONG_HAUL_RUNSC"]), assets)
     root, base = repository(tmp_path)
     evaluator = profile(DockerGVisorSandbox.implementation_reference())
+    if private:
+        evaluator = PrivateEvaluatorProfile.from_profile(evaluator, {"sealed": b"synthetic-pi-only-test-key-256-bits"})
     work = contract(root, base, evaluator)
     work.budget.max_attempts = 2
     work.repository_work = work.repository_work.model_copy(update={
@@ -136,6 +139,7 @@ def worker_setup(tmp_path, plan, *, seconds=20):
     prompt = lambda current: pi_prompt(work, session=session, evaluation_time=current)
     template = DigestReference(reference="urn:long-haul:pi-prompt-renderer-v1",
                                digest=content_digest(Path("src/long_haul/adapters/pi_rpc.py").read_bytes()))
+    evaluator_admission = (EvaluatorWorkerAdmission(evaluator) if private
+                           else public_evaluator_admission(evaluator, work, attempt, now))
     return worker, PiWorkerRequest(root, snapshot, normalizer, registry, prompt, plan, template,
-                                   admit_prompt(normalizer, prompt(now)),
-                                   evaluator_admission=public_evaluator_admission(evaluator, work, attempt, now)), evaluator
+                                   admit_prompt(normalizer, prompt(now)), evaluator_admission=evaluator_admission), evaluator

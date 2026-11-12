@@ -4,10 +4,15 @@ import subprocess
 from pathlib import Path
 
 from long_haul.work import WorkContract
+from long_haul.work.private_evaluator import (
+    PRIVATE_PROFILE_REFERENCE,
+    PrivateEvaluatorProfile,
+)
 from long_haul.work.repository_candidate import freeze_repository_candidate
 from long_haul.work.repository_evaluation_models import (
     EvaluatorEnvironment,
     RepositoryEvaluationProfileV1,
+    evaluator_check_fingerprint,
     evaluator_implementation_reference,
 )
 from long_haul.work.repository_evaluator import public_evaluator_reference
@@ -79,12 +84,15 @@ def contract(root, base, evaluator):
         source=git_repository_identity(root, repository_id="fixture/repository", commit=base),
         task=evaluator.task, environment=reference("worker-environment"), toolchain=reference("toolchain"),
         context_manifest=reference("context"), public_evaluation=public_evaluator_reference(evaluator),
-        sealed_evaluator=DigestReference(reference="urn:long-haul:evaluator:sealed", digest=evaluator.fingerprint),
+        sealed_evaluator=DigestReference(reference=PRIVATE_PROFILE_REFERENCE if isinstance(evaluator, PrivateEvaluatorProfile)
+                                          else "urn:long-haul:evaluator:sealed", digest=evaluator.fingerprint),
     )
-    predicates = [{"predicate_id": c.requirement.predicate_id, "description": c.requirement.description,
+    predicates = [{"predicate_id": c.requirement.predicate_id,
+                   "description": (evaluator.public_requirement(c)["description"] if isinstance(evaluator, PrivateEvaluatorProfile)
+                                   else c.requirement.description),
                    "kind": "test", "evaluator_reference": {
                        "reference": "urn:long-haul:evaluator-requirement:" + c.requirement.predicate_id,
-                       "digest": c.fingerprint}} for c in evaluator.checks]
+                       "digest": evaluator_check_fingerprint(evaluator, c)}} for c in evaluator.checks]
     return WorkContract(contract_id="fixture-contract", mission_id="fixture-mission", objective="Repair addition",
                         allowed_paths=["program.py"], capabilities=["read", "edit"], budget={"wall_seconds": 60},
                         success_predicates=predicates, repository_work=extension)
