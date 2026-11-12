@@ -14,7 +14,7 @@ ACTIONS = ("ai-training", "ai-train-gen", "ai-augment", "data-mining", "search",
 FILES = {"index.html": "ai-vocab/index.html", "ai-vocab.ttl": "ai-vocab/ai-vocab.ttl"}
 
 
-def verify_sources(manifest: dict, source_dir: Path) -> dict:
+def _source_files(manifest: dict, source_dir: Path) -> tuple[str, dict, dict]:
     revision = manifest.get("commit", "")
     files = manifest.get("files", {})
     if (not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision)
@@ -30,15 +30,24 @@ def verify_sources(manifest: dict, source_dir: Path) -> dict:
         if hashlib.sha256(data).hexdigest() != entry["sha256"]:
             raise ValueError(f"source hash mismatch: {name}")
         content[name] = data.decode("utf-8")
+    return revision, files, content
+
+
+def _verify_actions(html: str) -> None:
     sections = {}
     for action in ACTIONS:
         section = re.search(r'<section id="term-' + re.escape(action) + r'">(.*?)</section>',
-                            content["index.html"], re.DOTALL)
+                            html, re.DOTALL)
         if section is None or "http://www.w3.org/ns/odrl/2/" + action not in section.group(1):
             raise ValueError(f"reviewed action missing: {action}")
         sections[action] = section.group(1)
     if not re.search(r'Included In:</th>\s*<td>\s*<a href="#?term-ai-training"', sections["ai-train-gen"]):
         raise ValueError("reviewed generative-training hierarchy missing")
+
+
+def verify_sources(manifest: dict, source_dir: Path) -> dict:
+    revision, files, content = _source_files(manifest, source_dir)
+    _verify_actions(content["index.html"])
     ttl = content["ai-vocab.ttl"]
     if "TODO" not in ttl or re.search(r"(?m)^\s*odrl:[\w-]+\s+(?:a|rdf:type)\s", ttl):
         raise ValueError("Turtle source changed; review its machine-readable vocabulary")
