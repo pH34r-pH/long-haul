@@ -446,6 +446,27 @@ def _hosted_frozen_holder_capture(worker, guest, holder):
             process.wait(timeout=55)
 
 
+def _assert_synthetic_capture_abort_thaws(pid, container):
+    process = subprocess.Popen(["sudo", "-n", "python3", "-c", _HOSTED_CGROUP_KILL,
+                                str(pid), container, "capture"], env=_control_environment(),
+                               stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+    try:
+        assert select.select([process.stdout], [], [], 20)[0]
+        assert json.loads(process.stdout.readline()).get("kernel_freeze_confirmed") is True
+    finally:
+        process.stdin.close()
+        process.wait(timeout=55)
+    assert process.returncode != 0
+    events_file = Path("/sys/fs/cgroup/system.slice") / ("docker-" + container + ".scope/cgroup.events")
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        events = dict(line.split() for line in events_file.read_text().splitlines())
+        if events.get("frozen") == "0" and events.get("populated") == "1":
+            return
+        time.sleep(.1)
+    raise AssertionError("synthetic cgroup did not thaw after aborted capture")
+
+
 def test_hosted_synthetic_cgroup_kill_experiment(tmp_path):
     """Experiment only on a disposable synthetic guest in hosted CI."""
     if os.environ.get("GITHUB_ACTIONS") != "true" or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted":
@@ -454,6 +475,17 @@ def test_hosted_synthetic_cgroup_kill_experiment(tmp_path):
     with _paused_synthetic_guest(worker) as (container, _):
         info, = json.loads(worker._control("inspect", container))
         assert info["Id"] == container and info["State"]["Paused"] is True
+        _assert_synthetic_capture_abort_thaws(info["State"]["Pid"], container)
+        other_id = ("0" if container[0] != "0" else "1") + container[1:]
+        rejected = subprocess.run(["sudo", "-n", "python3", "-c", _HOSTED_CGROUP_KILL,
+                                   str(info["State"]["Pid"]), other_id],
+                                  env=_control_environment(), capture_output=True, timeout=20, check=False)
+        assert rejected.returncode != 0 and b'exact Docker systemd scope' in rejected.stderr
+        unchanged, = json.loads(worker._control("inspect", container))
+        assert unchanged["Id"] == container and unchanged["State"]["Running"] is True
+        assert unchanged["State"]["Paused"] is True and unchanged["State"]["Pid"] == info["State"]["Pid"]
+        print(json.dumps({"qualification": "synthetic-cgroup-negative-cases", "abort_thawed": True,
+                          "identity_rejected_without_stop": True}))
         result = subprocess.run(["sudo", "-n", "python3", "-c", _HOSTED_CGROUP_KILL,
                                  str(info["State"]["Pid"]), container],
                                 env=_control_environment(), capture_output=True, timeout=20, check=False)
