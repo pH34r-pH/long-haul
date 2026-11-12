@@ -88,6 +88,17 @@ def _check_projection_bounds(registry):
             raise ValueError("worker projection exceeds bounded directory count")
 
 
+def _projection_size(data, total):
+    if data is None:
+        return total
+    if not isinstance(data, bytes) or len(data) > MAX_WORKER_FILE_BYTES:
+        raise ValueError("worker projection exceeds bounded file size")
+    total += len(data)
+    if total > MAX_WORKER_TOTAL_BYTES:
+        raise ValueError("worker projection exceeds bounded total size")
+    return total
+
+
 def _prepare_control(root, attempt, tools, synthetic):
     for source in CONTROL.glob("*.mjs"):
         shutil.copyfile(source, root / source.name)
@@ -247,12 +258,7 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
             if not contract.permits_path(path):
                 raise ValueError("worker projection outside contract scope")
             data = base.contents.get(path)
-            if data is not None:
-                if not isinstance(data, bytes) or len(data) > MAX_WORKER_FILE_BYTES:
-                    raise ValueError("worker projection exceeds bounded file size")
-                total_bytes += len(data)
-                if total_bytes > MAX_WORKER_TOTAL_BYTES:
-                    raise ValueError("worker projection exceeds bounded total size")
+            total_bytes = _projection_size(data, total_bytes)
             expected = admission.derived.content_digest if admission.derived else admission.content_digest
             if (content_digest(data) if data is not None else None) != expected:
                 raise ValueError("worker projection source identity mismatch")
