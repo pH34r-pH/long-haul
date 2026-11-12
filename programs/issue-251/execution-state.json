@@ -2867,6 +2867,16 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-6837523825",
       "evidence": "All six post-merge main workflows passed.",
       "remaining": "Authentication, evaluator and source trust, independent consumer safety and full interoperability remain open."
+    },
+    {
+      "at": "2026-11-12T22:44:25.677730+00:00",
+      "task": "lh-242-context",
+      "status": "policy_evaluator_identity_branch_staged",
+      "branch": "program/251-context-evaluator-binding",
+      "tested_commit": "b2786f0",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-6837979997",
+      "evidence": "Linux: 106 focused and 587 full-suite tests passed, 43 skipped. Pydantic 2.8.2: 35 behavior tests passed; byte-identical schema export fails also on unchanged main.",
+      "remaining": "Branch is unmerged; exact-head hosted validation and review remain. Preserve historic manifest hashes, reselect legacy items before delivery, and do not treat source/runtime identity as host attestation."
     }
   ]
 }
