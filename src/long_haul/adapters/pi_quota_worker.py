@@ -6,6 +6,7 @@ fence through evaluation and recovery; this is not a private-work admission.
 from __future__ import annotations
 
 import json
+import subprocess
 import tempfile
 import time
 from datetime import UTC, datetime
@@ -180,18 +181,26 @@ class QuotaPiWorker(DockerGVisorPiWorker):
         view._check(paused=True)
         files = copy_docker_workspace(self.docker_path, holder, 15)
         view._check(paused=True)
-        self._control("kill", "--signal=KILL", container)
+        acknowledged = True
+        try:
+            self._control("kill", "--signal=KILL", container)
+        except (OSError, subprocess.SubprocessError):
+            acknowledged = False  # Never retry an ambiguous stop; reconcile exact state.
         stopped, = json.loads(self._control("inspect", container))
         state = stopped["State"]
         if (stopped["Id"] != container or state.get("Running") is not False or state.get("Paused") is not False
-                or state.get("Pid") != 0 or state.get("Error")):
-            raise ValueError("quota worker process-tree stop is unconfirmed")
+                or state.get("Pid") != 0 or state.get("Status") != "exited" or state.get("ExitCode") != 137
+                or state.get("OOMKilled") is not False or state.get("Dead") is not False or state.get("Error")):
+            raise ValueError("quota worker process-tree stop is unconfirmed "
+                             f"(ack={acknowledged}, running={state.get('Running') is True}, "
+                             f"paused={state.get('Paused') is True}, exit_137={state.get('ExitCode') == 137}, "
+                             f"pid_zero={state.get('Pid') == 0})")
         verify_workspace_holder(self._control, self._quota_intent, holder_profile, holder, running=True)
         if copy_docker_workspace(self.docker_path, holder, 15) != files:
             raise ValueError("quota workspace changed while stopping the worker")
         self._remove_exact(container)
         verify_workspace_holder(self._control, self._quota_intent, holder_profile, holder, running=True)
-        return files
+        return files, acknowledged
 
     def _run_quota(self, request, grant, projection, holder, holder_profile):
         container = self._control(*self._create_arguments(projection)).strip()
@@ -201,25 +210,29 @@ class QuotaPiWorker(DockerGVisorPiWorker):
         view = self._view(container, projection, holder, holder_profile, grant.scratch_root())
         self._workspace_view = view
         files = None
+        stop_acknowledged = None
         try:
             with self._attached_process(container) as process:
                 harness = self._drive(process, request.normalizer, request.registry, projection,
                                       PiPrompt(request.prompt, request.prompt_template, request.prompt_admission), request.cancel_after)
                 self._classify_worker_exit(container, harness)
                 if harness.projector.state.terminal == "settled":
-                    files = self._capture_and_remove(view, container, holder, holder_profile)
+                    files, stop_acknowledged = self._capture_and_remove(view, container, holder, holder_profile)
                 else:
                     self._remove_exact(container)
         finally:
             del self._workspace_view
-        return self._quota_result(request, grant, harness, files, container)
+        return self._quota_result(request, grant, harness, files, container, stop_acknowledged)
 
-    def _quota_result(self, request, grant, harness, files, container):
+    def _quota_result(self, request, grant, harness, files, container, stop_acknowledged):
         normalizer = request.normalizer
+        cleanup_reference = ("artifact:quota-worker-stop-reconciled" if stop_acknowledged is False
+                             else "artifact:quota-worker-process-cleanup")
         cleanup = HarnessCleanup(attempt_id=normalizer.attempt.attempt_id, session_id=normalizer.attempt.session_id,
             boundary="sandbox", process_tree_stopped=True, evidence=DigestReference(
-                reference="artifact:quota-worker-process-cleanup", digest=content_digest(_canonical({
+                reference=cleanup_reference, digest=content_digest(_canonical({
                     "container": normalizer.fingerprint("quota-container", container), "removed": True,
+                    "stop_acknowledged": stop_acknowledged,
                     "environment": self.environment.fingerprint, "implementation": self.identity.digest,
                     "attempt": normalizer.attempt.fingerprint,
                 }))))

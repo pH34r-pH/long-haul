@@ -1,8 +1,12 @@
 """Required hosted gate: actual pinned Pi + deterministic provider, not a real LLM."""
 import json
 import os
+import select
+import subprocess
+import sys
+import tempfile
 import time
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -30,6 +34,7 @@ from long_haul.adapters.pi_workspace_holder import (
 )
 from long_haul.adapters.pi_workspace_intent import (
     WorkspaceLeaseIntent,
+    load_workspace_intent,
     persist_workspace_intent,
 )
 from long_haul.adapters.pi_workspace_seed import build_workspace_seed
@@ -44,7 +49,7 @@ from long_haul.work.repository_evaluator import (
     private_repository_evidence_event,
 )
 from long_haul.work.repository_models import content_digest
-from long_haul.work.repository_sandbox import DockerGVisorSandbox
+from long_haul.work.repository_sandbox import DockerGVisorSandbox, _control_environment
 from long_haul.work.worker_candidate import regular_contents
 
 pytestmark = pytest.mark.skipif(os.environ.get("LONG_HAUL_REQUIRE_PI_GVISOR") != "1",
@@ -154,8 +159,9 @@ def test_actual_pi_repair_freezes_after_cleanup_then_independent_evaluator(tmp_p
     print(json.dumps({"qualification": "independent-evaluation-after-actual-pi", "packet": packet.model_dump(mode="json")}))
 
 
-def test_actual_pi_uses_fenced_quota_workspace_and_reclaims_scratch(tmp_path):
-    worker, request, profile = worker_setup(tmp_path, PLAN, seconds=90, worker_type=QuotaPiWorker)
+@contextmanager
+def quota_fixture(tmp_path, plan):
+    worker, request, profile = worker_setup(tmp_path, plan, seconds=90, worker_type=QuotaPiWorker)
     root = (tmp_path / "quota-recovery").resolve()
     root.mkdir(mode=0o700)
     intent = WorkspaceLeaseIntent.generate(request.normalizer.attempt.fingerprint, worker.environment.fingerprint,
@@ -163,6 +169,11 @@ def test_actual_pi_uses_fenced_quota_workspace_and_reclaims_scratch(tmp_path):
     persist_workspace_intent(root, intent)
     with LocalWorkspaceFence(root, intent.token, intent.fingerprint).launch() as grant, ExitStack() as cleanup:
         cleanup.callback(grant.cleanup, worker._control)
+        yield worker, request, profile, grant, root, intent
+
+
+def test_actual_pi_uses_fenced_quota_workspace_and_reclaims_scratch(tmp_path):
+    with quota_fixture(tmp_path, PLAN) as (worker, request, profile, grant, root, intent):
         result, events, snapshot = worker.run_bounded(request, grant)
         assert result.terminal == "settled" and snapshot is not None and result.cleanup.process_tree_stopped
         assert [event.tool for event in events if event.phase == "end"] == ["read", "edit"]
@@ -173,6 +184,78 @@ def test_actual_pi_uses_fenced_quota_workspace_and_reclaims_scratch(tmp_path):
         assert packet.validity == "valid" and evaluation.disposition.value == "ACCEPTED"
     assert worker.lease_releasable and not (root / (intent.token + ".scratch")).exists()
     assert (root / (intent.token + ".cleanup.json")).is_file()
+
+
+def test_actual_quota_pi_cancellation_reclaims_resources_without_candidate(tmp_path):
+    plan = {"mode": "hang", "actions": []}
+    with quota_fixture(tmp_path, plan) as (worker, request, _, grant, root, intent):
+        result, _, snapshot = worker.run_bounded(replace(request, cancel_after=3), grant)
+        assert result.terminal == "cancelled" and snapshot is None and result.candidate is None
+        assert result.cleanup.process_tree_stopped and not worker.lease_releasable
+    assert worker.lease_releasable and not (root / (intent.token + ".scratch")).exists()
+    assert (root / (intent.token + ".cleanup.json")).is_file()
+
+
+def _test_docker_control(config, *arguments):
+    result = subprocess.run(["/usr/bin/docker", "--config", config, *arguments], env=_control_environment(),
+                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=15, check=True)
+    return result.stdout.decode()
+
+
+def _wait_for_quota_guest(control, name, process):
+    deadline = time.monotonic() + 55
+    while time.monotonic() < deadline:
+        if process.poll() is not None:
+            raise AssertionError("synthetic controller exited before guest launch")
+        try:
+            info, = json.loads(control("inspect", name))
+            if info["State"].get("Running") is True:
+                return info["Id"]
+        except subprocess.CalledProcessError:
+            pass
+        time.sleep(.2)
+    raise AssertionError("synthetic quota guest did not start within the test deadline")
+
+
+def test_crashed_quota_pi_controller_requires_recovery_before_reuse(tmp_path):
+    script = ("import json,sys; from pathlib import Path; from test_pi_gvisor import quota_fixture; "
+              "p=Path(sys.argv[1]); ctx=quota_fixture(p,{'mode':'hang','actions':[]}); "
+              "worker,request,profile,grant,root,intent=ctx.__enter__(); "
+              "print(json.dumps({'token':intent.token,'fingerprint':intent.fingerprint}),flush=True); "
+              "worker.run_bounded(request,grant)")
+    env = {"PATH": os.defpath, "LANG": "C.UTF-8", "PYTHONPATH": str(Path.cwd() / "tests"),
+           **{name: os.environ[name] for name in ("LONG_HAUL_RUNSC", "LONG_HAUL_PI_RUNTIME", "LONG_HAUL_PI_RECEIPT")}}
+    process = subprocess.Popen([sys.executable, "-c", script, str(tmp_path)], env=env,
+                               stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+    root, details, marker = (tmp_path / "quota-recovery").resolve(), None, None
+    with tempfile.TemporaryDirectory(prefix="lh-test-docker-config-") as config:
+        control = lambda *args: _test_docker_control(config, *args)
+        try:
+            assert select.select([process.stdout], [], [], 45)[0]
+            line = process.stdout.readline()
+            if not line:
+                raise AssertionError("synthetic controller exited before its recovery intent was ready")
+            details = json.loads(line)
+            intent = load_workspace_intent(root, details["token"], details["fingerprint"])
+            name = intent.worker_name
+            guest = _wait_for_quota_guest(control, name, process)
+            time.sleep(1)
+            assert process.poll() is None
+            scratch = root / (details["token"] + ".scratch")
+            assert (scratch / "pi-projection" / "program.py").is_file()
+        finally:
+            if process.poll() is None:
+                process.kill()
+            process.communicate(timeout=10)
+            if details is None and root.exists():
+                candidates = [path for path in root.glob("*.json") if len(path.stem) == 32]
+                if len(candidates) == 1:
+                    intent = WorkspaceLeaseIntent.model_validate_json(candidates[0].read_bytes())
+                    details = {"token": intent.token, "fingerprint": intent.fingerprint}
+            if details is not None and (root / "active.json").exists():
+                marker = LocalWorkspaceFence(root, details["token"], details["fingerprint"]).recover(control)
+        assert marker is not None and marker.is_file() and not scratch.exists()
+        assert not control("container", "ls", "--all", "--no-trunc", "--filter", "id=" + guest, "--format", "{{.ID}}").strip()
 
 
 def test_actual_pi_keyed_evaluator_has_no_sealed_output_in_public_event(tmp_path):

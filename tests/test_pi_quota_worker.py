@@ -1,6 +1,7 @@
 """Quota executor failure boundaries; real Pi/gVisor is qualified separately."""
 import json
 import os
+import subprocess
 from types import SimpleNamespace
 
 import pytest
@@ -43,6 +44,21 @@ def test_unclean_quota_attempt_never_releases_lease_until_matching_recovery(tmp_
     assert worker.recover_bounded(fence).exists() and worker.lease_releasable
 
 
+def test_quota_executor_rejects_direct_event_store_before_allocation(tmp_path):
+    root, intent, docker = setup(tmp_path)
+    worker = object.__new__(QuotaPiWorker)
+    worker._control = docker
+    worker.environment = SimpleNamespace(limits=SimpleNamespace(wall_seconds=10))
+    worker._validate_request = lambda _: None
+    request = SimpleNamespace(normalizer=SimpleNamespace(contract=SimpleNamespace(budget=SimpleNamespace(wall_seconds=10))),
+                              event_store=object())
+    with LocalWorkspaceFence(root, intent.token, intent.fingerprint).launch() as grant:
+        with pytest.raises(ValueError, match="post-cleanup evidence"):
+            worker.run_bounded(request, grant)
+        assert docker.calls == [] and not worker.lease_releasable
+        grant.cleanup(docker)
+
+
 @pytest.mark.parametrize("changed", [False, True])
 def test_candidate_requires_matching_post_stop_snapshot(monkeypatch, changed):
     worker = object.__new__(QuotaPiWorker)
@@ -53,7 +69,8 @@ def test_candidate_requires_matching_post_stop_snapshot(monkeypatch, changed):
     def control(*args):
         calls.append(args)
         if args[0] == "inspect":
-            return json.dumps([{"Id": "a" * 64, "State": {"Running": False, "Paused": False, "Pid": 0, "Error": ""}}])
+            return json.dumps([{"Id": "a" * 64, "State": {"Running": False, "Paused": False, "Pid": 0,
+                "Status": "exited", "ExitCode": 137, "OOMKilled": False, "Dead": False, "Error": ""}}])
         return ""
 
     worker._control = control
@@ -67,8 +84,40 @@ def test_candidate_requires_matching_post_stop_snapshot(monkeypatch, changed):
             worker._capture_and_remove(view, "a" * 64, "b" * 64, object())
         assert ("remove",) not in calls
     else:
-        assert worker._capture_and_remove(view, "a" * 64, "b" * 64, object()) == {"a": b"before"}
+        assert worker._capture_and_remove(view, "a" * 64, "b" * 64, object()) == ({"a": b"before"}, True)
         assert calls.index(("kill", "--signal=KILL", "a" * 64)) < calls.index(("remove",))
+
+
+@pytest.mark.parametrize("stopped", [False, True])
+def test_ambiguous_kill_is_never_retried_and_requires_exact_stopped_state(monkeypatch, stopped):
+    worker = object.__new__(QuotaPiWorker)
+    worker._execution_deadline = float("inf")
+    worker.docker_path, worker._quota_intent = "/fixture/docker", object()
+    calls = []
+
+    def control(*args):
+        calls.append(args)
+        if args[0] == "kill":
+            raise subprocess.CalledProcessError(1, args)
+        if args[0] == "inspect":
+            return json.dumps([{"Id": "a" * 64, "State": {"Running": not stopped, "Paused": not stopped,
+                "Pid": 0 if stopped else 42, "Status": "exited" if stopped else "paused", "ExitCode": 137,
+                "OOMKilled": False, "Dead": False, "Error": ""}}])
+        return ""
+
+    worker._control = control
+    worker._remove_exact = lambda _: calls.append(("remove",))
+    view = SimpleNamespace(_check=lambda **_: None)
+    monkeypatch.setattr(pi_quota_worker, "copy_docker_workspace", lambda *_: {"a": b"fixture"})
+    monkeypatch.setattr(pi_quota_worker, "verify_workspace_holder", lambda *args, **kwargs: None)
+    if stopped:
+        assert worker._capture_and_remove(view, "a" * 64, "b" * 64, object()) == ({"a": b"fixture"}, False)
+        assert ("remove",) in calls
+    else:
+        with pytest.raises(ValueError, match="stop is unconfirmed"):
+            worker._capture_and_remove(view, "a" * 64, "b" * 64, object())
+        assert ("remove",) not in calls
+    assert sum(call[0] == "kill" for call in calls) == 1
 
 
 @pytest.mark.parametrize("change", [
