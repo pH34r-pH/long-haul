@@ -162,6 +162,18 @@ def test_runner_denies_unmodified_file_with_explicit_evaluation_prohibition(tmp_
     assert not sandbox.calls
 
 
+def assert_wall_budget_timeout(tmp_path, contract, snapshot, profile, admission):
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    sandbox = FixtureSandbox(profile.environment)
+    with pytest.raises(TimeoutError, match="wall budget"):
+        RepositoryEvaluationRunner(sandbox, scratch_root=scratch).evaluate(
+            contract, snapshot, profile, attempt_id="attempt", packet_id="packet", candidate_admission=admission
+        )
+    assert not list(scratch.iterdir())
+    return sandbox.calls
+
+
 def test_preflight_admission_consumes_wall_budget_before_materialization(tmp_path, monkeypatch):
     _, contract, snapshot, profile = setup(tmp_path, FixtureSandbox.identity)
     admission = evaluation_input_admission(contract, snapshot, profile, "attempt")
@@ -174,14 +186,7 @@ def test_preflight_admission_consumes_wall_budget_before_materialization(tmp_pat
         clock.value += contract.budget.wall_seconds
 
     monkeypatch.setattr(CandidateInputAdmission, "authorize", slow_admission)
-    scratch = tmp_path / "scratch"
-    scratch.mkdir()
-    sandbox = FixtureSandbox(profile.environment)
-    with pytest.raises(TimeoutError, match="wall budget"):
-        RepositoryEvaluationRunner(sandbox, scratch_root=scratch).evaluate(
-            contract, snapshot, profile, attempt_id="attempt", packet_id="packet", candidate_admission=admission
-        )
-    assert not sandbox.calls and not list(scratch.iterdir())
+    assert not assert_wall_budget_timeout(tmp_path, contract, snapshot, profile, admission)
 
 
 def test_expired_wall_budget_prevents_later_check_and_cleans_workspace(tmp_path, monkeypatch):
@@ -197,11 +202,4 @@ def test_expired_wall_budget_prevents_later_check_and_cleans_workspace(tmp_path,
         return result
 
     monkeypatch.setattr(repository_evaluator, "_observe_check", slow_observation)
-    scratch = tmp_path / "scratch"
-    scratch.mkdir()
-    sandbox = FixtureSandbox(profile.environment)
-    with pytest.raises(TimeoutError, match="wall budget"):
-        RepositoryEvaluationRunner(sandbox, scratch_root=scratch).evaluate(
-            contract, snapshot, profile, attempt_id="attempt", packet_id="packet", candidate_admission=admission
-        )
-    assert len(sandbox.calls) == 1 and not list(scratch.iterdir())
+    assert len(assert_wall_budget_timeout(tmp_path, contract, snapshot, profile, admission)) == 1
