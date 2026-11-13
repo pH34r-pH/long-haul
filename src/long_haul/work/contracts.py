@@ -49,7 +49,7 @@ class WorkDisposition(str, Enum):
 
 
 class WorkBudget(BaseModel):
-    wall_seconds: float = Field(gt=0)
+    wall_seconds: float = Field(gt=0, allow_inf_nan=False)
     max_attempts: int = Field(default=1, ge=1)
     max_tokens_per_attempt: int | None = Field(default=None, ge=1)
     max_no_progress_steps: int | None = Field(default=None, ge=1)

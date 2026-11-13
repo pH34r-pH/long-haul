@@ -174,6 +174,19 @@ def assert_wall_budget_timeout(tmp_path, contract, snapshot, profile, admission)
     return sandbox.calls
 
 
+@pytest.mark.parametrize("budget", [float("inf"), float("nan"), 0.0, -1.0])
+def test_runner_rejects_bypassed_invalid_budget_before_execution(tmp_path, budget):
+    _, contract, snapshot, profile = setup(tmp_path, FixtureSandbox.identity)
+    admission = evaluation_input_admission(contract, snapshot, profile, "attempt")
+    contract = contract.model_copy(update={"budget": contract.budget.model_copy(update={"wall_seconds": budget})})
+    sandbox = FixtureSandbox(profile.environment)
+    with pytest.raises(ValueError, match="finite positive wall budget"):
+        RepositoryEvaluationRunner(sandbox).evaluate(
+            contract, snapshot, profile, attempt_id="attempt", packet_id="packet", candidate_admission=admission
+        )
+    assert not sandbox.calls
+
+
 def test_preflight_admission_consumes_wall_budget_before_materialization(tmp_path, monkeypatch):
     _, contract, snapshot, profile = setup(tmp_path, FixtureSandbox.identity)
     admission = evaluation_input_admission(contract, snapshot, profile, "attempt")

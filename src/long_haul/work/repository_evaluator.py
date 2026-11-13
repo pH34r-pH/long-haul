@@ -1,6 +1,7 @@
 """Independent public/sealed checks against immutable, read-only candidates."""
 from __future__ import annotations
 
+import math
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -171,6 +172,8 @@ class RepositoryEvaluationRunner:
 
     def _evaluate(self, contract, snapshot, profile, *, attempt_id, packet_id, candidate_admission):
         started = time.monotonic()
+        if not math.isfinite(contract.budget.wall_seconds) or contract.budget.wall_seconds <= 0:
+            raise ValueError("repository evaluator requires a finite positive wall budget")
         _validate_binding(contract, snapshot, profile, self.sandbox)
         if type(candidate_admission) is not CandidateInputAdmission:
             raise PermissionError("candidate input admission is required")
