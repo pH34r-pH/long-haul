@@ -3014,6 +3014,16 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6840009990",
       "evidence": "All exact-head hosted checks passed or were intentionally skipped, including synthetic Pi qualification.",
       "remaining": "New key-intent changes were not included; containment and all private-use gates remain open."
+    },
+    {
+      "at": "2026-11-13T00:33:32.361190+00:00",
+      "task": "lh-245-security",
+      "status": "evaluator_key_readonly_recovery_draft",
+      "pull_request": 265,
+      "tested_code_commit": "0570f0e",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6840132650",
+      "evidence": "Claimed intent recovery reads and verifies one exact provider version and repeats the census; synthetic lost-response and negative cases passed. Linux full suite 843 passed, 64 skipped; Ruff, Lizard and jscpd passed.",
+      "remaining": "No strongly consistent or cross-host fence, authenticated provider/scheduler, hard network deadline, destructive cleanup, lifecycle, real Azure qualification or exact-head CI. Existing adapter identities require migration."
     }
   ]
 }
