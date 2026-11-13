@@ -2985,6 +2985,16 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839457681",
       "evidence": "All hosted checks passed or were intentionally skipped for that exact head.",
       "remaining": "New candidate input admission is not included; security and private-use acceptance remain open."
+    },
+    {
+      "at": "2026-11-13T00:18:20.782217+00:00",
+      "task": "lh-245-security",
+      "status": "evaluator_cooperative_budget_draft",
+      "pull_request": 265,
+      "tested_code_commit": "2f6a981",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839859353",
+      "evidence": "Evaluator counts preflight and stops before later checks after budget expiry; contract and evaluator reject nonfinite budgets. Linux suite 824 passed, 64 skipped; Ruff, Lizard and jscpd passed.",
+      "remaining": "Cooperative checks do not interrupt in-flight work. Authenticated hard-deadline supervision, cleanup, trusted lineage, receipts, races, containment, caller migration and exact-head hosted checks remain open."
     }
   ]
 }
