@@ -3024,6 +3024,16 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6840132650",
       "evidence": "Claimed intent recovery reads and verifies one exact provider version and repeats the census; synthetic lost-response and negative cases passed. Linux full suite 843 passed, 64 skipped; Ruff, Lizard and jscpd passed.",
       "remaining": "No strongly consistent or cross-host fence, authenticated provider/scheduler, hard network deadline, destructive cleanup, lifecycle, real Azure qualification or exact-head CI. Existing adapter identities require migration."
+    },
+    {
+      "at": "2026-11-13T00:40:19.004554+00:00",
+      "task": "lh-245-security",
+      "status": "key_recovery_private_error_draft",
+      "pull_request": 265,
+      "tested_code_commit": "944bd9b",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6840246916",
+      "evidence": "A missing-record exception exposed a synthetic locator before the fix. Generic private record errors now cover missing, duplicate and malformed records; Linux full suite 845 passed, 64 skipped, Ruff/Lizard/jscpd passed.",
+      "remaining": "This is not general log redaction. Trusted scheduler/provider, retained old builds, host-loss recovery, concurrency, lifecycle, hard deadlines and exact-head hosted checks remain open."
     }
   ]
 }
