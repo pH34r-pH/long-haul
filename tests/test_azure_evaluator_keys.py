@@ -1,7 +1,10 @@
 """Synthetic Key Vault protocol checks; no live identity or storage claim."""
 import json
+import os
+import tempfile
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -13,11 +16,19 @@ from azure.keyvault.secrets._generated.models import SecretAttributes
 from repository_evaluator_fixture import setup
 from test_repository_evaluator import FixtureSandbox
 
+from long_haul.adapters import azure_evaluator_keys
 from long_haul.adapters.azure_evaluator_keys import (
     FrozenKeyReference,
     KeyUseAdmission,
-    KeyVaultEvaluatorKeys,
     KeyVaultWriteUncertain,
+    KeyWriteGrant,
+)
+from long_haul.adapters.azure_evaluator_keys import (
+    KeyVaultEvaluatorKeys as ProductionKeyVaultEvaluatorKeys,
+)
+from long_haul.adapters.evaluator_key_intent import (
+    claim_key_write,
+    persist_key_write_intent,
 )
 from long_haul.resource_policy import (
     PolicyRule,
@@ -28,6 +39,21 @@ from long_haul.resource_policy import (
 )
 
 VAULT = "https://synthetic-vault.vault.azure.net"
+
+
+class KeyVaultEvaluatorKeys(ProductionKeyVaultEvaluatorKeys):
+    """Test-only controller persists and independently admits synthetic intents."""
+
+    def __init__(self, client, vault):
+        super().__init__(client, vault)
+        self._test_root = tempfile.TemporaryDirectory(prefix="synthetic-key-intent-")
+
+    def freeze(self, source, contract, retention, reading):
+        prepared = self.prepare(source, contract)
+        root = Path(self._test_root.name)
+        persist_key_write_intent(root, prepared.intent)
+        grant = KeyWriteGrant(root, prepared.intent.fingerprint)
+        return super().freeze(source, contract, retention, reading, prepared, grant)
 
 
 class FakeSecretClient:
@@ -94,6 +120,89 @@ def key_admission(source, contract, action):
         now=datetime.now(UTC) - timedelta(seconds=1),
     )
     return KeyUseAdmission(policy, policy.fingerprint, request, request.fingerprint)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="private recovery requires POSIX semantics")
+def test_production_write_requires_durable_admitted_one_shot_intent(tmp_path):
+    _, contract, _, source = setup(tmp_path, FixtureSandbox.identity)
+    root = tmp_path / "recovery"
+    root.mkdir(mode=0o700)
+    client = FakeSecretClient()
+    authority = ProductionKeyVaultEvaluatorKeys(client, VAULT)
+    prepared = authority.prepare(source, contract)
+    retention, reading = key_admission(source, contract, "retain"), key_admission(source, contract, "read")
+    grant = KeyWriteGrant(root, prepared.intent.fingerprint)
+    with pytest.raises(FileNotFoundError):
+        authority.freeze(source, contract, retention, reading, prepared, grant)
+    assert not client.calls
+    persist_key_write_intent(root, prepared.intent)
+    with pytest.raises(PermissionError, match="independently admitted"):
+        authority.freeze(source, contract, retention, reading, prepared, KeyWriteGrant(root, "sha256:" + "0" * 64))
+    assert not client.calls
+    _, reference = authority.freeze(source, contract, retention, reading, prepared, grant)
+    assert reference.name == prepared.intent.secret_name
+    with pytest.raises(FileExistsError):
+        authority.freeze(source, contract, retention, reading, prepared, grant)
+    assert [call[0] for call in client.calls] == ["set", "get"]
+
+
+@pytest.mark.skipif(os.name != "posix", reason="process-death probe requires POSIX semantics")
+def test_process_death_after_provider_write_leaves_durable_locator_and_claim(tmp_path):
+    _, contract, _, source = setup(tmp_path, FixtureSandbox.identity)
+    root = tmp_path / "recovery"
+    root.mkdir(mode=0o700)
+
+    class DyingClient(FakeSecretClient):
+        def set_secret(self, name, *_args, **_kwargs):
+            (root / "synthetic-provider-name").write_text(name)
+            os._exit(42)
+
+    authority = ProductionKeyVaultEvaluatorKeys(DyingClient(), VAULT)
+    prepared = authority.prepare(source, contract)
+    persist_key_write_intent(root, prepared.intent)
+    grant = KeyWriteGrant(root, prepared.intent.fingerprint)
+    pid = os.fork()
+    if pid == 0:
+        authority.freeze(source, contract, key_admission(source, contract, "retain"),
+                         key_admission(source, contract, "read"), prepared, grant)
+        os._exit(1)
+    _, status = os.waitpid(pid, 0)
+    assert os.waitstatus_to_exitcode(status) == 42
+    assert (root / "synthetic-provider-name").read_text() == prepared.intent.secret_name
+    assert (root / (prepared.intent.token + ".key-intent.json")).exists()
+    with pytest.raises(FileExistsError):
+        claim_key_write(root, prepared.intent, prepared.intent.fingerprint)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="private recovery requires POSIX semantics")
+def test_client_origin_is_rechecked_after_claim_before_write(tmp_path, monkeypatch):
+    _, contract, _, source = setup(tmp_path, FixtureSandbox.identity)
+    root = tmp_path / "recovery"
+    root.mkdir(mode=0o700)
+    client = FakeSecretClient()
+    authority = ProductionKeyVaultEvaluatorKeys(client, VAULT)
+    prepared = authority.prepare(source, contract)
+    persist_key_write_intent(root, prepared.intent)
+
+    def claim_then_change_origin(*args):
+        claim_key_write(*args)
+        client.vault_url = "https://other-vault.vault.azure.net"
+
+    monkeypatch.setattr(azure_evaluator_keys, "claim_key_write", claim_then_change_origin)
+    with pytest.raises(KeyVaultWriteUncertain):
+        authority.freeze(source, contract, key_admission(source, contract, "retain"),
+                         key_admission(source, contract, "read"), prepared,
+                         KeyWriteGrant(root, prepared.intent.fingerprint))
+    assert not client.calls
+    assert (root / (prepared.intent.token + ".key-claim.json")).exists()
+
+
+@pytest.mark.parametrize("module", ["evaluator_key_intent.py", "pi_workspace_intent.py"])
+def test_adapter_identity_binds_recovery_implementation(monkeypatch, module):
+    baseline = ProductionKeyVaultEvaluatorKeys.implementation_fingerprint()
+    read_bytes = Path.read_bytes
+    monkeypatch.setattr(Path, "read_bytes", lambda path: read_bytes(path) + (b" changed" if path.name == module else b""))
+    assert ProductionKeyVaultEvaluatorKeys.implementation_fingerprint() != baseline
 
 
 def test_key_vault_freeze_and_exact_version_replay(tmp_path):

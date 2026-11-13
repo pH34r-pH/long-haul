@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import re
-import secrets
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -25,8 +24,10 @@ from ..work.private_evaluator import PrivateEvaluatorProfile
 from ..work.repository_evaluation_models import (
     RepositoryEvaluationProfileV1,
     evaluator_implementation_reference,
+    work_contract_fingerprint,
 )
 from ..work.repository_models import content_digest
+from .evaluator_key_intent import EvaluatorKeyWriteIntent, claim_key_write
 
 _CONTENT_TYPE = "application/vnd.long-haul.evaluator-keys-v2+json"
 _NAME = re.compile(r"lheval-[0-9a-f]{64}\Z")
@@ -54,6 +55,22 @@ class FrozenKeyReference:
 
     def __repr__(self):
         return "FrozenKeyReference(<private>)"
+
+
+@dataclass(frozen=True, repr=False)
+class PreparedKeyWrite:
+    """In-memory secret material and the pre-write identity for trusted control."""
+
+    profile: PrivateEvaluatorProfile = field(repr=False)
+    intent: EvaluatorKeyWriteIntent = field(repr=False)
+
+
+@dataclass(frozen=True, repr=False)
+class KeyWriteGrant:
+    """Scheduler-owned recovery root and independently admitted intent fingerprint."""
+
+    recovery_root: Path = field(repr=False)
+    expected_intent_fingerprint: str = field(repr=False)
 
 
 @dataclass(frozen=True)
@@ -154,29 +171,56 @@ class KeyVaultEvaluatorKeys:
 
     @staticmethod
     def implementation_fingerprint():
-        return content_digest(Path(__file__).read_bytes())
+        root = Path(__file__).parent
+        files = ("azure_evaluator_keys.py", "evaluator_key_intent.py", "pi_workspace_intent.py")
+        return content_digest(canonical_json({name: content_digest((root / name).read_bytes())
+                                              for name in files}).encode())
 
     def _assert_client(self):
         if _vault_url(self._client.vault_url) != self._vault_url:
             raise ValueError("Key Vault client origin changed")
 
-    def freeze(self, source, contract, retention, reading):
+    def prepare(self, source, contract):
+        """Generate in-memory keys and a locator to persist before provider writes."""
+        if type(source) is not RepositoryEvaluationProfileV1:
+            raise TypeError("private evaluator keys require an exact source profile")
+        self._assert_client()
+        profile = PrivateEvaluatorProfile.generate(source)
+        intent = EvaluatorKeyWriteIntent.generate(
+            vault_url=self._vault_url, source_fingerprint=source.fingerprint,
+            contract_fingerprint=work_contract_fingerprint(contract), evaluator_fingerprint=profile.fingerprint,
+            adapter_fingerprint=self.implementation_fingerprint(),
+        )
+        return PreparedKeyWrite(profile, intent)
+
+    def freeze(self, source, contract, retention, reading, prepared, grant):
         if (type(source) is not RepositoryEvaluationProfileV1
-                or not isinstance(retention, KeyUseAdmission) or not isinstance(reading, KeyUseAdmission)):
-            raise TypeError("private evaluator keys require trusted retention and read admission")
+                or not isinstance(retention, KeyUseAdmission) or not isinstance(reading, KeyUseAdmission)
+                or type(prepared) is not PreparedKeyWrite or type(grant) is not KeyWriteGrant):
+            raise TypeError("private evaluator keys require trusted policy and write-intent admission")
         self._assert_client()
         retention.authorize(source, contract, ResourceAction.RETAIN, datetime.now(UTC))
         reading.authorize(source, contract, ResourceAction.READ, datetime.now(UTC))
-        profile = PrivateEvaluatorProfile.generate(source)
+        profile, intent = prepared.profile, prepared.intent
+        actual = (intent.vault_url, intent.source_fingerprint, intent.contract_fingerprint,
+                  intent.evaluator_fingerprint, intent.adapter_fingerprint)
+        expected = (self._vault_url, source.fingerprint, work_contract_fingerprint(contract), profile.fingerprint,
+                    self.implementation_fingerprint())
+        if type(profile) is not PrivateEvaluatorProfile or actual != expected or profile._profile.fingerprint != source.fingerprint:
+            raise ValueError("private evaluator key write intent changed")
         payload = canonical_json({"schema": "long-haul-private-evaluator-keys-v2",
                                   "source_fingerprint": source.fingerprint,
                                   "evaluator_fingerprint": profile.fingerprint,
                                   "keys": {key: value.hex() for key, value in profile._keys.items()}})
         if len(payload.encode()) > 20000:
             raise ValueError("private key record exceeds bounded size")
-        name = "lheval-" + secrets.token_hex(32)
+        name = intent.secret_name
+        claim_key_write(grant.recovery_root, intent, grant.expected_intent_fingerprint)
         version = None
         try:
+            retention.authorize(source, contract, ResourceAction.RETAIN, datetime.now(UTC))
+            reading.authorize(source, contract, ResourceAction.READ, datetime.now(UTC))
+            self._assert_client()
             secret = self._client.set_secret(name, payload, enabled=True, content_type=_CONTENT_TYPE,
                                               logging_enable=False, retry_total=0)
             version = secret.properties.version
@@ -192,7 +236,8 @@ class KeyVaultEvaluatorKeys:
             reading.authorize(source, contract, ResourceAction.READ, datetime.now(UTC))
         # A provider failure or interruption may follow a successful write and
         # may contain the request body. Retain an opaque handle without retrying.
-        # Abrupt process death still requires a durable pre-write intent.
+        # The scheduler-admitted intent and one-shot claim survive process death
+        # only if the supplied recovery directory is durable and trusted.
         except BaseException:  # noqa: BLE001 -- cancellation must not lose the recovery handle.
             raise KeyVaultWriteUncertain(name, version if isinstance(version, str) and _VERSION.fullmatch(version) else None) from None
         return profile, reference
