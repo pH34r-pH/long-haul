@@ -7,6 +7,7 @@ The directory must itself be durable and privately owned by trusted control.
 from __future__ import annotations
 
 import os
+import re
 import secrets
 import stat
 from pathlib import Path
@@ -68,6 +69,36 @@ def persist_key_write_intent(root: Path, intent: EvaluatorKeyWriteIntent):
     return root / (intent.token + ".key-intent.json")
 
 
+def _read_private(directory, name, limit):
+    descriptor = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
+    with os.fdopen(descriptor, "rb") as source:
+        metadata = os.fstat(source.fileno())
+        if (not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.geteuid()
+                or metadata.st_nlink != 1 or metadata.st_mode & 0o077 or metadata.st_size > limit):
+            raise PermissionError("key recovery record is not private and bounded")
+        data = source.read(limit + 1)
+    if len(data) > limit:
+        raise PermissionError("key recovery record is not private and bounded")
+    return data
+
+
+def load_claimed_key_intent(root: Path, token: str, expected_fingerprint: str):
+    """Load a claimed intent only against an independently retained identity."""
+    if not isinstance(token, str) or re.fullmatch(r"[0-9a-f]{64}", token) is None:
+        raise ValueError("invalid key recovery token")
+    directory = _open_private_root(root)
+    try:
+        data = _read_private(directory, token + ".key-intent.json", 16384)
+        intent = EvaluatorKeyWriteIntent.model_validate_json(data)
+        claim = _read_private(directory, token + ".key-claim.json", 128)
+    finally:
+        os.close(directory)
+    if (intent.token != token or intent.fingerprint != expected_fingerprint
+            or claim != intent.fingerprint.encode("ascii")):
+        raise PermissionError("key recovery intent is not independently admitted and claimed")
+    return intent
+
+
 def claim_key_write(root: Path, intent: EvaluatorKeyWriteIntent, expected_fingerprint: str):
     """Sync a one-shot write claim after matching independent scheduler admission."""
     intent = _validated_intent(intent)
@@ -75,14 +106,8 @@ def claim_key_write(root: Path, intent: EvaluatorKeyWriteIntent, expected_finger
         raise PermissionError("key write intent is not independently admitted")
     directory = _open_private_root(root)
     try:
-        descriptor = os.open(intent.token + ".key-intent.json", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
-                             dir_fd=directory)
-        with os.fdopen(descriptor, "rb") as source:
-            metadata = os.fstat(source.fileno())
-            if (not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.geteuid()
-                    or metadata.st_nlink != 1 or metadata.st_mode & 0o077 or metadata.st_size > 16384):
-                raise PermissionError("key write intent is not private and bounded")
-            persisted = EvaluatorKeyWriteIntent.model_validate_json(source.read(16385))
+        data = _read_private(directory, intent.token + ".key-intent.json", 16384)
+        persisted = EvaluatorKeyWriteIntent.model_validate_json(data)
         if persisted != intent or persisted.fingerprint != expected_fingerprint:
             raise PermissionError("key write intent differs from scheduler admission")
         _write_once(directory, intent.token + ".key-claim.json", persisted.fingerprint.encode("ascii"))

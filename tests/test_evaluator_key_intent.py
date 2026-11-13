@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from long_haul.adapters.evaluator_key_intent import (
     EvaluatorKeyWriteIntent,
     claim_key_write,
+    load_claimed_key_intent,
     persist_key_write_intent,
 )
 
@@ -28,10 +29,27 @@ def test_intent_is_private_persistent_and_claim_is_one_shot(tmp_path, intent):
     path = persist_key_write_intent(tmp_path, intent)
     assert path.stat().st_mode & 0o777 == 0o600
     claim_key_write(tmp_path, intent, intent.fingerprint)
+    assert load_claimed_key_intent(tmp_path, intent.token, intent.fingerprint) == intent
     marker = tmp_path / (intent.token + ".key-claim.json")
     assert marker.read_text() == intent.fingerprint and marker.stat().st_mode & 0o777 == 0o600
     with pytest.raises(FileExistsError):
         claim_key_write(tmp_path, intent, intent.fingerprint)
+
+
+def test_recovery_requires_an_exact_private_claim(tmp_path, intent):
+    tmp_path.chmod(0o700)
+    persist_key_write_intent(tmp_path, intent)
+    with pytest.raises(FileNotFoundError):
+        load_claimed_key_intent(tmp_path, intent.token, intent.fingerprint)
+    claim_key_write(tmp_path, intent, intent.fingerprint)
+    with pytest.raises(PermissionError):
+        load_claimed_key_intent(tmp_path, intent.token, "sha256:" + "0" * 64)
+    with pytest.raises(ValueError):
+        load_claimed_key_intent(tmp_path, "../outside", intent.fingerprint)
+    marker = tmp_path / (intent.token + ".key-claim.json")
+    marker.write_text("wrong")
+    with pytest.raises(PermissionError):
+        load_claimed_key_intent(tmp_path, intent.token, intent.fingerprint)
 
 
 def test_claim_requires_independent_exact_fingerprint_and_matching_intent(tmp_path, intent):

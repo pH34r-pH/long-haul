@@ -9,6 +9,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from itertools import islice
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -27,7 +28,11 @@ from ..work.repository_evaluation_models import (
     work_contract_fingerprint,
 )
 from ..work.repository_models import content_digest
-from .evaluator_key_intent import EvaluatorKeyWriteIntent, claim_key_write
+from .evaluator_key_intent import (
+    EvaluatorKeyWriteIntent,
+    claim_key_write,
+    load_claimed_key_intent,
+)
 
 _CONTENT_TYPE = "application/vnd.long-haul.evaluator-keys-v2+json"
 _NAME = re.compile(r"lheval-[0-9a-f]{64}\Z")
@@ -126,6 +131,19 @@ def _metadata(secret, reference, now):
         raise ValueError("private key version is not yet active")
     if properties.expires_on and (properties.expires_on.tzinfo is None or now >= properties.expires_on):
         raise ValueError("private key version is expired")
+
+
+def _sole_version(client, vault_url, name):
+    versions = list(islice(client.list_properties_of_secret_versions(
+        name, max_page_size=2, logging_enable=False, retry_total=0), 2))
+    if len(versions) != 1:
+        raise ValueError("private key recovery requires exactly one provider version")
+    version = versions[0].version
+    if not isinstance(version, str) or _VERSION.fullmatch(version) is None:
+        raise ValueError("private key recovery version identity differs")
+    if versions[0].id != f"{vault_url}/secrets/{name}/{version}":
+        raise ValueError("private key recovery version identity differs")
+    return version
 
 
 def _unique_object(pairs):
@@ -263,3 +281,34 @@ class KeyVaultEvaluatorKeys:
             raise ValueError("private key version is unavailable or invalid") from None
         admission.authorize(source, contract, ResourceAction.READ, datetime.now(UTC))
         return profile
+
+    def recover(self, source, contract, admission, grant, token):
+        """Read one exact claimed version; never create, retry or delete a secret."""
+        if (type(source) is not RepositoryEvaluationProfileV1 or not isinstance(admission, KeyUseAdmission)
+                or type(grant) is not KeyWriteGrant):
+            raise TypeError("private key recovery requires trusted read and intent admission")
+        self._assert_client()
+        intent = load_claimed_key_intent(grant.recovery_root, token, grant.expected_intent_fingerprint)
+        actual = (intent.vault_url, intent.source_fingerprint, intent.contract_fingerprint, intent.adapter_fingerprint)
+        expected = (self._vault_url, source.fingerprint, work_contract_fingerprint(contract),
+                    self.implementation_fingerprint())
+        if actual != expected:
+            raise PermissionError("private key recovery lacks an exact current binding")
+        admission.authorize(source, contract, ResourceAction.READ, datetime.now(UTC))
+        try:
+            self._assert_client()
+            version = _sole_version(self._client, self._vault_url, intent.secret_name)
+            reference = _reference(self._vault_url, intent.secret_name, version, intent.evaluator_fingerprint,
+                                   intent.adapter_fingerprint)
+            admission.authorize(source, contract, ResourceAction.READ, datetime.now(UTC))
+            self._assert_client()
+            secret = self._client.get_secret(intent.secret_name, version, logging_enable=False, retry_total=0)
+            _metadata(secret, reference, datetime.now(UTC))
+            profile = _decode(source, reference, secret.value)
+            self._assert_client()
+            if _sole_version(self._client, self._vault_url, intent.secret_name) != version:
+                raise ValueError("private key recovery version changed")
+        except Exception:  # noqa: BLE001 -- provider exceptions may disclose private locators or payloads.
+            raise ValueError("private key recovery is unavailable or ambiguous") from None
+        admission.authorize(source, contract, ResourceAction.READ, datetime.now(UTC))
+        return profile, reference

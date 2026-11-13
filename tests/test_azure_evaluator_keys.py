@@ -91,6 +91,12 @@ class FakeSecretClient:
             return SimpleNamespace(id=secret.id, properties=secret.properties, value="not-json")
         return secret
 
+    def list_properties_of_secret_versions(self, name, *, max_page_size, logging_enable, retry_total):
+        assert max_page_size == 2 and logging_enable is False and retry_total == 0
+        self.calls.append(("list", name))
+        return iter(SimpleNamespace(id=secret.id, version=version)
+                    for (record_name, version), secret in self.records.items() if record_name == name)
+
 
 class SDKModelSecretClient(FakeSecretClient):
     """Exercise real pinned SDK response models without network or credentials."""
@@ -103,6 +109,11 @@ class SDKModelSecretClient(FakeSecretClient):
         secret = KeyVaultSecret(properties, value)
         self.records[(name, properties.version)] = secret
         return secret
+
+    def list_properties_of_secret_versions(self, name, *, max_page_size, logging_enable, retry_total):
+        assert max_page_size == 2 and logging_enable is False and retry_total == 0
+        self.calls.append(("list", name))
+        return iter(secret.properties for (record_name, _), secret in self.records.items() if record_name == name)
 
 
 def key_admission(source, contract, action):
@@ -195,6 +206,79 @@ def test_client_origin_is_rechecked_after_claim_before_write(tmp_path, monkeypat
                          KeyWriteGrant(root, prepared.intent.fingerprint))
     assert not client.calls
     assert (root / (prepared.intent.token + ".key-claim.json")).exists()
+
+
+@pytest.mark.skipif(os.name != "posix", reason="private recovery requires POSIX semantics")
+def test_recover_after_lost_write_response_uses_exact_admitted_version(tmp_path):
+    _, contract, _, source = setup(tmp_path, FixtureSandbox.identity)
+    root = tmp_path / "recovery"
+    root.mkdir(mode=0o700)
+    client = FakeSecretClient()
+    authority = ProductionKeyVaultEvaluatorKeys(client, VAULT)
+    prepared = authority.prepare(source, contract)
+    intent = prepared.intent
+    persist_key_write_intent(root, intent)
+    grant = KeyWriteGrant(root, intent.fingerprint)
+    client.fail_after_set = True
+    with pytest.raises(KeyVaultWriteUncertain):
+        authority.freeze(source, contract, key_admission(source, contract, "retain"),
+                         key_admission(source, contract, "read"), prepared, grant)
+    del prepared, authority
+    restarted = ProductionKeyVaultEvaluatorKeys(client, VAULT)
+    profile, reference = restarted.recover(source, contract, key_admission(source, contract, "read"), grant, intent.token)
+    assert profile.fingerprint == intent.evaluator_fingerprint
+    assert reference.name == intent.secret_name and reference.version == "a" * 32
+    assert [call[0] for call in client.calls] == ["set", "list", "get", "list"]
+
+
+@pytest.mark.skipif(os.name != "posix", reason="private recovery requires POSIX semantics")
+def test_recovery_accepts_pinned_sdk_version_property_models_offline(tmp_path):
+    _, contract, _, source = setup(tmp_path, FixtureSandbox.identity)
+    root = tmp_path / "recovery"
+    root.mkdir(mode=0o700)
+    client = SDKModelSecretClient()
+    authority = ProductionKeyVaultEvaluatorKeys(client, VAULT)
+    prepared = authority.prepare(source, contract)
+    persist_key_write_intent(root, prepared.intent)
+    grant = KeyWriteGrant(root, prepared.intent.fingerprint)
+    _, original = authority.freeze(source, contract, key_admission(source, contract, "retain"),
+                                   key_admission(source, contract, "read"), prepared, grant)
+    profile, recovered = authority.recover(source, contract, key_admission(source, contract, "read"),
+                                           grant, prepared.intent.token)
+    assert recovered == original and profile.fingerprint == prepared.intent.evaluator_fingerprint
+
+
+@pytest.mark.skipif(os.name != "posix", reason="private recovery requires POSIX semantics")
+@pytest.mark.parametrize("failure", ["missing", "multiple", "tampered", "revoked", "concurrent-version"])
+def test_recovery_rejects_ambiguous_or_unauthorized_provider_state(tmp_path, failure):
+    _, contract, _, source = setup(tmp_path, FixtureSandbox.identity)
+    root = tmp_path / "recovery"
+    root.mkdir(mode=0o700)
+    client = FakeSecretClient()
+    authority = ProductionKeyVaultEvaluatorKeys(client, VAULT)
+    prepared = authority.prepare(source, contract)
+    intent = prepared.intent
+    persist_key_write_intent(root, intent)
+    grant = KeyWriteGrant(root, intent.fingerprint)
+    authority.freeze(source, contract, key_admission(source, contract, "retain"),
+                     key_admission(source, contract, "read"), prepared, grant)
+    original = client.records[(intent.secret_name, "a" * 32)]
+    if failure == "missing":
+        client.records.clear()
+    elif failure == "multiple":
+        client.records[(intent.secret_name, "b" * 32)] = original
+    elif failure == "tampered":
+        client.tamper_read = True
+    reading = key_admission(source, contract, "read")
+    if failure == "revoked":
+        client.on_get = lambda: setattr(reading.policy, "lifecycle", ResourceLifecycle.RETRACTED)
+    elif failure == "concurrent-version":
+        client.on_get = lambda: client.records.update({(intent.secret_name, "b" * 32): original})
+    before = len(client.calls)
+    with pytest.raises((ValueError, PermissionError)):
+        authority.recover(source, contract, reading, grant, intent.token)
+    assert all(call[0] in {"list", "get"} for call in client.calls[before:])
+    assert sum(call[0] == "set" for call in client.calls) == 1
 
 
 @pytest.mark.parametrize("module", ["evaluator_key_intent.py", "pi_workspace_intent.py"])
