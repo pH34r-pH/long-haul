@@ -2966,6 +2966,25 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839287611",
       "evidence": "All hosted checks passed or were intentionally skipped on that exact head.",
       "remaining": "Subsequent projected-source change not included; full security acceptance remains open."
+    },
+    {
+      "at": "2026-11-13T00:02:23.499591+00:00",
+      "task": "lh-245-security",
+      "status": "full_candidate_input_admission_draft",
+      "pull_request": 265,
+      "tested_code_commit": "bc0e44b",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839586109",
+      "evidence": "Production runner rejects missing or denied file admission before execution and rechecks declared lineage. Full Linux suite 814 passed, 64 skipped, plus Ruff.",
+      "remaining": "Trusted lineage completeness and caller authentication, durable receipts, revocation races, host trust, containment, API migration and exact-head hosted checks remain open."
+    },
+    {
+      "at": "2026-11-13T00:02:23.499591+00:00",
+      "task": "lh-245-security",
+      "status": "prior_projected_lineage_hosted_checks_passed",
+      "head": "30b6364784afaeada466f3a2a8e21c6685f5dbc4",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839457681",
+      "evidence": "All hosted checks passed or were intentionally skipped for that exact head.",
+      "remaining": "New candidate input admission is not included; security and private-use acceptance remain open."
     }
   ]
 }
