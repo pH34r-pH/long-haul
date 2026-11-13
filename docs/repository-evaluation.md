@@ -14,6 +14,8 @@ Evaluation materializes the complete frozen candidate, including unchanged files
 
 The registry permits at most 4096 total lineage entries per candidate. The registry is a trusted-control assertion: this implementation does not authenticate its caller or prove that the asserted lineage is complete. Rechecking after a command prevents acceptance following a detected revocation, but cannot retract bytes already made visible during execution. Input-policy decisions are not yet recorded as a durable private receipt, and concurrent revocation, real private authority and sandbox containment remain separate qualification gates.
 
+The evaluator includes input admission and sandbox readiness in its work-contract wall budget and aborts before starting another check once the budget is exhausted. This is a cooperative check, not a hard deadline: it cannot interrupt an in-progress policy decision, workspace operation or sandbox command. Commands retain their separately configured sandbox timeouts, and an external supervisor must enforce a hard aggregate deadline and verify cleanup.
+
 The worker-visible profile contains requirement IDs/descriptions/classes and public check definitions. Sealed commands, input values and expected results remain outside the worker workspace and tool catalog. The frozen profile digest and safe requirement references preserve identity without disclosing those definitions.
 
 | Class | Execution authority |

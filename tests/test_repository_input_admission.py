@@ -1,14 +1,19 @@
 """Synthetic per-file evaluator admission; trusted lineage is supplied by control."""
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
 import pytest
 from repository_evaluator_fixture import evaluation_input_admission, setup
 from test_repository_evaluator import FixtureSandbox
 
 from long_haul.resource_policy import ResourceAction, ResourceLifecycle
+from long_haul.work import repository_evaluator
 from long_haul.work.repository_evaluator import RepositoryEvaluationRunner
-from long_haul.work.repository_input_admission import MAX_EVALUATION_LINEAGE_ENTRIES
+from long_haul.work.repository_input_admission import (
+    MAX_EVALUATION_LINEAGE_ENTRIES,
+    CandidateInputAdmission,
+)
 
 
 def test_exact_candidate_admission_covers_unchanged_and_changed_files(tmp_path):
@@ -155,3 +160,48 @@ def test_runner_denies_unmodified_file_with_explicit_evaluation_prohibition(tmp_
             candidate_admission=replace(admission, files=tuple(entries)),
         )
     assert not sandbox.calls
+
+
+def test_preflight_admission_consumes_wall_budget_before_materialization(tmp_path, monkeypatch):
+    _, contract, snapshot, profile = setup(tmp_path, FixtureSandbox.identity)
+    admission = evaluation_input_admission(contract, snapshot, profile, "attempt")
+    clock = SimpleNamespace(value=0.0)
+    monkeypatch.setattr(repository_evaluator, "time", SimpleNamespace(monotonic=lambda: clock.value))
+    authorize = CandidateInputAdmission.authorize
+
+    def slow_admission(self, *args):
+        authorize(self, *args)
+        clock.value += contract.budget.wall_seconds
+
+    monkeypatch.setattr(CandidateInputAdmission, "authorize", slow_admission)
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    sandbox = FixtureSandbox(profile.environment)
+    with pytest.raises(TimeoutError, match="wall budget"):
+        RepositoryEvaluationRunner(sandbox, scratch_root=scratch).evaluate(
+            contract, snapshot, profile, attempt_id="attempt", packet_id="packet", candidate_admission=admission
+        )
+    assert not sandbox.calls and not list(scratch.iterdir())
+
+
+def test_expired_wall_budget_prevents_later_check_and_cleans_workspace(tmp_path, monkeypatch):
+    _, contract, snapshot, profile = setup(tmp_path, FixtureSandbox.identity)
+    admission = evaluation_input_admission(contract, snapshot, profile, "attempt")
+    clock = SimpleNamespace(value=0.0)
+    monkeypatch.setattr(repository_evaluator, "time", SimpleNamespace(monotonic=lambda: clock.value))
+    observe = repository_evaluator._observe_check
+
+    def slow_observation(*args):
+        result = observe(*args)
+        clock.value += contract.budget.wall_seconds
+        return result
+
+    monkeypatch.setattr(repository_evaluator, "_observe_check", slow_observation)
+    scratch = tmp_path / "scratch"
+    scratch.mkdir()
+    sandbox = FixtureSandbox(profile.environment)
+    with pytest.raises(TimeoutError, match="wall budget"):
+        RepositoryEvaluationRunner(sandbox, scratch_root=scratch).evaluate(
+            contract, snapshot, profile, attempt_id="attempt", packet_id="packet", candidate_admission=admission
+        )
+    assert len(sandbox.calls) == 1 and not list(scratch.iterdir())
