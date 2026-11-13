@@ -1,5 +1,13 @@
 name: CI
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      retain_native_assets:
+        description: Retain the qualified CPU smoke bundle for offline reuse
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -25,7 +33,8 @@ jobs:
     needs: test
     if: >-
       (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.retain_native_assets)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     concurrency:
@@ -143,6 +152,7 @@ jobs:
             sha256sum --check --strict SHA256SUMS
           )
       - name: Retain reusable native assets after successful qualification only
+        if: github.event_name == 'workflow_dispatch' && inputs.retain_native_assets
         uses: actions/upload-artifact@v4
         with:
           name: native-cpu-assets-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
