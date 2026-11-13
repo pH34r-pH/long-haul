@@ -208,17 +208,21 @@ def test_client_origin_is_rechecked_after_claim_before_write(tmp_path, monkeypat
     assert (root / (prepared.intent.token + ".key-claim.json")).exists()
 
 
-@pytest.mark.skipif(os.name != "posix", reason="private recovery requires POSIX semantics")
-def test_recover_after_lost_write_response_uses_exact_admitted_version(tmp_path):
+def recovery_setup(tmp_path, client):
     _, contract, _, source = setup(tmp_path, FixtureSandbox.identity)
     root = tmp_path / "recovery"
     root.mkdir(mode=0o700)
-    client = FakeSecretClient()
     authority = ProductionKeyVaultEvaluatorKeys(client, VAULT)
     prepared = authority.prepare(source, contract)
+    persist_key_write_intent(root, prepared.intent)
+    return source, contract, authority, prepared, KeyWriteGrant(root, prepared.intent.fingerprint)
+
+
+@pytest.mark.skipif(os.name != "posix", reason="private recovery requires POSIX semantics")
+def test_recover_after_lost_write_response_uses_exact_admitted_version(tmp_path):
+    client = FakeSecretClient()
+    source, contract, authority, prepared, grant = recovery_setup(tmp_path, client)
     intent = prepared.intent
-    persist_key_write_intent(root, intent)
-    grant = KeyWriteGrant(root, intent.fingerprint)
     client.fail_after_set = True
     with pytest.raises(KeyVaultWriteUncertain):
         authority.freeze(source, contract, key_admission(source, contract, "retain"),
@@ -233,14 +237,8 @@ def test_recover_after_lost_write_response_uses_exact_admitted_version(tmp_path)
 
 @pytest.mark.skipif(os.name != "posix", reason="private recovery requires POSIX semantics")
 def test_recovery_accepts_pinned_sdk_version_property_models_offline(tmp_path):
-    _, contract, _, source = setup(tmp_path, FixtureSandbox.identity)
-    root = tmp_path / "recovery"
-    root.mkdir(mode=0o700)
     client = SDKModelSecretClient()
-    authority = ProductionKeyVaultEvaluatorKeys(client, VAULT)
-    prepared = authority.prepare(source, contract)
-    persist_key_write_intent(root, prepared.intent)
-    grant = KeyWriteGrant(root, prepared.intent.fingerprint)
+    source, contract, authority, prepared, grant = recovery_setup(tmp_path, client)
     _, original = authority.freeze(source, contract, key_admission(source, contract, "retain"),
                                    key_admission(source, contract, "read"), prepared, grant)
     profile, recovered = authority.recover(source, contract, key_admission(source, contract, "read"),
@@ -251,15 +249,9 @@ def test_recovery_accepts_pinned_sdk_version_property_models_offline(tmp_path):
 @pytest.mark.skipif(os.name != "posix", reason="private recovery requires POSIX semantics")
 @pytest.mark.parametrize("failure", ["missing", "multiple", "tampered", "revoked", "concurrent-version"])
 def test_recovery_rejects_ambiguous_or_unauthorized_provider_state(tmp_path, failure):
-    _, contract, _, source = setup(tmp_path, FixtureSandbox.identity)
-    root = tmp_path / "recovery"
-    root.mkdir(mode=0o700)
     client = FakeSecretClient()
-    authority = ProductionKeyVaultEvaluatorKeys(client, VAULT)
-    prepared = authority.prepare(source, contract)
+    source, contract, authority, prepared, grant = recovery_setup(tmp_path, client)
     intent = prepared.intent
-    persist_key_write_intent(root, intent)
-    grant = KeyWriteGrant(root, intent.fingerprint)
     authority.freeze(source, contract, key_admission(source, contract, "retain"),
                      key_admission(source, contract, "read"), prepared, grant)
     original = client.records[(intent.secret_name, "a" * 32)]
