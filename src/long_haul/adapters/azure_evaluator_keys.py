@@ -305,6 +305,7 @@ class KeyVaultEvaluatorKeys:
             secret = self._client.get_secret(intent.secret_name, version, logging_enable=False, retry_total=0)
             _metadata(secret, reference, datetime.now(UTC))
             profile = _decode(source, reference, secret.value)
+            admission.authorize(source, contract, ResourceAction.READ, datetime.now(UTC))
             self._assert_client()
             if _sole_version(self._client, self._vault_url, intent.secret_name) != version:
                 raise ValueError("private key recovery version changed")

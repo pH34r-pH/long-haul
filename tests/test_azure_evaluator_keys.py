@@ -270,6 +270,8 @@ def test_recovery_rejects_ambiguous_or_unauthorized_provider_state(tmp_path, fai
     with pytest.raises((ValueError, PermissionError)):
         authority.recover(source, contract, reading, grant, intent.token)
     assert all(call[0] in {"list", "get"} for call in client.calls[before:])
+    if failure == "revoked":
+        assert [call[0] for call in client.calls[before:]] == ["list", "get"]
     assert sum(call[0] == "set" for call in client.calls) == 1
 
 
