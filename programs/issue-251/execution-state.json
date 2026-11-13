@@ -197,14 +197,13 @@
           },
           "current_draft": {
             "pull_request": 265,
-            "head": "9b9184f0d7c93e5769d542315411c5d6e66b2c1a",
             "status": "draft",
-            "previous_checked_head": "3dbe44f",
-            "previous_checks": "all hosted checks passed; package/release intentionally skipped",
-            "current_head_checks": "all hosted checks passed; package/release intentionally skipped",
-            "evidence": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6837419503",
-            "remaining": "Durable evaluator recovery, authenticated host/daemon control, external attachment fencing and private-work containment remain unqualified.",
-            "checks_evidence": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6837558535"
+            "last_observed_head": "43c49bc7ed6d16198294f34a898dcb301c9e72b5",
+            "last_observed_at": "2026-11-13T00:45:26.527177+00:00",
+            "observed_checks": "Pi qualification and pinned CPU parity still running; other applicable checks passed or were skipped. Newer code and ledger commits require their own hosted checks.",
+            "tested_code_commit": "715125f",
+            "evidence": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6840333447",
+            "remaining": "Real private authority, trusted scheduler and provider, verified retained build, host-loss recovery, cross-host fencing, lifecycle, hard deadlines and independent containment remain unqualified."
           }
         },
         {
@@ -3034,6 +3033,16 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6840246916",
       "evidence": "A missing-record exception exposed a synthetic locator before the fix. Generic private record errors now cover missing, duplicate and malformed records; Linux full suite 845 passed, 64 skipped, Ruff/Lizard/jscpd passed.",
       "remaining": "This is not general log redaction. Trusted scheduler/provider, retained old builds, host-loss recovery, concurrency, lifecycle, hard deadlines and exact-head hosted checks remain open."
+    },
+    {
+      "at": "2026-11-13T00:45:26.527177+00:00",
+      "task": "lh-245-security",
+      "status": "key_adapter_sdk_version_identity_draft",
+      "pull_request": 265,
+      "tested_code_commit": "715125f",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6840333447",
+      "evidence": "SDK version-change regression failed before fix; full Linux suite 856 passed, 64 skipped before two added assertions, then 15 focused identity cases passed. Ruff, Lizard and LF-normalized jscpd passed.",
+      "remaining": "Version metadata is not package-byte, loaded-code, host or client attestation. Old intents require original admitted runtime; all private-use and exact-head CI gates remain open."
     }
   ]
 }
