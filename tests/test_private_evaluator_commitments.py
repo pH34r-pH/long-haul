@@ -4,7 +4,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from repository_evaluator_fixture import git, profile, setup
+from repository_evaluator_fixture import SyntheticEvaluationRunner, git, profile, setup
 from test_repository_evaluator import FixtureSandbox
 
 from long_haul.resource_policy import (
@@ -23,7 +23,6 @@ from long_haul.work.private_evaluator import (
 from long_haul.work.repository_candidate import freeze_repository_candidate
 from long_haul.work.repository_evaluation_models import work_contract_fingerprint
 from long_haul.work.repository_evaluator import (
-    RepositoryEvaluationRunner,
     private_repository_evidence_event,
     public_evaluator_reference,
     repository_evidence_event,
@@ -34,6 +33,8 @@ from long_haul.work.repository_evidence_admission import (
     evidence_packet_digest,
 )
 from long_haul.work.repository_models import DigestReference, content_digest
+
+RepositoryEvaluationRunner = SyntheticEvaluationRunner
 
 
 def synthetic_profile(hidden):

@@ -29,6 +29,7 @@ from .repository_evaluation_models import (
     work_contract_fingerprint,
 )
 from .repository_evidence_admission import PublicEvidenceAdmission
+from .repository_input_admission import CandidateInputAdmission
 from .repository_models import DigestReference, content_digest
 from .repository_sandbox import SandboxAdapter, SandboxCleanupRequired, SandboxResult
 
@@ -147,21 +148,30 @@ class RepositoryEvaluationRunner:
         self.scratch_root = scratch_root
 
     def evaluate(self, contract: WorkContract, snapshot: CandidateSnapshot,
-                 profile: RepositoryEvaluationProfileV1, *, attempt_id: str, packet_id: str):
+                 profile: RepositoryEvaluationProfileV1, *, attempt_id: str, packet_id: str,
+                 candidate_admission: CandidateInputAdmission | None = None):
         if isinstance(profile, PrivateEvaluatorProfile):
             raise TypeError("private profiles require evaluate_private and an explicit private evidence sink")
-        return self._evaluate(contract, snapshot, profile, attempt_id=attempt_id, packet_id=packet_id)
+        return self._evaluate(contract, snapshot, profile, attempt_id=attempt_id, packet_id=packet_id,
+                              candidate_admission=candidate_admission)
 
-    def _evaluate(self, contract, snapshot, profile, *, attempt_id, packet_id):
+    def _evaluate(self, contract, snapshot, profile, *, attempt_id, packet_id, candidate_admission):
         _validate_binding(contract, snapshot, profile, self.sandbox)
+        if type(candidate_admission) is not CandidateInputAdmission:
+            raise PermissionError("candidate input admission is required")
+        candidate_admission.authorize(snapshot, contract, profile, attempt_id, datetime.now(UTC))
         assert_ready = getattr(self.sandbox, "assert_ready", None)
         if callable(assert_ready):
             assert_ready()
         started = time.monotonic()
         scope_valid = all(contract.permits_path(path) for path in snapshot.candidate.changed_paths)
         with snapshot.materialize(scratch_root=self.scratch_root) as target:
-            observations = tuple(_observe_check(check, snapshot, target, self.sandbox, scope_valid, profile)
-                                 for check in profile.checks)
+            observations = []
+            for check in profile.checks:
+                candidate_admission.authorize(snapshot, contract, profile, attempt_id, datetime.now(UTC))
+                observations.append(_observe_check(check, snapshot, target, self.sandbox, scope_valid, profile))
+                candidate_admission.authorize(snapshot, contract, profile, attempt_id, datetime.now(UTC))
+            observations = tuple(observations)
         invalid = tuple(check.predicate_id + ":" + check.outcome + (":" + check.diagnostic if check.diagnostic else "") for check in observations
                         if check.outcome not in {"pass", "fail"})
         if not scope_valid:
@@ -181,12 +191,14 @@ class RepositoryEvaluationRunner:
         )
         return packet, evaluate_repository_packet(contract, packet, snapshot.candidate, profile)
 
-    def evaluate_private(self, contract, snapshot, profile, *, attempt_id, packet_id, private_sink):
+    def evaluate_private(self, contract, snapshot, profile, *, attempt_id, packet_id, private_sink,
+                         candidate_admission: CandidateInputAdmission | None = None):
         """Only authenticated control may register the private evidence sink."""
         if not isinstance(profile, PrivateEvaluatorProfile) or not isinstance(private_sink, PrivateEvidenceAdmission):
             raise TypeError("private evaluation requires a keyed profile and admitted private evidence sink")
         private_sink.authorize(contract, profile, attempt_id, datetime.now(UTC))
-        packet, evaluation = self._evaluate(contract, snapshot, profile, attempt_id=attempt_id, packet_id=packet_id)
+        packet, evaluation = self._evaluate(contract, snapshot, profile, attempt_id=attempt_id, packet_id=packet_id,
+                                            candidate_admission=candidate_admission)
         private_sink.authorize(contract, profile, attempt_id, datetime.now(UTC))
         private_sink.writer(packet)
         return _private_summary(packet, profile), evaluation

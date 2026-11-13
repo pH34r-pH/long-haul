@@ -10,6 +10,10 @@ The observed evaluator implementation reference includes its relevant source fil
 
 `AcceptancePredicate.evaluator_reference` explicitly identifies a profile-owned check without putting sealed commands into WorkContract. It cannot coexist with an executable/artifact definition. The ordinary evaluator reports these predicates as unknown; only `RepositoryEvaluationRunner` resolves them under the exact profile references in the repository extension. This leaves ordinary command meanings unchanged.
 
+Evaluation materializes the complete frozen candidate, including unchanged files outside the worker projection. Callers must now supply a `CandidateInputAdmission` from authenticated control for every candidate file before evaluation can start. Each entry binds the exact content digest and caller-attested complete policy lineage; every parent must currently allow both READ and EVALUATE for the exact evaluator, contract, mission, repository and attempt. The runner rechecks admission around each check and rejects missing, conflicting, expired or changed policy. Existing callers must supply this registry and regenerate the pinned evaluator implementation reference. Test fixtures use explicitly synthetic policies; they are not production admission.
+
+The registry permits at most 4096 total lineage entries per candidate. The registry is a trusted-control assertion: this implementation does not authenticate its caller or prove that the asserted lineage is complete. Rechecking after a command prevents acceptance following a detected revocation, but cannot retract bytes already made visible during execution. Input-policy decisions are not yet recorded as a durable private receipt, and concurrent revocation, real private authority and sandbox containment remain separate qualification gates.
+
 The worker-visible profile contains requirement IDs/descriptions/classes and public check definitions. Sealed commands, input values and expected results remain outside the worker workspace and tool catalog. The frozen profile digest and safe requirement references preserve identity without disclosing those definitions.
 
 | Class | Execution authority |

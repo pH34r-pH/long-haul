@@ -7,7 +7,12 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from pydantic import ValidationError
-from repository_evaluator_fixture import git, reference, setup
+from repository_evaluator_fixture import (
+    SyntheticEvaluationRunner,
+    git,
+    reference,
+    setup,
+)
 
 from long_haul.resource_policy import (
     PolicyRule,
@@ -28,7 +33,9 @@ from long_haul.work.repository_evaluation_models import (
     evaluator_implementation_reference,
 )
 from long_haul.work.repository_evaluator import (
-    RepositoryEvaluationRunner,
+    RepositoryEvaluationRunner as ProductionEvaluationRunner,
+)
+from long_haul.work.repository_evaluator import (
     repository_evidence_event,
 )
 from long_haul.work.repository_evidence_admission import (
@@ -46,8 +53,10 @@ from long_haul.work.repository_sandbox import (
     _startup_receipt,
 )
 
+RepositoryEvaluationRunner = SyntheticEvaluationRunner
 
-@pytest.mark.parametrize("module", ["resource_policy.py", "resource_policy_evaluator.py"])
+
+@pytest.mark.parametrize("module", ["resource_policy.py", "resource_policy_evaluator.py", "repository_input_admission.py"])
 def test_implementation_reference_binds_policy_decision_code(monkeypatch, module):
     from pathlib import Path
 
@@ -93,6 +102,18 @@ class FixtureSandbox:
         return SandboxResult(self.outcome, output, b"", 0,
                              DigestReference(reference="urn:long-haul:sandbox:" + facts.container_id,
                                              digest=facts.fingerprint), facts)
+
+
+def test_evaluator_rejects_missing_candidate_input_admission_before_execution(tmp_path):
+    _, contract, snapshot, profile = setup(tmp_path, FixtureSandbox.identity)
+    sandbox = FixtureSandbox(profile.environment)
+    scratch = tmp_path / "not-materialized"
+    scratch.mkdir()
+    with pytest.raises(PermissionError, match="candidate input admission"):
+        ProductionEvaluationRunner(sandbox, scratch_root=scratch).evaluate(
+            contract, snapshot, profile, attempt_id="unadmitted", packet_id="unadmitted"
+        )
+    assert not sandbox.calls and not list(scratch.iterdir())
 
 
 def run_fixture(tmp_path, **options):

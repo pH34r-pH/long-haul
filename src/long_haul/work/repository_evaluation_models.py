@@ -40,7 +40,7 @@ def evaluator_implementation_reference() -> DigestReference:
     files = (
         "repository_evaluation_models.py", "repository_evaluator.py", "repository_candidate.py", "repository_sandbox.py",
         "contracts.py", "evaluator.py", "repository_models.py", "repository_git.py", "private_evaluator.py",
-        "repository_evidence_admission.py",
+        "repository_evidence_admission.py", "repository_input_admission.py",
     )
     manifest = {name: content_digest((root / name).read_bytes()) for name in files}
     # Public and private evidence admission uses the shared policy implementation.

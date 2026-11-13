@@ -19,7 +19,7 @@ from pi_worker_fixture import (
     public_evaluator_admission,
     worker_setup,
 )
-from repository_evaluator_fixture import PROGRAM, environment
+from repository_evaluator_fixture import PROGRAM, SyntheticEvaluationRunner, environment
 from test_private_evaluator_commitments import evidence_admission, summary_admission
 
 from long_haul.adapters import pi_quota_worker
@@ -49,12 +49,13 @@ from long_haul.resource_policy import ResourceAction, ResourceLifecycle
 from long_haul.work import WorkCheckpoint, WorkSession, render_digest
 from long_haul.work.harness import resume_harness_attempt
 from long_haul.work.repository_evaluator import (
-    RepositoryEvaluationRunner,
     private_repository_evidence_event,
 )
 from long_haul.work.repository_models import content_digest
 from long_haul.work.repository_sandbox import DockerGVisorSandbox, _control_environment
 from long_haul.work.worker_candidate import regular_contents
+
+RepositoryEvaluationRunner = SyntheticEvaluationRunner
 
 pytestmark = pytest.mark.skipif(os.environ.get("LONG_HAUL_REQUIRE_PI_GVISOR") != "1",
                                 reason="actual Pi/gVisor qualification is mandatory in its hosted CI job")
