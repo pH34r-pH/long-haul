@@ -2995,6 +2995,25 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839859353",
       "evidence": "Evaluator counts preflight and stops before later checks after budget expiry; contract and evaluator reject nonfinite budgets. Linux suite 824 passed, 64 skipped; Ruff, Lizard and jscpd passed.",
       "remaining": "Cooperative checks do not interrupt in-flight work. Authenticated hard-deadline supervision, cleanup, trusted lineage, receipts, races, containment, caller migration and exact-head hosted checks remain open."
+    },
+    {
+      "at": "2026-11-13T00:27:01.455269+00:00",
+      "task": "lh-245-security",
+      "status": "evaluator_key_prewrite_intent_draft",
+      "pull_request": 265,
+      "tested_code_commit": "795c9f3",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6840023246",
+      "evidence": "Persisted independently admitted intent and one-shot claim precede provider writes; synthetic process death and negative path tests passed. Linux full suite 835 passed, 64 skipped; Ruff, Lizard and jscpd passed.",
+      "remaining": "Requires trusted durable POSIX root and independently authenticated scheduler admission; real Azure reconciliation, cross-host fencing, lifecycle, caller migration, exact-head CI and private-use qualification remain open."
+    },
+    {
+      "at": "2026-11-13T00:27:01.455269+00:00",
+      "task": "lh-245-security",
+      "status": "prior_evaluator_budget_hosted_checks_passed",
+      "head": "4a588c2eae1bf2097f40f039eb5436a933083911",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6840009990",
+      "evidence": "All exact-head hosted checks passed or were intentionally skipped, including synthetic Pi qualification.",
+      "remaining": "New key-intent changes were not included; containment and all private-use gates remain open."
     }
   ]
 }
