@@ -6,12 +6,17 @@ resource policy. This module does not provision Azure identities or storage.
 from __future__ import annotations
 
 import json
+import platform
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from importlib import metadata
 from itertools import islice
 from pathlib import Path
 from urllib.parse import urlsplit
+
+import pydantic
+import pydantic_core
 
 from ..resource_policy import (
     PolicyDecisionStatus,
@@ -191,8 +196,13 @@ class KeyVaultEvaluatorKeys:
     def implementation_fingerprint():
         root = Path(__file__).parent
         files = ("azure_evaluator_keys.py", "evaluator_key_intent.py", "pi_workspace_intent.py")
-        return content_digest(canonical_json({name: content_digest((root / name).read_bytes())
-                                              for name in files}).encode())
+        packages = ("azure-core", "azure-keyvault-secrets", "requests", "urllib3", "certifi", "idna",
+                    "charset-normalizer", "isodate", "typing-extensions")
+        manifest = {"files": {name: content_digest((root / name).read_bytes()) for name in files},
+                    "packages": {name: metadata.version(name) for name in packages},
+                    "python": platform.python_version(), "pydantic": pydantic.__version__,
+                    "pydantic_core": pydantic_core.__version__}
+        return content_digest(canonical_json(manifest).encode())
 
     def _assert_client(self):
         if _vault_url(self._client.vault_url) != self._vault_url:

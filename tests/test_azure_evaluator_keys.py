@@ -4,6 +4,7 @@ import os
 import tempfile
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from importlib import metadata
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -280,6 +281,47 @@ def test_adapter_identity_binds_recovery_implementation(monkeypatch, module):
     baseline = ProductionKeyVaultEvaluatorKeys.implementation_fingerprint()
     read_bytes = Path.read_bytes
     monkeypatch.setattr(Path, "read_bytes", lambda path: read_bytes(path) + (b" changed" if path.name == module else b""))
+    assert ProductionKeyVaultEvaluatorKeys.implementation_fingerprint() != baseline
+
+
+@pytest.mark.parametrize("distribution", ["azure-core", "azure-keyvault-secrets", "requests", "urllib3", "certifi",
+                                           "idna", "charset-normalizer", "isodate", "typing-extensions"])
+def test_adapter_identity_binds_sdk_and_transport_versions(monkeypatch, distribution):
+    baseline = ProductionKeyVaultEvaluatorKeys.implementation_fingerprint()
+    current_version = metadata.version
+    monkeypatch.setattr(metadata, "version", lambda name: current_version(name) + ".synthetic"
+                        if name == distribution else current_version(name))
+    assert ProductionKeyVaultEvaluatorKeys.implementation_fingerprint() != baseline
+
+
+def test_adapter_identity_fails_closed_if_sdk_metadata_is_missing(monkeypatch):
+    version = metadata.version
+
+    def missing(name):
+        if name == "azure-core":
+            raise metadata.PackageNotFoundError(name)
+        return version(name)
+
+    monkeypatch.setattr(metadata, "version", missing)
+    with pytest.raises(metadata.PackageNotFoundError):
+        ProductionKeyVaultEvaluatorKeys.implementation_fingerprint()
+
+
+def test_adapter_identity_binds_pydantic_core_version(monkeypatch):
+    import pydantic_core
+
+    baseline = ProductionKeyVaultEvaluatorKeys.implementation_fingerprint()
+    monkeypatch.setattr(pydantic_core, "__version__", pydantic_core.__version__ + ".synthetic")
+    assert ProductionKeyVaultEvaluatorKeys.implementation_fingerprint() != baseline
+
+
+@pytest.mark.parametrize("component", ["python", "pydantic"])
+def test_adapter_identity_binds_runtime_version(monkeypatch, component):
+    baseline = ProductionKeyVaultEvaluatorKeys.implementation_fingerprint()
+    if component == "python":
+        monkeypatch.setattr(azure_evaluator_keys.platform, "python_version", lambda: "synthetic-python")
+    else:
+        monkeypatch.setattr(azure_evaluator_keys.pydantic, "__version__", "synthetic-pydantic")
     assert ProductionKeyVaultEvaluatorKeys.implementation_fingerprint() != baseline
 
 

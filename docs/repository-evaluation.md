@@ -59,6 +59,8 @@ The synced files do not authenticate the scheduler, prove the directory survives
 
 An unresolved intent pins its original adapter implementation. Recovery after an upgrade requires the exact admitted implementation and dependencies; replacing the intent's fingerprint or generating unrelated keys does not recover the original write. Retained, verified old-build execution and an authorized migration procedure are not yet qualified.
 
+The adapter identity binds its relevant local source files, Python and Pydantic versions, and declared Azure SDK and HTTP transport distribution versions. Missing required distribution metadata fails closed. Version strings do not attest installed package bytes, the credential or transport object, the operating system, or all transitive dependencies; a verified runtime and client remain separate qualification requirements.
+
 The synthetic arithmetic cases are conformance fixtures, not private held-out benchmarks or evidence of agent competence. Preventing all evaluator detection is not guaranteed: filesystem/resource differences can be observed. Qualification omits evaluator-only markers, includes rotated inputs and an adversarial marker/tool-shadow test, and retains this limitation. Scientific benchmark validity and corpus contamination require #64/#246 protocols and independent evidence.
 
 ## Reproduce
