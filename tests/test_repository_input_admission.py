@@ -71,7 +71,7 @@ def test_every_declared_lineage_parent_must_allow_evaluation(tmp_path):
         admission.authorize(snapshot, contract, profile, "attempt", datetime.now(UTC))
 
 
-@pytest.mark.parametrize("now", [None, datetime(2026, 1, 1)])
+@pytest.mark.parametrize("now", [None, datetime.fromisoformat("2026-01-01T00:00:00")])
 def test_candidate_admission_rejects_invalid_clock(tmp_path, now):
     _, contract, snapshot, profile = setup(tmp_path, FixtureSandbox.identity)
     admission = evaluation_input_admission(contract, snapshot, profile, "attempt")

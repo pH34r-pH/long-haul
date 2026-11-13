@@ -17,6 +17,7 @@ from long_haul.work.repository_evaluation_models import (
     evaluator_implementation_reference,
 )
 from long_haul.work.repository_evaluator import (
+    PrivateEvaluationAdmissions,
     RepositoryEvaluationRunner,
     public_evaluator_reference,
 )
@@ -151,9 +152,8 @@ class SyntheticEvaluationRunner(RepositoryEvaluationRunner):
         return super().evaluate(contract, snapshot, profile, attempt_id=attempt_id, packet_id=packet_id,
                                 candidate_admission=candidate_admission)
 
-    def evaluate_private(self, contract, snapshot, profile, *, attempt_id, packet_id, private_sink,
-                         candidate_admission=None):
-        if candidate_admission is None and contract is not None and snapshot is not None:
-            candidate_admission = evaluation_input_admission(contract, snapshot, profile, attempt_id)
+    def evaluate_private(self, contract, snapshot, profile, *, attempt_id, packet_id, private_sink):
+        inputs = (evaluation_input_admission(contract, snapshot, profile, attempt_id)
+                  if contract is not None and snapshot is not None else None)
         return super().evaluate_private(contract, snapshot, profile, attempt_id=attempt_id, packet_id=packet_id,
-                                        private_sink=private_sink, candidate_admission=candidate_admission)
+                                        admissions=PrivateEvaluationAdmissions(inputs, private_sink))

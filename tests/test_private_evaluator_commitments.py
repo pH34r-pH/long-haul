@@ -23,9 +23,13 @@ from long_haul.work.private_evaluator import (
 from long_haul.work.repository_candidate import freeze_repository_candidate
 from long_haul.work.repository_evaluation_models import work_contract_fingerprint
 from long_haul.work.repository_evaluator import (
+    PrivateEvaluationAdmissions,
     private_repository_evidence_event,
     public_evaluator_reference,
     repository_evidence_event,
+)
+from long_haul.work.repository_evaluator import (
+    RepositoryEvaluationRunner as ProductionEvaluationRunner,
 )
 from long_haul.work.repository_evidence_admission import (
     PublicEvidenceAdmission,
@@ -167,6 +171,19 @@ def private_evaluation_fixture(tmp_path):
     snapshot = freeze_repository_candidate(root, git(root, "rev-parse", "HEAD"), contract)
     runner = RepositoryEvaluationRunner(FixtureSandbox(private.environment))
     return old_profile, private, contract, snapshot, runner
+
+
+def test_private_production_runner_requires_input_admission(tmp_path):
+    _, private, contract, snapshot, _ = private_evaluation_fixture(tmp_path)
+    packets = []
+    sink = evidence_admission(contract, private, "attempt", packets.append)
+    sandbox = FixtureSandbox(private.environment)
+    with pytest.raises(PermissionError, match="candidate input admission"):
+        ProductionEvaluationRunner(sandbox).evaluate_private(
+            contract, snapshot, private, attempt_id="attempt", packet_id="packet",
+            admissions=PrivateEvaluationAdmissions(inputs=None, evidence=sink),
+        )
+    assert not sandbox.calls and not packets
 
 
 def test_private_evaluation_redacts_hidden_output_and_rejects_raw_public_event(tmp_path):
