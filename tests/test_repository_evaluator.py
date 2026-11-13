@@ -2,11 +2,25 @@
 import json
 import subprocess
 import sys
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from pydantic import ValidationError
-from repository_evaluator_fixture import git, reference, setup
+from repository_evaluator_fixture import (
+    SyntheticEvaluationRunner,
+    git,
+    reference,
+    setup,
+)
 
+from long_haul.resource_policy import (
+    PolicyRule,
+    ResourceIdentity,
+    ResourceLifecycle,
+    ResourcePolicyProfile,
+    ResourceUseRequest,
+)
 from long_haul.work import WorkContract
 from long_haul.work.repository_candidate import freeze_repository_candidate
 from long_haul.work.repository_evaluation_models import (
@@ -16,20 +30,53 @@ from long_haul.work.repository_evaluation_models import (
     RepositoryEvidencePacketV1,
     SandboxExecutionReceipt,
     evaluate_repository_packet,
+    evaluator_implementation_reference,
 )
 from long_haul.work.repository_evaluator import (
-    RepositoryEvaluationRunner,
+    RepositoryEvaluationRunner as ProductionEvaluationRunner,
+)
+from long_haul.work.repository_evaluator import (
     repository_evidence_event,
+)
+from long_haul.work.repository_evidence_admission import (
+    PublicEvidenceAdmission,
+    evidence_packet_digest,
 )
 from long_haul.work.repository_models import DigestReference, content_digest
 from long_haul.work.repository_sandbox import (
     PYTHON_BOOTSTRAP,
     START_MARKER,
     DockerGVisorSandbox,
+    SandboxCleanupRequired,
     SandboxResult,
     _bounded_output,
     _startup_receipt,
 )
+
+RepositoryEvaluationRunner = SyntheticEvaluationRunner
+
+
+@pytest.mark.parametrize("module", ["resource_policy.py", "resource_policy_evaluator.py", "repository_input_admission.py"])
+def test_implementation_reference_binds_policy_decision_code(monkeypatch, module):
+    from pathlib import Path
+
+    baseline = evaluator_implementation_reference()
+    original = Path.read_bytes
+
+    def changed(path):
+        result = original(path)
+        return result + b"\n# synthetic change\n" if path.name == module else result
+
+    monkeypatch.setattr(Path, "read_bytes", changed)
+    assert evaluator_implementation_reference() != baseline
+
+
+def test_implementation_reference_binds_pydantic_core_version(monkeypatch):
+    import pydantic_core
+
+    baseline = evaluator_implementation_reference()
+    monkeypatch.setattr(pydantic_core, "__version__", pydantic_core.__version__ + ".synthetic")
+    assert evaluator_implementation_reference() != baseline
 
 
 class FixtureSandbox:
@@ -57,6 +104,18 @@ class FixtureSandbox:
                                              digest=facts.fingerprint), facts)
 
 
+def test_evaluator_rejects_missing_candidate_input_admission_before_execution(tmp_path):
+    _, contract, snapshot, profile = setup(tmp_path, FixtureSandbox.identity)
+    sandbox = FixtureSandbox(profile.environment)
+    scratch = tmp_path / "not-materialized"
+    scratch.mkdir()
+    with pytest.raises(PermissionError, match="candidate input admission"):
+        ProductionEvaluationRunner(sandbox, scratch_root=scratch).evaluate(
+            contract, snapshot, profile, attempt_id="unadmitted", packet_id="unadmitted"
+        )
+    assert not sandbox.calls and not list(scratch.iterdir())
+
+
 def run_fixture(tmp_path, **options):
     root, work, snapshot, profile = setup(tmp_path, FixtureSandbox.identity)
     sandbox = FixtureSandbox(profile.environment, **options)
@@ -64,6 +123,41 @@ def run_fixture(tmp_path, **options):
         work, snapshot, profile, attempt_id="attempt-1", packet_id="packet-1",
     )
     return root, work, snapshot, profile, sandbox, packet, result
+
+
+def test_evaluator_materializes_only_under_owned_scratch(tmp_path):
+    _, work, snapshot, profile = setup(tmp_path, FixtureSandbox.identity)
+    scratch = tmp_path / "owned-scratch"
+    scratch.mkdir(mode=0o700)
+
+    class ScratchSandbox(FixtureSandbox):
+        def execute(self, target, command):
+            assert target.parent == scratch
+            return super().execute(target, command)
+
+    sandbox = ScratchSandbox(profile.environment)
+    packet, _ = RepositoryEvaluationRunner(sandbox, scratch_root=scratch).evaluate(
+        work, snapshot, profile, attempt_id="attempt-1", packet_id="packet-1",
+    )
+    assert packet.validity == "valid" and sandbox.calls
+    assert list(scratch.iterdir()) == []
+
+
+def public_evidence_admission(work, profile, packet):
+    policy = ResourcePolicyProfile(
+        identity=ResourceIdentity(resource_id="urn:fixture:public-packet", resource_type="public-evidence",
+                                  content_digest=evidence_packet_digest(packet)),
+        lifecycle="active", policy_id="urn:fixture:public-packet-policy", policy_assigner="urn:fixture:controller",
+        permissions=[PolicyRule(rule_id="public", actions=["distribute"], purposes=["public-evaluator-evidence"],
+                                principal_ids=[profile.evaluator_id], contract_ids=[work.contract_id])],
+    )
+    request = ResourceUseRequest(
+        request_id="public-evidence:" + packet.evidence.attempt_id, resource_id=policy.identity.resource_id,
+        action="distribute", purpose="public-evaluator-evidence", caller_id=profile.evaluator_id,
+        contract_id=work.contract_id, mission_id=work.mission_id,
+        repository_id=work.repository_work.source.repository_id, now=datetime.now(UTC) - timedelta(seconds=1),
+    )
+    return PublicEvidenceAdmission(policy, policy.fingerprint, request, request.fingerprint)
 
 
 def test_mixed_public_sealed_policy_inspection_and_v1_round_trip(tmp_path):
@@ -78,10 +172,36 @@ def test_mixed_public_sealed_policy_inspection_and_v1_round_trip(tmp_path):
     assert "[-5, 2]" not in json.dumps(profile.public_projection())
     assert "[-5, 2]" not in work.model_dump_json() + packet.model_dump_json()
     assert all(not c.command for c in packet.evidence.checks)
-    from long_haul.events import EventStore
+    from long_haul.events import Event, EventStore
     history = EventStore(tmp_path / "events.jsonl")
-    history.append(repository_evidence_event(packet))
+    # Historical V1 records remain readable without authorizing a new disclosure.
+    historical = Event(event_type="work_evidence", payload={"repository_evidence": packet.model_dump(mode="json")})
+    history.path.write_text(historical.model_dump_json() + "\n")
     assert RepositoryEvidencePacketV1.model_validate(history.events()[0].payload["repository_evidence"]) == packet
+    with pytest.raises(TypeError, match="explicit public disclosure admission"):
+        repository_evidence_event(packet)
+    admission = public_evidence_admission(work, profile, packet)
+    history.append(repository_evidence_event(packet, contract=work, candidate=snapshot.candidate,
+                                             profile=profile, admission=admission))
+    assert RepositoryEvidencePacketV1.model_validate(history.events()[1].payload["repository_evidence"]) == packet
+    revoked = admission.policy.model_copy(update={"lifecycle": ResourceLifecycle.RETRACTED})
+    with pytest.raises(PermissionError, match="exact current disclosure admission"):
+        repository_evidence_event(packet, contract=work, candidate=snapshot.candidate, profile=profile,
+                                  admission=replace(admission, policy=revoked))
+
+
+def test_legacy_public_event_requires_current_exact_packet_distribution_policy(tmp_path):
+    _, work, snapshot, profile, _, packet, _ = run_fixture(tmp_path)
+    admission = public_evidence_admission(work, profile, packet)
+    changed = packet.model_copy(update={"producing_attempt_references": (reference("another-attempt"),)})
+    with pytest.raises(PermissionError, match="exact current disclosure admission"):
+        repository_evidence_event(changed, contract=work, candidate=snapshot.candidate,
+                                  profile=profile, admission=admission)
+    revoked = admission.policy.model_copy(update={"lifecycle": ResourceLifecycle.RETRACTED})
+    admission = replace(admission, policy=revoked, expected_policy_fingerprint=revoked.fingerprint)
+    with pytest.raises(PermissionError, match="distribution is not currently allowed"):
+        repository_evidence_event(packet, contract=work, candidate=snapshot.candidate,
+                                  profile=profile, admission=admission)
 
 
 @pytest.mark.parametrize("outcome", ["timeout", "output_limit", "resource_exhausted", "invalid"])
@@ -199,6 +319,38 @@ def test_offline_schema_shapes_match_runtime_models():
         assert retained == expected
 
 
+@pytest.mark.parametrize(("host_override", "allowed"), [
+    ({"SecurityOpt": ["no-new-privileges"]}, True), ({"SecurityOpt": ["no-new-privileges:true"]}, True),
+    ({"SecurityOpt": ["no-new-privileges:false"]}, False), ({"SecurityOpt": ["no-new-privileges=false"]}, False),
+    ({"SecurityOpt": ["no-new-privileges-disabled"]}, False),
+    ({"SecurityOpt": ["no-new-privileges", "seccomp=unconfined"]}, False),
+    ({"CapAdd": ["SYS_ADMIN"]}, False), ({"IpcMode": "host"}, False), ({"UTSMode": "host"}, False),
+    ({"UsernsMode": "host"}, False), ({"CgroupnsMode": "host"}, False),
+])
+def test_sandbox_checks_exact_security_options(tmp_path, monkeypatch, host_override, allowed):
+    from repository_evaluator_fixture import environment
+
+    adapter = DockerGVisorSandbox.__new__(DockerGVisorSandbox)
+    adapter.environment = environment()
+    adapter.image_id = "sha256:" + "a" * 64
+    limits = adapter.environment.limits
+    host = {"Runtime": adapter.environment.runtime, "NetworkMode": "none", "ReadonlyRootfs": True,
+            "Memory": limits.memory_mib * 1048576, "MemorySwap": limits.memory_mib * 1048576,
+            "PidsLimit": limits.pids, "NanoCpus": int(limits.cpus * 1000000000),
+            "CapDrop": ["ALL"], "SecurityOpt": ["no-new-privileges"], "Tmpfs": adapter._expected_tmpfs()}
+    host.update(host_override)
+    info = {"HostConfig": host, "Mounts": [], "Image": adapter.image_id,
+            "Config": {"User": "65534:65534", "AttachStdout": True, "AttachStderr": True, "OpenStdin": True}}
+    monkeypatch.setattr(adapter, "_control", lambda *args: json.dumps([info]))
+    monkeypatch.setattr(adapter, "_verify_environment", lambda *_: None)
+    monkeypatch.setattr(adapter, "_verify_mounts", lambda *_: None)
+    if allowed:
+        assert adapter._verify_configuration("fixture", tmp_path) == info
+    else:
+        with pytest.raises(ValueError, match="containment configuration mismatch"):
+            adapter._verify_configuration("fixture", tmp_path)
+
+
 def test_failed_container_cleanup_remains_invalid_and_unresolved(tmp_path, monkeypatch):
     from repository_evaluator_fixture import environment
 
@@ -217,9 +369,131 @@ def test_failed_container_cleanup_remains_invalid_and_unresolved(tmp_path, monke
     monkeypatch.setattr(adapter, "_control", control)
     monkeypatch.setattr(adapter, "_verify_configuration", lambda *args: None)
     monkeypatch.setattr(adapter, "_execute", lambda *args: SandboxResult("completed", b"3\n", b"", 0))
-    result = adapter.execute(tmp_path, CandidateCommand(program="program.py", expected_stdout_digest=reference("out").digest))
-    assert result.outcome == "invalid" and result.diagnostic == "cleanup_failed"
-    assert result.execution_receipt.cleanup == "failed" and result.execution_receipt.process_stopped is None
+    command = CandidateCommand(program="program.py", expected_stdout_digest=reference("out").digest)
+    with pytest.raises(RuntimeError, match="cleanup") as failure:
+        adapter.execute(tmp_path, command)
+    assert failure.value.container_id == "c" * 64 and failure.value.workspace == tmp_path
+    assert failure.value.lease_releasable is False
+    with pytest.raises(RuntimeError, match="cleanup"):
+        adapter.execute(tmp_path, command)
+
+
+def test_evaluator_reports_cleanup_only_after_exact_absence_census(tmp_path, monkeypatch):
+    from repository_evaluator_fixture import environment
+
+    from long_haul.work.repository_evaluation_models import CandidateCommand
+
+    adapter = DockerGVisorSandbox.__new__(DockerGVisorSandbox)
+    adapter.environment, adapter.image_id = environment(), "sha256:" + "a" * 64
+    (tmp_path / "program.py").write_text("print(3)\n")
+    calls = []
+
+    def control(*arguments):
+        calls.append(arguments)
+        if arguments[0] == "create":
+            return "c" * 64
+        if arguments[0] == "rm" or arguments[:2] == ("container", "ls"):
+            return ""
+        raise AssertionError("unexpected control operation")
+
+    monkeypatch.setattr(adapter, "_control", control)
+    monkeypatch.setattr(adapter, "_verify_configuration", lambda *args: None)
+    monkeypatch.setattr(adapter, "_execute", lambda *args: SandboxResult("completed", b"3\n", b"", 0))
+    command = CandidateCommand(program="program.py", expected_stdout_digest=reference("out").digest)
+    result = adapter.execute(tmp_path, command)
+    assert result.execution_receipt.cleanup == "removed" and result.execution_receipt.process_stopped is True
+    assert ("container", "ls", "--all", "--no-trunc", "--filter", "id=" + "c" * 64, "--format", "{{.ID}}") in calls
+
+
+@pytest.mark.parametrize("outcome", ["error", "interrupted", "malformed"])
+def test_evaluator_retains_candidate_when_container_creation_is_ambiguous(tmp_path, monkeypatch, outcome):
+    _, work, snapshot, profile = setup(tmp_path, FixtureSandbox.identity)
+    scratch = tmp_path / "owned-scratch"
+    scratch.mkdir(mode=0o700)
+    sandbox = DockerGVisorSandbox.__new__(DockerGVisorSandbox)
+    sandbox.environment, sandbox.identity = profile.environment, FixtureSandbox.identity
+    sandbox.image_id = "sha256:" + "a" * 64
+
+    def control(*arguments):
+        assert arguments[0] == "create"
+        if outcome == "error":
+            raise subprocess.CalledProcessError(1, ["docker", "create"])
+        if outcome == "interrupted":
+            raise KeyboardInterrupt()
+        return "not-a-container-id"
+
+    monkeypatch.setattr(sandbox, "_control", control)
+    runner = RepositoryEvaluationRunner(sandbox, scratch_root=scratch)
+    with pytest.raises(SandboxCleanupRequired) as failure:
+        runner.evaluate(work, snapshot, profile, attempt_id="attempt-1", packet_id="packet-1")
+    assert failure.value.container_id is None and failure.value.lease_releasable is False
+    assert (failure.value.workspace / "program.py").is_file()
+    with pytest.raises(SandboxCleanupRequired):
+        runner.evaluate(work, snapshot, profile, attempt_id="attempt-2", packet_id="packet-2")
+    assert list(scratch.iterdir()) == [failure.value.workspace]
+
+
+@pytest.mark.parametrize("census", ["present", "error", "unexpected", "interrupted", "mode_error", "mode_interrupt"])
+def test_evaluator_holds_candidate_when_acknowledged_removal_is_unconfirmed(tmp_path, monkeypatch, census):
+    from pathlib import Path
+
+    _, work, snapshot, profile = setup(tmp_path, FixtureSandbox.identity)
+    scratch = tmp_path / "owned-scratch"
+    scratch.mkdir(mode=0o700)
+    sandbox = DockerGVisorSandbox.__new__(DockerGVisorSandbox)
+    sandbox.environment, sandbox.identity = profile.environment, FixtureSandbox.identity
+    sandbox.image_id = "sha256:" + "a" * 64
+    calls = []
+    if census in {"mode_error", "mode_interrupt"}:
+        original_chmod = Path.chmod
+
+        def chmod(path, mode, *args, **kwargs):
+            if path.parent == scratch and mode == 0o700:
+                if census == "mode_interrupt":
+                    raise KeyboardInterrupt()
+                raise OSError("private chmod failure")
+            return original_chmod(path, mode, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "chmod", chmod)
+
+    def control(*arguments):
+        calls.append(arguments)
+        if arguments[0] == "create":
+            return "c" * 64
+        if arguments[0] == "rm":
+            return ""  # Acknowledgment alone does not prove the container is gone.
+        if arguments[:2] == ("container", "ls"):
+            if census == "error":
+                raise subprocess.CalledProcessError(1, ["docker", "container", "ls"])
+            if census == "unexpected":
+                raise RuntimeError("sensitive provider detail")
+            if census == "interrupted":
+                raise KeyboardInterrupt()
+            return "c" * 64 + "\n"
+        raise AssertionError("unexpected control operation")
+
+    monkeypatch.setattr(sandbox, "_control", control)
+    monkeypatch.setattr(sandbox, "_verify_configuration", lambda *args: None)
+    monkeypatch.setattr(sandbox, "_execute", lambda *args: SandboxResult("completed", b"3\n", b"", 0, startup_verified=True))
+    runner = RepositoryEvaluationRunner(sandbox, scratch_root=scratch)
+    with pytest.raises(SandboxCleanupRequired, match="cleanup") as failure:
+        runner.evaluate(
+            work, snapshot, profile, attempt_id="attempt-1", packet_id="packet-1")
+    assert failure.value.workspace.parent == scratch and failure.value.workspace.is_dir()
+    assert failure.value.lease_releasable is False
+    assert "sensitive provider detail" not in str(failure.value)
+    assert (failure.value.workspace / "program.py").is_file()
+    if census in {"mode_error", "mode_interrupt"}:
+        assert failure.value.workspace_mode_restricted is False
+    elif sys.platform != "win32":
+        assert failure.value.workspace.stat().st_mode & 0o777 == 0o700
+        assert failure.value.workspace_mode_restricted is True
+    assert sum(call[0] == "create" for call in calls) == 1
+    with pytest.raises(SandboxCleanupRequired) as retry:
+        runner.evaluate(work, snapshot, profile, attempt_id="attempt-2", packet_id="packet-2")
+    assert retry.value.workspace == failure.value.workspace
+    assert list(scratch.iterdir()) == [failure.value.workspace]
+    assert sum(call[0] == "create" for call in calls) == 1
 
 
 def test_pass_cannot_wrap_invalid_sandbox_outcome(tmp_path):

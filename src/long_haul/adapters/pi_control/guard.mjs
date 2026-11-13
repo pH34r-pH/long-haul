@@ -9,7 +9,7 @@ export default function (pi) {
       const binding = JSON.parse(process.env.LONG_HAUL_ATTEMPT_BINDING);
       allowed = await ctx.ui.confirm("long-haul-tool-admission-v1", JSON.stringify({
         ...binding, toolCallId: event.toolCallId, toolName: event.toolName, args: event.input,
-      }), { timeout: 5000, signal: ctx.signal });
+      }), { timeout: 15000, signal: ctx.signal });
     } catch {
       allowed = false;
     }

@@ -197,14 +197,13 @@
           },
           "current_draft": {
             "pull_request": 265,
-            "head": "9b9184f0d7c93e5769d542315411c5d6e66b2c1a",
             "status": "draft",
-            "previous_checked_head": "3dbe44f",
-            "previous_checks": "all hosted checks passed; package/release intentionally skipped",
-            "current_head_checks": "all hosted checks passed; package/release intentionally skipped",
-            "evidence": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6837419503",
-            "remaining": "Durable evaluator recovery, authenticated host/daemon control, external attachment fencing and private-work containment remain unqualified.",
-            "checks_evidence": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6837558535"
+            "last_observed_head": "43c49bc7ed6d16198294f34a898dcb301c9e72b5",
+            "last_observed_at": "2026-11-13T00:45:26.527177+00:00",
+            "observed_checks": "Pi qualification and pinned CPU parity still running; other applicable checks passed or were skipped. Newer code and ledger commits require their own hosted checks.",
+            "tested_code_commit": "715125f",
+            "evidence": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6840333447",
+            "remaining": "Real private authority, trusted scheduler and provider, verified retained build, host-loss recovery, cross-host fencing, lifecycle, hard deadlines and independent containment remain unqualified."
           }
         },
         {
@@ -2867,6 +2866,183 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-6837523825",
       "evidence": "All six post-merge main workflows passed.",
       "remaining": "Authentication, evaluator and source trust, independent consumer safety and full interoperability remain open."
+    },
+    {
+      "at": "2026-11-12T22:52:47.458209+00:00",
+      "task": "lh-245-security",
+      "status": "scratch_preparation_bounds_draft",
+      "pull_request": 265,
+      "tested_code_commit": "8254b09",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6838151596",
+      "evidence": "Two negative fixtures reproduced unbounded file preparation and removal of a late candidate; after correction 103 focused Linux tests and Ruff passed.",
+      "remaining": "Hosted exact-head checks, authenticated host/daemon, external fencing, race-free cleanup, process containment and private use remain unqualified; draft cannot merge on these tests alone."
+    },
+    {
+      "at": "2026-11-12T23:03:54.715529+00:00",
+      "task": "lh-245-security",
+      "status": "synthetic_frozen_clock_failure",
+      "pull_request": 265,
+      "failed_head": "43e5cd33a30953597651ef48e55d0b3c15df6510",
+      "failed_pi_run": 43324299082,
+      "fixture_fix_commit": "520fa552ed76a676ea75e0b8c92c5ca57d88b7af",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6838391046",
+      "evidence": "Hosted Pi run: 30 passed and one frozen synthetic clock was empty; truncate during repeated writes is plausible, not proven. Fixture now writes fixed-length in place while preserving nonempty and stability assertions; Node smoke and Ruff passed.",
+      "remaining": "Fresh hosted checks required; do not infer production process containment, race-free cleanup or private-use qualification."
+    },
+    {
+      "at": "2026-11-12T23:13:41.743935+00:00",
+      "task": "lh-245-security",
+      "status": "key_write_interruption_handle_draft",
+      "pull_request": 265,
+      "tested_code_commit": "7dfbb45c944f3bef06b70846577a0e8708c56a99",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6838622278",
+      "evidence": "Synthetic provider interruption after possible write previously escaped without a locator. Catchable write/readback interruptions now retain an opaque hold; 75 focused Linux tests and Ruff passed.",
+      "remaining": "No durable pre-write intent or crash/host recovery; no live Azure principal, authority, lifecycle or private-work qualification. Exact-head hosted checks required."
+    },
+    {
+      "at": "2026-11-12T23:21:52.477246+00:00",
+      "task": "lh-245-security",
+      "status": "evaluator_core_version_identity_draft",
+      "pull_request": 265,
+      "tested_code_commit": "c94a440b7edbe6f7adc675a234cc562fe877efd1",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6838832423",
+      "evidence": "Evaluator reference now binds the Pydantic Core version. Focused regression, Ruff and 78 Linux evaluator, private commitment, key adapter and Pi admission tests passed.",
+      "remaining": "Changes evaluator identities and requires regeneration/readmission of pinned profiles and dependent key references. Exact-head hosted checks and all security/private-use gates remain open."
+    },
+    {
+      "at": "2026-11-12T23:29:30.070758+00:00",
+      "task": "lh-245-security",
+      "status": "private_summary_identifier_classification_draft",
+      "pull_request": 265,
+      "tested_code_commit": "c1b36cd23062e934635cd7d01f27b02761b5a24f",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839003146",
+      "evidence": "Synthetic summary identifiers were exposed absent independent classification. Event emission now requires an exact trusted identifier classification; 79 focused Linux tests, full suite 786 passed/64 skipped, and Ruff passed.",
+      "remaining": "Trusted classification is not automatic secret detection. Model-facing and other disclosure paths, private authority, containment and recovery remain unqualified; existing callers and evaluator identities require updates. Hosted exact-head checks required."
+    },
+    {
+      "at": "2026-11-12T23:29:30.070758+00:00",
+      "task": "lh-245-security",
+      "status": "prior_evaluator_core_identity_hosted_checks_passed",
+      "head": "dd6eb0805b51a25a9b521d6d02be9d8f0e5e8276",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839006536",
+      "evidence": "All hosted checks passed or were intentionally skipped on that exact head.",
+      "remaining": "New identifier classification code was not included; full security acceptance remains open."
+    },
+    {
+      "at": "2026-11-12T23:36:33.605937+00:00",
+      "task": "lh-245-security",
+      "status": "conflicting_input_policy_draft",
+      "pull_request": 265,
+      "tested_code_commit": "cfc25a1ed432df7ca3fbf195e9a50e50e8fcc641",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839138732",
+      "evidence": "A synthetic conflict caused an earlier input policy to be overwritten before a derived-write admission. The guard now rejects conflicting policy identities before delivery; 82 focused and 788 full Linux tests passed, 64 full-suite tests skipped, and Ruff passed.",
+      "remaining": "A changed policy identity within an attempt fails closed. Exact-head hosted checks and host, containment, fencing and private-use qualification remain open."
+    },
+    {
+      "at": "2026-11-12T23:36:33.605937+00:00",
+      "task": "lh-245-security",
+      "status": "summary_identifier_hosted_checks_passed",
+      "head": "94525ccfc00ffa9e9c1894cd096e09bf165de175",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839138732",
+      "evidence": "All exact-head hosted checks passed or were intentionally skipped.",
+      "remaining": "The subsequent conflict fix was not included; full security acceptance remains open."
+    },
+    {
+      "at": "2026-11-12T23:44:49.093316+00:00",
+      "task": "lh-245-security",
+      "status": "projected_sources_derivation_draft",
+      "pull_request": 265,
+      "tested_code_commit": "064acca7efbb4b9a7be10ec28c0990e73ac912ad",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839238047",
+      "evidence": "Synthetic fixture showed projected unread source restriction omitted from derivation. All projected files are now tracked as input parents and conflicting projections deny before copying; 104 focused and 792 full Linux tests passed, 64 skipped, plus Ruff.",
+      "remaining": "Conservative rule may deny writes for unrelated projected inputs. Exact-head hosted checks, host/daemon trust, races, containment and private-use qualification remain open."
+    },
+    {
+      "at": "2026-11-12T23:44:49.093316+00:00",
+      "task": "lh-245-security",
+      "status": "prior_input_conflict_hosted_checks_passed",
+      "head": "d31737d080998e9a50fc1bfb260f4645d37efd43",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839287611",
+      "evidence": "All hosted checks passed or were intentionally skipped on that exact head.",
+      "remaining": "Subsequent projected-source change not included; full security acceptance remains open."
+    },
+    {
+      "at": "2026-11-13T00:02:23.499591+00:00",
+      "task": "lh-245-security",
+      "status": "full_candidate_input_admission_draft",
+      "pull_request": 265,
+      "tested_code_commit": "bc0e44b",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839586109",
+      "evidence": "Production runner rejects missing or denied file admission before execution and rechecks declared lineage. Full Linux suite 814 passed, 64 skipped, plus Ruff.",
+      "remaining": "Trusted lineage completeness and caller authentication, durable receipts, revocation races, host trust, containment, API migration and exact-head hosted checks remain open."
+    },
+    {
+      "at": "2026-11-13T00:02:23.499591+00:00",
+      "task": "lh-245-security",
+      "status": "prior_projected_lineage_hosted_checks_passed",
+      "head": "30b6364784afaeada466f3a2a8e21c6685f5dbc4",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839457681",
+      "evidence": "All hosted checks passed or were intentionally skipped for that exact head.",
+      "remaining": "New candidate input admission is not included; security and private-use acceptance remain open."
+    },
+    {
+      "at": "2026-11-13T00:18:20.782217+00:00",
+      "task": "lh-245-security",
+      "status": "evaluator_cooperative_budget_draft",
+      "pull_request": 265,
+      "tested_code_commit": "2f6a981",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6839859353",
+      "evidence": "Evaluator counts preflight and stops before later checks after budget expiry; contract and evaluator reject nonfinite budgets. Linux suite 824 passed, 64 skipped; Ruff, Lizard and jscpd passed.",
+      "remaining": "Cooperative checks do not interrupt in-flight work. Authenticated hard-deadline supervision, cleanup, trusted lineage, receipts, races, containment, caller migration and exact-head hosted checks remain open."
+    },
+    {
+      "at": "2026-11-13T00:27:01.455269+00:00",
+      "task": "lh-245-security",
+      "status": "evaluator_key_prewrite_intent_draft",
+      "pull_request": 265,
+      "tested_code_commit": "795c9f3",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6840023246",
+      "evidence": "Persisted independently admitted intent and one-shot claim precede provider writes; synthetic process death and negative path tests passed. Linux full suite 835 passed, 64 skipped; Ruff, Lizard and jscpd passed.",
+      "remaining": "Requires trusted durable POSIX root and independently authenticated scheduler admission; real Azure reconciliation, cross-host fencing, lifecycle, caller migration, exact-head CI and private-use qualification remain open."
+    },
+    {
+      "at": "2026-11-13T00:27:01.455269+00:00",
+      "task": "lh-245-security",
+      "status": "prior_evaluator_budget_hosted_checks_passed",
+      "head": "4a588c2eae1bf2097f40f039eb5436a933083911",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6840009990",
+      "evidence": "All exact-head hosted checks passed or were intentionally skipped, including synthetic Pi qualification.",
+      "remaining": "New key-intent changes were not included; containment and all private-use gates remain open."
+    },
+    {
+      "at": "2026-11-13T00:33:32.361190+00:00",
+      "task": "lh-245-security",
+      "status": "evaluator_key_readonly_recovery_draft",
+      "pull_request": 265,
+      "tested_code_commit": "0570f0e",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6840132650",
+      "evidence": "Claimed intent recovery reads and verifies one exact provider version and repeats the census; synthetic lost-response and negative cases passed. Linux full suite 843 passed, 64 skipped; Ruff, Lizard and jscpd passed.",
+      "remaining": "No strongly consistent or cross-host fence, authenticated provider/scheduler, hard network deadline, destructive cleanup, lifecycle, real Azure qualification or exact-head CI. Existing adapter identities require migration."
+    },
+    {
+      "at": "2026-11-13T00:40:19.004554+00:00",
+      "task": "lh-245-security",
+      "status": "key_recovery_private_error_draft",
+      "pull_request": 265,
+      "tested_code_commit": "944bd9b",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6840246916",
+      "evidence": "A missing-record exception exposed a synthetic locator before the fix. Generic private record errors now cover missing, duplicate and malformed records; Linux full suite 845 passed, 64 skipped, Ruff/Lizard/jscpd passed.",
+      "remaining": "This is not general log redaction. Trusted scheduler/provider, retained old builds, host-loss recovery, concurrency, lifecycle, hard deadlines and exact-head hosted checks remain open."
+    },
+    {
+      "at": "2026-11-13T00:45:26.527177+00:00",
+      "task": "lh-245-security",
+      "status": "key_adapter_sdk_version_identity_draft",
+      "pull_request": 265,
+      "tested_code_commit": "715125f",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6840333447",
+      "evidence": "SDK version-change regression failed before fix; full Linux suite 856 passed, 64 skipped before two added assertions, then 15 focused identity cases passed. Ruff, Lizard and LF-normalized jscpd passed.",
+      "remaining": "Version metadata is not package-byte, loaded-code, host or client attestation. Old intents require original admitted runtime; all private-use and exact-head CI gates remain open."
     }
   ]
 }

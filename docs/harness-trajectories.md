@@ -110,6 +110,16 @@ any text. Input history records only the template reference, keyed actual text
 identity, task/context references, source decisions and requested/acknowledged
 status. A denied or unacknowledged request never claims delivery. These initial
 input policies also restrict every subsequent candidate derivation.
+Within an attempt, a later prompt or native read cannot replace an earlier
+policy for the same resource identifier with a different fingerprint. The host
+denies that conflict before delivery so a later derivation cannot silently lose
+the earlier input restriction; changed authority requires a fresh admission.
+All projected files, including empty files, are treated as inputs even when no
+native read event is observed: the worker process can access projected bytes.
+Their parent policies therefore constrain subsequent derivations. Conflicting
+projected identities are rejected before any workspace bytes are copied. This
+conservative rule can deny a write because of an unrelated projected file;
+callers should project only the inputs admitted for the task.
 
 The agent's settings, model/auth configuration and system text are separately
 read-only mounts inside a disposable writable lock/cache parent. The launcher

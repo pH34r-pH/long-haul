@@ -1,0 +1,211 @@
+"""Local workspace fence tests; no distributed scheduler claim."""
+import os
+import select
+import subprocess
+import sys
+import threading
+
+import pytest
+from test_pi_workspace_cleanup import FakeDocker, setup
+
+from long_haul.adapters.pi_workspace_cleanup import WorkspaceCleanupRequired
+from long_haul.adapters.pi_workspace_fence import LocalWorkspaceFence
+from long_haul.adapters.pi_workspace_intent import (
+    WorkspaceLeaseIntent,
+    persist_workspace_intent,
+)
+
+pytestmark = pytest.mark.skipif(os.name != "posix", reason="local fencing requires POSIX flock and directory handles")
+DIGEST = "sha256:" + "f" * 64
+
+
+@pytest.mark.parametrize("target", ["intent", "active", "cleanup", "owner"])
+def test_fifo_recovery_files_are_rejected_without_blocking(tmp_path, target):
+    root, intent, _ = setup(tmp_path)
+    fence = LocalWorkspaceFence(root, intent.token, intent.fingerprint)
+    if target == "intent":
+        path = root / (intent.token + ".json")
+        path.unlink()
+    elif target == "cleanup":
+        path = root / (intent.token + ".cleanup.json")
+    elif target == "active":
+        path = root / "active.json"
+    else:
+        with pytest.raises(WorkspaceCleanupRequired), fence.launch():
+            pass
+        path = root / (intent.token + ".scratch") / ".workspace-owner"
+        path.unlink()
+    os.mkfifo(path, 0o600)
+    script = ("import sys; from pathlib import Path; "
+              "from long_haul.adapters.pi_workspace_intent import load_workspace_intent,persist_workspace_cleanup; "
+              "from long_haul.adapters.pi_workspace_fence import LocalWorkspaceFence,_matches; "
+              "from long_haul.adapters.pi_workspace_cleanup import WorkspaceCleanupRequired; "
+              "root=Path(sys.argv[1]); token=sys.argv[2]; fingerprint=sys.argv[3]; target=sys.argv[4]; "
+              "exec(\"try:\\n"
+              " if target == 'intent': load_workspace_intent(root,token,fingerprint)\\n"
+              " elif target == 'active': LocalWorkspaceFence(root,token,fingerprint).launch().__enter__()\\n"
+              " elif target == 'cleanup': persist_workspace_cleanup(root,load_workspace_intent(root,token,fingerprint))\\n"
+              " else:\\n  import os\\n  fd=os.open(root/(token+'.scratch'),os.O_RDONLY|os.O_DIRECTORY)\\n"
+              "  try: _matches(fd,'.workspace-owner',b'fixture')\\n  finally: os.close(fd)\\n"
+              "except (ValueError,WorkspaceCleanupRequired): pass\\n"
+              "else: raise AssertionError('FIFO was accepted')\")")
+    subprocess.run([sys.executable, "-c", script, str(root), intent.token, intent.fingerprint, target],
+                   check=True, timeout=10)
+
+
+def second_intent(root, first):
+    other = WorkspaceLeaseIntent(token="9" * 32, attempt_fingerprint=first.attempt_fingerprint,
+                                 environment_fingerprint=first.environment_fingerprint, daemon_id=first.daemon_id)
+    persist_workspace_intent(root, other)
+    return other
+
+
+def test_fence_sequences_one_seed_worker_and_cleanup(tmp_path):
+    root, intent, docker = setup(tmp_path)
+    fence = LocalWorkspaceFence(root, intent.token, intent.fingerprint)
+    with fence.launch() as grant:
+        scratch = grant.scratch_root()
+        (scratch / "private-fixture").write_text("synthetic")
+        assert grant.admit(intent.fingerprint)
+        with pytest.raises(ValueError, match="not ready"):
+            grant.begin_worker()
+        grant.begin_seed(DIGEST)
+        assert grant.admit_seed(DIGEST) and not grant.admit_seed("sha256:" + "a" * 64)
+        assert not grant.admit(intent.fingerprint)
+        grant.finish_seed(DIGEST)
+        assert not grant.admit_seed(DIGEST)
+        grant.begin_worker()
+        with pytest.raises(ValueError, match="single worker"):
+            grant.begin_worker()
+        assert grant.cleanup(docker).exists()
+    assert not (root / "active.json").exists()
+    assert not scratch.exists()
+    with pytest.raises(ValueError, match="no longer held"):
+        grant.admit(intent.fingerprint)
+    with pytest.raises(FileExistsError), fence.launch():
+        pass
+
+
+def test_unclean_exit_blocks_new_token_until_exact_recovery(tmp_path):
+    root, first, docker = setup(tmp_path)
+    other = second_intent(root, first)
+    fence = LocalWorkspaceFence(root, first.token, first.fingerprint)
+    with pytest.raises(WorkspaceCleanupRequired), fence.launch():
+        pass
+    assert (root / "active.json").exists()
+    with pytest.raises(WorkspaceCleanupRequired), LocalWorkspaceFence(root, other.token, other.fingerprint).launch():
+        pass
+    assert not (root / (other.token + ".used")).exists()
+    assert fence.recover(docker).exists()
+    other_docker = FakeDocker(other)
+    with LocalWorkspaceFence(root, other.token, other.fingerprint).launch() as grant:
+        assert grant.cleanup(other_docker).exists()
+
+
+def test_grant_cannot_be_used_from_another_thread(tmp_path):
+    root, intent, docker = setup(tmp_path)
+    errors = []
+    with LocalWorkspaceFence(root, intent.token, intent.fingerprint).launch() as grant:
+        def attempt():
+            try:
+                grant.admit(intent.fingerprint)
+            except ValueError as error:
+                errors.append(str(error))
+
+        thread = threading.Thread(target=attempt)
+        thread.start()
+        thread.join(timeout=5)
+        assert not thread.is_alive() and errors == ["workspace fence is no longer held by its owner"]
+        grant.cleanup(docker)
+
+
+def test_tampered_active_marker_cannot_authorize_cleanup(tmp_path):
+    root, intent, docker = setup(tmp_path)
+    fence = LocalWorkspaceFence(root, intent.token, intent.fingerprint)
+    with pytest.raises(WorkspaceCleanupRequired), fence.launch():
+        pass
+    (root / "active.json").write_text("foreign")
+    with pytest.raises(WorkspaceCleanupRequired):
+        fence.recover(docker)
+    assert not any(call[0] == "rm" or call[:2] == ("volume", "rm") for call in docker.calls)
+
+
+def test_unowned_scratch_symlink_is_never_followed_or_deleted(tmp_path):
+    root, intent, docker = setup(tmp_path)
+    fence = LocalWorkspaceFence(root, intent.token, intent.fingerprint)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "keep").write_text("fixture")
+    with pytest.raises(WorkspaceCleanupRequired), fence.launch() as grant:
+        scratch = grant.scratch_root()
+        (scratch / ".workspace-owner").unlink()
+        scratch.rmdir()
+        scratch.symlink_to(outside, target_is_directory=True)
+    with pytest.raises(WorkspaceCleanupRequired):
+        fence.recover(docker)
+    assert (outside / "keep").read_text() == "fixture" and (root / "active.json").exists()
+
+
+def test_owned_scratch_cleanup_does_not_follow_nested_symlink(tmp_path):
+    root, intent, docker = setup(tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "keep").write_text("fixture")
+    with LocalWorkspaceFence(root, intent.token, intent.fingerprint).launch() as grant:
+        scratch = grant.scratch_root()
+        (scratch / "link").symlink_to(outside, target_is_directory=True)
+        grant.cleanup(docker)
+    assert not scratch.exists() and (outside / "keep").read_text() == "fixture"
+
+
+def test_recovery_reclaims_readonly_executor_scratch(tmp_path):
+    root, intent, docker = setup(tmp_path)
+    fence = LocalWorkspaceFence(root, intent.token, intent.fingerprint)
+    with pytest.raises(WorkspaceCleanupRequired), fence.launch() as grant:
+        scratch = grant.scratch_root()
+        readonly = scratch / "evaluator" / "nested"
+        readonly.mkdir(parents=True)
+        (readonly / "fixture").write_text("synthetic")
+        readonly.chmod(0o555)
+        readonly.parent.chmod(0o555)
+    assert fence.recover(docker).exists()
+    assert not scratch.exists()
+
+
+def test_scratch_with_missing_ownership_marker_is_not_removed(tmp_path):
+    root, intent, docker = setup(tmp_path)
+    fence = LocalWorkspaceFence(root, intent.token, intent.fingerprint)
+    with pytest.raises(WorkspaceCleanupRequired), fence.launch() as grant:
+        scratch = grant.scratch_root()
+        (scratch / "keep").write_text("fixture")
+        (scratch / ".workspace-owner").unlink()
+    with pytest.raises(WorkspaceCleanupRequired):
+        fence.recover(docker)
+    assert (scratch / "keep").read_text() == "fixture" and (root / "active.json").exists()
+
+
+def test_crashed_controller_leaves_fence_until_recovery(tmp_path):
+    root, intent, docker = setup(tmp_path)
+    other = second_intent(root, intent)
+    script = ("import sys,time; from pathlib import Path; "
+              "from long_haul.adapters.pi_workspace_fence import LocalWorkspaceFence; "
+              "f=LocalWorkspaceFence(Path(sys.argv[1]),sys.argv[2],sys.argv[3]); "
+              "ctx=f.launch(); grant=ctx.__enter__(); "
+              "(grant.scratch_root()/'private-fixture').write_text('synthetic'); "
+              "print('held',flush=True); time.sleep(30)")
+    process = subprocess.Popen([sys.executable, "-c", script, str(root), intent.token, intent.fingerprint],
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        assert select.select([process.stdout], [], [], 10)[0]
+        assert process.stdout.readline().strip() == "held"
+        with pytest.raises(BlockingIOError), LocalWorkspaceFence(root, other.token, other.fingerprint).launch():
+            pass
+    finally:
+        process.kill()
+        process.communicate(timeout=5)
+    with pytest.raises(WorkspaceCleanupRequired), LocalWorkspaceFence(root, other.token, other.fingerprint).launch():
+        pass
+    scratch = root / (intent.token + ".scratch")
+    assert (scratch / "private-fixture").exists()
+    assert LocalWorkspaceFence(root, intent.token, intent.fingerprint).recover(docker).exists()
+    assert not scratch.exists()

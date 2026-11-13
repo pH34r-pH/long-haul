@@ -25,6 +25,20 @@ wheels = [
 ]
 
 [[package]]
+name = "azure-keyvault-secrets"
+version = "4.10.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "azure-core" },
+    { name = "isodate" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/97/e5/3074e581b6e8923c4a1f2e42192ea6f390bb52de3600c68baaaed529ef05/azure_keyvault_secrets-4.10.0.tar.gz", hash = "sha256:666fa42892f9cee749563e551a90f060435ab878977c95265173a8246d546a36", size = 129695, upload-time = "2025-06-16T22:52:20.986Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/26/94/7c902e966b28e7cb5080a8e0dd6bffc22ba44bc907f09c4c633d2b7c4f6a/azure_keyvault_secrets-4.10.0-py3-none-any.whl", hash = "sha256:9dbde256077a4ee1a847646671580692e3f9bea36bcfc189c3cf2b9a94eb38b9", size = 125237, upload-time = "2025-06-16T22:52:22.489Z" },
+]
+
+[[package]]
 name = "azure-storage-blob"
 version = "12.31.0"
 source = { registry = "https://pypi.org/simple" }
@@ -424,6 +438,8 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "azure-core" },
+    { name = "azure-keyvault-secrets" },
     { name = "azure-storage-blob" },
     { name = "azure-storage-queue" },
     { name = "pytest" },
@@ -432,6 +448,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "azure-core", marker = "extra == 'dev'", specifier = "==1.41.0" },
+    { name = "azure-keyvault-secrets", marker = "extra == 'dev'", specifier = "==4.10.0" },
     { name = "azure-storage-blob", marker = "extra == 'dev'", specifier = "==12.31.0" },
     { name = "azure-storage-queue", marker = "extra == 'dev'", specifier = "==12.18.0" },
     { name = "pydantic", specifier = ">=2.8" },
