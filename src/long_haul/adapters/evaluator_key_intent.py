@@ -12,7 +12,7 @@ import secrets
 import stat
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, ValidationError
 
 from ..work.repository_models import FrozenProjection
 from .pi_workspace_intent import _open_private_root
@@ -41,7 +41,12 @@ class EvaluatorKeyWriteIntent(FrozenProjection):
 
 
 def _write_once(directory, name, payload):
-    descriptor = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=directory)
+    try:
+        descriptor = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=directory)
+    except FileExistsError:
+        raise FileExistsError("private key recovery record already exists") from None
+    except OSError:
+        raise OSError("private key recovery record is unavailable") from None
     with os.fdopen(descriptor, "wb") as output:
         output.write(payload)
         output.flush()
@@ -52,16 +57,33 @@ def _write_once(directory, name, payload):
 def _validated_intent(intent):
     if type(intent) is not EvaluatorKeyWriteIntent:
         raise TypeError("key write requires an exact recovery intent")
-    validated = EvaluatorKeyWriteIntent.model_validate(intent.model_dump())
+    try:
+        validated = EvaluatorKeyWriteIntent.model_validate(intent.model_dump())
+    except ValidationError:
+        raise ValueError("invalid private key recovery intent") from None
     if validated != intent:
         raise ValueError("key write recovery intent changed")
     return validated
 
 
+def _private_root(root):
+    try:
+        return _open_private_root(root)
+    except OSError:
+        raise OSError("private key recovery directory is unavailable") from None
+
+
+def _parse_intent(data):
+    try:
+        return EvaluatorKeyWriteIntent.model_validate_json(data)
+    except ValidationError:
+        raise ValueError("invalid private key recovery intent") from None
+
+
 def persist_key_write_intent(root: Path, intent: EvaluatorKeyWriteIntent):
     """Sync the private locator and expected identities before scheduler admission."""
     intent = _validated_intent(intent)
-    directory = _open_private_root(root)
+    directory = _private_root(root)
     try:
         _write_once(directory, intent.token + ".key-intent.json", intent.model_dump_json().encode())
     finally:
@@ -70,7 +92,12 @@ def persist_key_write_intent(root: Path, intent: EvaluatorKeyWriteIntent):
 
 
 def _read_private(directory, name, limit):
-    descriptor = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
+    try:
+        descriptor = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
+    except FileNotFoundError:
+        raise FileNotFoundError("private key recovery record is unavailable") from None
+    except OSError:
+        raise OSError("private key recovery record is unavailable") from None
     with os.fdopen(descriptor, "rb") as source:
         metadata = os.fstat(source.fileno())
         if (not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.geteuid()
@@ -86,10 +113,10 @@ def load_claimed_key_intent(root: Path, token: str, expected_fingerprint: str):
     """Load a claimed intent only against an independently retained identity."""
     if not isinstance(token, str) or re.fullmatch(r"[0-9a-f]{64}", token) is None:
         raise ValueError("invalid key recovery token")
-    directory = _open_private_root(root)
+    directory = _private_root(root)
     try:
         data = _read_private(directory, token + ".key-intent.json", 16384)
-        intent = EvaluatorKeyWriteIntent.model_validate_json(data)
+        intent = _parse_intent(data)
         claim = _read_private(directory, token + ".key-claim.json", 128)
     finally:
         os.close(directory)
@@ -104,10 +131,10 @@ def claim_key_write(root: Path, intent: EvaluatorKeyWriteIntent, expected_finger
     intent = _validated_intent(intent)
     if intent.fingerprint != expected_fingerprint:
         raise PermissionError("key write intent is not independently admitted")
-    directory = _open_private_root(root)
+    directory = _private_root(root)
     try:
         data = _read_private(directory, intent.token + ".key-intent.json", 16384)
-        persisted = EvaluatorKeyWriteIntent.model_validate_json(data)
+        persisted = _parse_intent(data)
         if persisted != intent or persisted.fingerprint != expected_fingerprint:
             raise PermissionError("key write intent differs from scheduler admission")
         _write_once(directory, intent.token + ".key-claim.json", persisted.fingerprint.encode("ascii"))

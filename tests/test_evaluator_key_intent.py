@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
 
 from long_haul.adapters.evaluator_key_intent import (
     EvaluatorKeyWriteIntent,
@@ -52,6 +51,27 @@ def test_recovery_requires_an_exact_private_claim(tmp_path, intent):
         load_claimed_key_intent(tmp_path, intent.token, intent.fingerprint)
 
 
+def test_recovery_record_errors_do_not_expose_private_locator(tmp_path, intent):
+    tmp_path.chmod(0o700)
+    with pytest.raises(FileNotFoundError) as missing:
+        load_claimed_key_intent(tmp_path, intent.token, intent.fingerprint)
+    assert intent.token not in str(missing.value) and str(tmp_path) not in str(missing.value)
+    persist_key_write_intent(tmp_path, intent)
+    claim_key_write(tmp_path, intent, intent.fingerprint)
+    with pytest.raises(FileExistsError) as duplicate:
+        claim_key_write(tmp_path, intent, intent.fingerprint)
+    assert intent.token not in str(duplicate.value) and str(tmp_path) not in str(duplicate.value)
+
+
+def test_malformed_intent_error_does_not_echo_private_contents(tmp_path, intent):
+    tmp_path.chmod(0o700)
+    path = persist_key_write_intent(tmp_path, intent)
+    path.write_text('{"token":"SYNTHETIC_PRIVATE_LOCATOR"}')
+    with pytest.raises(ValueError) as failure:
+        claim_key_write(tmp_path, intent, intent.fingerprint)
+    assert "SYNTHETIC_PRIVATE_LOCATOR" not in str(failure.value)
+
+
 def test_claim_requires_independent_exact_fingerprint_and_matching_intent(tmp_path, intent):
     tmp_path.chmod(0o700)
     path = persist_key_write_intent(tmp_path, intent)
@@ -66,9 +86,9 @@ def test_claim_requires_independent_exact_fingerprint_and_matching_intent(tmp_pa
 def test_unvalidated_copied_intent_cannot_escape_recovery_root(tmp_path, intent):
     tmp_path.chmod(0o700)
     invalid = intent.model_copy(update={"token": "../outside"})
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValueError, match="invalid private key recovery intent"):
         persist_key_write_intent(tmp_path, invalid)
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValueError, match="invalid private key recovery intent"):
         claim_key_write(tmp_path, invalid, invalid.fingerprint)
     assert not (tmp_path.parent / "outside.key-intent.json").exists()
 

@@ -53,6 +53,8 @@ The experimental Key Vault adapter now separates `prepare` from `freeze`. Truste
 
 The adapter's read-only `recover` reloads the claimed intent against the independently retained fingerprint, requires current READ policy, and lists and reads one exact provider version whose keyed evaluator fingerprint matches the intent. It checks the version census before and after readback; a missing, changed or multiple-version result remains ambiguous and does not trigger a retry or deletion. Recovery requires Key Vault list and get permissions. These point-in-time checks do not fence concurrent provider changes, guarantee a hard network deadline, or prove provider response authenticity independently of the trusted SDK client.
 
+Intent-record open and validation errors use generic messages rather than echoing recovery locators or malformed contents. Recovery records and retained exception details still belong in private control; this is not a general-purpose log-redaction guarantee.
+
 The synced files do not authenticate the scheduler, prove the directory survives machine loss, delete a provider secret, or fence another host. The real principal, storage, scheduler binding, recovery procedure and revocation lifecycle remain unqualified. A claim may exist even when no provider write occurred. Treat that outcome as ambiguous until authorized recovery verifies it; no automatic retry or release is implied.
 
 An unresolved intent pins its original adapter implementation. Recovery after an upgrade requires the exact admitted implementation and dependencies; replacing the intent's fingerprint or generating unrelated keys does not recover the original write. Retained, verified old-build execution and an authorized migration procedure are not yet qualified.
