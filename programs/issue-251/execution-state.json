@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T23:35:53+00:00",
+    "updated_at": "2026-11-26T23:45:10+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3574,6 +3574,25 @@
       "issue_evidence": "https://github.com/pH34r-pH/blue-swallow-society/issues/131#issuecomment-7205684212",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7205686375",
       "remaining": "Disposable migration and recovery qualification, live device mutual TLS and managed identity, protected Wardriver cutover, public authority retirement, and exact live recovery receipts."
+    },
+    {
+      "at": "2026-11-26T23:45:10+00:00",
+      "task": "society-131",
+      "status": "disposable_postgis_migration_and_recovery_merged",
+      "repository": "pH34r-pH/blue-swallow-society",
+      "pull_request": 147,
+      "checked_head": "f9c3bab2e8b43b417c9bf93255af80267ce4c669",
+      "ci_checkout": "bd4de5bfa4cf088a0c0ab8d3cebab8dd7bf03bb8",
+      "merge_commit": "e72125da259345e097e3e2f790570d885aa78f6d",
+      "default_branch_ci": "https://github.com/pH34r-pH/blue-swallow-society/actions/runs/45912590292",
+      "default_branch_governance": "https://github.com/pH34r-pH/blue-swallow-society/actions/runs/45912590151",
+      "postgres_image": "postgis/postgis:16-3.5@sha256:94146ac37bc61e2322f88016056c5920729cb8c64c8542ed590af8fc2abdac07",
+      "schema_sha256": "2deed77f59661f1646addd34c8022c0166f711772279338fd37f0bca441e8c94",
+      "temporary_backup_sha256": "d75d74d8ef7e943eb45fa237cd4a54fb2c41397cecff1aca647858f01dd645e7",
+      "evidence": "Identical checked and merged trees. PostgreSQL 16.9/PostGIS 3.5.2 rehearsal proved fresh provisioning, empty reset before admission, forward migration of admitted legacy records and receipts, and isolated restore with immutability guards. Later source writes remained outside the recovered snapshot. This CI receipt covers only synthetic data. All public CI and governance checks passed.",
+      "issue_evidence": "https://github.com/pH34r-pH/blue-swallow-society/issues/131#issuecomment-7205821039",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7205824447",
+      "remaining": "Protected Fleet and Wardriver promotion and coordinated frontend/backend recovery, live health and authorization proofs and post-user database recovery receipts, physical device mutual TLS, and public authority retirement."
     }
   ]
 }
