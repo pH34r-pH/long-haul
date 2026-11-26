@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T19:59:00+00:00",
+    "updated_at": "2026-11-26T20:16:15+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3095,6 +3095,19 @@
       "evidence": "47 Nacre tests and eight Long-Haul adapter tests passed. The actual launch writer and Nacre CLI exercised synthetic allow, missing policy and wrong mission with exact evaluator and request provenance.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7202166608",
       "remaining": "Approved local workspace-source admission and the task contribution and capture scorecard."
+    },
+    {
+      "at": "2026-11-26T20:16:15+00:00",
+      "task": "nacre-24",
+      "status": "approved_workspace_reference_source_merged",
+      "repository": "pH34r-pH/nacre-recall",
+      "pull_request": 25,
+      "checked_head": "35e97ee59b59e46bd8eb6e10bcf3748c48d33bd6",
+      "merge_commit": "12ede60745b958e3eaaff7659324d0d10d02fc64",
+      "default_branch_checks": "Python 3.11 and 3.12, pinned Pi hook and governance passed",
+      "evidence": "56 Python tests and both Pi hook tests passed. Exact Long-Haul evaluator and launch writer admitted synthetic approved bytes and withheld changed bytes. Pi removed the old reference from context and skipped settled-turn capture after exposure.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7202479204",
+      "remaining": "Live operator-admitted source, setup and refresh receipts and index qualification, and the frozen task contribution and capture scorecard."
     }
   ]
 }
