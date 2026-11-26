@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T21:35:41+00:00",
+    "updated_at": "2026-11-26T21:46:21+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3181,6 +3181,20 @@
       "evidence": "Two fresh Webots R2025a runs passed 13 simulator checks and replayed 688 steps each, including 71 expired-watchdog steps. A forced timeout retained partial evidence and corrupted trace bytes were rejected. Terminal ground truth stays in the evaluator report.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7203875388",
       "remaining": "Pilot trajectory receipts, calibration comparisons, hardware-in-loop and independent physical safety acceptance."
+    },
+    {
+      "at": "2026-11-26T21:46:21+00:00",
+      "task": "family-44",
+      "status": "private_archive_and_atlas_validation_merged",
+      "repository": "pH34r-pH/family-tree",
+      "pull_request": 48,
+      "checked_head": "8159c045035887c0002f0e9f7f501aa1a5da7bad",
+      "merge_commit": "b8f9392a68dd65945777b3f0da28471cc279be15",
+      "default_branch_checks": "Private native and atlas archive validation and repository governance passed",
+      "glx_release_digest": "sha256:bee73812cebd741c2708872d19aa915a321d9f203a4ebaa75f213aa866ae6f3a",
+      "evidence": "Six focused tests, 19 synthetic archive checks and 11 runner-routing tests passed. The known native binary accepted generated synthetic records and rejected malformed input with a generic diagnostic. Protected full-checkout archive, atlas browser, and packaging checks passed.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7204043332",
+      "remaining": "Per-record privacy and rights decisions, reversible identity merges, and privacy-filtered exports."
     }
   ]
 }
