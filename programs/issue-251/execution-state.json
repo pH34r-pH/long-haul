@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T21:23:56+00:00",
+    "updated_at": "2026-11-26T21:35:41+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3167,6 +3167,20 @@
       "evidence": "The historical hosted jobs used Python 3.14.4 despite the declared 3.12 series. The new main receipts verify Python 3.12.16 and 14 distinct passing cases. A mismatched interpreter emits no receipt. The claim-to-evidence map records exact public prototype and historical deployed scope.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7203686653",
       "remaining": "Wider convergence, coordinator cancellation, partial-write crash recovery, and exact deployed qualification and independent review under Longband #12."
+    },
+    {
+      "at": "2026-11-26T21:35:41+00:00",
+      "task": "homebot-2",
+      "status": "webots_smoke_receipts_and_replay_merged",
+      "repository": "pH34r-pH/home-bot",
+      "pull_request": 3,
+      "checked_head": "22fc7466fc45de35fdb0e2cf1e097b21f7e64f7b",
+      "merge_commit": "17833c94691fd5b1bcd9e056c87d787d4223b38b",
+      "default_branch_checks": "22 tests on Python 3.11, 3.12 and 3.13, world consistency, syntax and governance passed",
+      "evidence_archive_sha256": "sha256:23893bbb267dceda3681b40d3aec8f531e2a6c9ece6cd96940d2aa4928ebb74f",
+      "evidence": "Two fresh Webots R2025a runs passed 13 simulator checks and replayed 688 steps each, including 71 expired-watchdog steps. A forced timeout retained partial evidence and corrupted trace bytes were rejected. Terminal ground truth stays in the evaluator report.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7203875388",
+      "remaining": "Pilot trajectory receipts, calibration comparisons, hardware-in-loop and independent physical safety acceptance."
     }
   ]
 }
