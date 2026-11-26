@@ -71,10 +71,12 @@ jobs:
         run: |
           set -o pipefail
           git -C native-upstream rev-parse HEAD > "$RUNNER_TEMP/native-evidence/source.txt"
+          # Native parity exercises the server API with --no-webui.
           cmake -S native-upstream -B "$RUNNER_TEMP/native-build" \
             -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
             -DGGML_NATIVE=OFF -DGGML_CUDA=OFF -DGGML_VULKAN=OFF \
             -DLLAMA_CURL=OFF -DLLAMA_BUILD_TESTS=OFF \
+            -DLLAMA_BUILD_UI=OFF -DLLAMA_USE_PREBUILT_UI=OFF \
             2>&1 | tee "$RUNNER_TEMP/native-evidence/configure.log"
           cmake --build "$RUNNER_TEMP/native-build" \
             --target llama-completion llama-tokenize llama-server --parallel 2 \
