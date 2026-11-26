@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T21:46:21+00:00",
+    "updated_at": "2026-11-26T21:58:31+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3195,6 +3195,33 @@
       "evidence": "Six focused tests, 19 synthetic archive checks and 11 runner-routing tests passed. The known native binary accepted generated synthetic records and rejected malformed input with a generic diagnostic. Protected full-checkout archive, atlas browser, and packaging checks passed.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7204043332",
       "remaining": "Per-record privacy and rights decisions, reversible identity merges, and privacy-filtered exports."
+    },
+    {
+      "at": "2026-11-26T21:58:31+00:00",
+      "task": "dae-37",
+      "status": "synthetic_evaluation_and_private_ci_merged",
+      "repository": "pH34r-pH/discursive-affective-epistemology",
+      "pull_request": 38,
+      "checked_head": "a824cc2b094e7fa0335dba0e42609b1773a7dc7f",
+      "merge_commit": "2c44ec5fbab7de9fc2bc0e1804c47ac6cef14789",
+      "default_branch_checks": "Admitted private CI passed governance, evaluator, runner and docs checks",
+      "manifest_digest": "sha256:da468ef266cdfabd854b6570f989049351c30dae786fadbfd8444f0039a4aa28",
+      "receipt_digest": "sha256:0665a3654eaf75825fc68454f1644f36286895ede6facc7b859773ecf90aa200",
+      "evidence": "20 Linux checks passed. The main CI receipt matches the local synthetic fixture. Six held-out cases yielded four paired agreements, two disagreements, three resolved abstentions and Cohen's kappa 11/23.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7204237320",
+      "remaining": "Independent source and rights approvals, an externally frozen holdout, and qualified human raters."
+    },
+    {
+      "at": "2026-11-26T21:58:31+00:00",
+      "task": "book-5",
+      "status": "governance_retry_startup_failed",
+      "repository": "pH34r-pH/book-development",
+      "pull_request": 6,
+      "checked_head": "9d71ce9b8e2686cbe5e46db1c3e8590784f3ba54",
+      "run": "https://github.com/pH34r-pH/book-development/actions/runs/43096302292",
+      "evidence": "The single retry following terminal cancellation reached startup_failure with zero allocated jobs on the same exact head.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7204237320",
+      "remaining": "A successfully allocated exact-head governance check is required to merge the verified source."
     }
   ]
 }
