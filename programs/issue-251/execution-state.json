@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T22:52:23+00:00",
+    "updated_at": "2026-11-26T23:04:54+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3512,6 +3512,22 @@
       "evidence": "The same pinned validator passed all 24 exact default-branch profiles. Every active workflow executed the pinned step successfully at its audited source revision. The action source repository uses byte-identical in-tree action files.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7205051525",
       "remaining": "23 repository stabilization issues remain open. Independent acceptance, protected actions, and the later program exit criteria remain separate."
+    },
+    {
+      "at": "2026-11-26T23:04:54+00:00",
+      "task": "theorem-20",
+      "status": "all_compiled_public_theorem_applicability_mappings_merged",
+      "repository": "pH34r-pH/theorem-library",
+      "pull_request": 31,
+      "checked_head": "f3ec76472b0e4c8d28b114761987d64927b4b510",
+      "merge_commit": "0d8b81f81d5fd75fecdd8bd125288e55b8b992c8",
+      "initial_ci_failure": "https://github.com/pH34r-pH/theorem-library/actions/runs/45907864507",
+      "passing_pull_request_ci": "https://github.com/pH34r-pH/theorem-library/actions/runs/45908134725",
+      "default_branch_ci": "https://github.com/pH34r-pH/theorem-library/actions/runs/45908386348",
+      "default_branch_governance": "https://github.com/pH34r-pH/theorem-library/actions/runs/45908386967",
+      "evidence": "Main and the checked head match. All 67 named theorem and defining-module pairs in the nine public modules have mappings across 12 applicability records. Lean rejected both an omitted record and an unknown name. All 26 regressions, the pinned proof checks, and governance passed after fixing the initial generated syntax error.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7205232581",
+      "remaining": "Retain and verify a refreshed bundle on authorized exact main through lean.yml with retain_proof_candidate=true. Upstream mutation-tool usage remains a separate #11 decision."
     }
   ]
 }
