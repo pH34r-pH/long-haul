@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-12T01:01:58.153723+00:00",
+    "updated_at": "2026-11-26T19:59:00+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3043,6 +3043,58 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6840333447",
       "evidence": "SDK version-change regression failed before fix; full Linux suite 856 passed, 64 skipped before two added assertions, then 15 focused identity cases passed. Ruff, Lizard and LF-normalized jscpd passed.",
       "remaining": "Version metadata is not package-byte, loaded-code, host or client attestation. Old intents require original admitted runtime; all private-use and exact-head CI gates remain open."
+    },
+    {
+      "at": "2026-11-26T19:59:00+00:00",
+      "task": "knowledge-42",
+      "status": "source_review_and_invalidation_pilot_merged",
+      "repository": "pH34r-pH/knowledge",
+      "pull_request": 43,
+      "checked_head": "01b8c483847ec03b9bd61f40ff33a997d3f2cb18",
+      "merge_commit": "60eb06aaed51601323439808a95cf79dfe263d75",
+      "default_branch_checks": "adapter, documentation and governance passed",
+      "evidence": "45 Linux tests passed. The metadata-only pilot verified the retained PDF against the same versioned source. Its expiry identified one claim, one evidence record and two corpus articles.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7202166608",
+      "remaining": "Wider reviewed source coverage and real stale-source qualification."
+    },
+    {
+      "at": "2026-11-26T19:59:00+00:00",
+      "task": "jam-25",
+      "status": "calendar_and_browser_rsvp_merged",
+      "repository": "pH34r-pH/jam-day",
+      "pull_request": 26,
+      "checked_head": "a21aa8fb35080e39c7ea7e562321ff1909596314",
+      "merge_commit": "df7902aab0b1fe7ccd6a52c0ff7ac3532d18a9a1",
+      "default_branch_checks": "quality, documentation and governance passed",
+      "evidence": "Four Node and three Python checks passed. A second parser agreed on the synthetic calendar identity, revision, UTC times and location escaping.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7202166608",
+      "remaining": "Server-side RSVP lifecycle, retention, deletion and controlled end-to-end qualification."
+    },
+    {
+      "at": "2026-11-26T19:59:00+00:00",
+      "task": "jam-25",
+      "status": "organizer_browser_contract_merged",
+      "repository": "pH34r-pH/jam-day",
+      "pull_request": 27,
+      "checked_head": "2313c81bd73fe2b493436218f48ffc3316d02b8f",
+      "merge_commit": "1eaaf54140e827c6389b617cdf6646d8dd0f81cf",
+      "default_branch_checks": "quality, documentation and governance passed",
+      "evidence": "Six Node and three Python checks passed. Organizer fixtures cover authentication denials, hidden stale data, malformed responses and correct totals for valid responses.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7202166608",
+      "remaining": "Server-side retention, deletion and deployment qualification."
+    },
+    {
+      "at": "2026-11-26T19:59:00+00:00",
+      "task": "nacre-24",
+      "status": "authenticated_recall_launch_policy_merged",
+      "repository": "pH34r-pH/nacre-recall",
+      "pull_request": 22,
+      "checked_head": "f7550c76e9c6099e539af394d11efd119cf19a45",
+      "merge_commit": "5174025f6eed68d125022f970f82fc8db84aae81",
+      "default_branch_checks": "Python 3.11 and 3.12, pinned Pi hook and governance passed",
+      "evidence": "47 Nacre tests and eight Long-Haul adapter tests passed. The actual launch writer and Nacre CLI exercised synthetic allow, missing policy and wrong mission with exact evaluator and request provenance.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7202166608",
+      "remaining": "Approved local workspace-source admission and the task contribution and capture scorecard."
     }
   ]
 }
