@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T20:32:16+00:00",
+    "updated_at": "2026-11-26T20:47:31+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3122,6 +3122,21 @@
       "closeout": "https://github.com/pH34r-pH/nacre-recall/issues/4#issuecomment-7202794335",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7202798611",
       "remaining": "Live operator-admitted workspace and the frozen comparative recall and capture scorecard under Nacre #24 and #7."
+    },
+    {
+      "at": "2026-11-26T20:47:31+00:00",
+      "task": "nacre-24",
+      "status": "synthetic_recall_and_capture_scorecard_merged",
+      "repository": "pH34r-pH/nacre-recall",
+      "pull_request": 27,
+      "checked_head": "f759bd10efc1ebae1644e4dc1da3a063826a4f80",
+      "merge_commit": "8c7010882408694725260af0da71fd42244098d2",
+      "default_branch_checks": "Python 3.11 and 3.12, pinned Pi hook and governance passed",
+      "fixture_digest": "sha256:f6ff22b9ede51167b4ff6b31f933b73b034a92c1061b2e8009cb03c70756eda2",
+      "scorecard_digest": "sha256:87bf42ffa6f6b78c585ba8a651b8d6538be99efc4872f6bdd776601074383ec7",
+      "evidence": "Eight synthetic treatments, zero hard failures, and 68 Python tests. Accepted memory and workspace solved 3 of 3 fixture tasks, checkpoint-only 2 of 3, and no recall 1 of 3. Conflicting review grants now deny promotion. Main run summary and log retain the complete scorecard.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7203084796",
+      "remaining": "Live operator-admitted workspace, qualified Long-Haul task contribution and longitudinal capture outcomes under #24 and #7."
     }
   ]
 }
