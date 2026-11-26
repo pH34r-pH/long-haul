@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T20:47:31+00:00",
+    "updated_at": "2026-11-26T21:11:47+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3137,6 +3137,20 @@
       "evidence": "Eight synthetic treatments, zero hard failures, and 68 Python tests. Accepted memory and workspace solved 3 of 3 fixture tasks, checkpoint-only 2 of 3, and no recall 1 of 3. Conflicting review grants now deny promotion. Main run summary and log retain the complete scorecard.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7203084796",
       "remaining": "Live operator-admitted workspace, qualified Long-Haul task contribution and longitudinal capture outcomes under #24 and #7."
+    },
+    {
+      "at": "2026-11-26T21:11:47+00:00",
+      "task": "jam-25",
+      "status": "simple_rsvp_retention_source_merged",
+      "repository": "pH34r-pH/long-haul-fleet",
+      "pull_request": 1719,
+      "checked_head": "b3cd1323c5166f3affcc5941c169619fc89a0a0d",
+      "merge_commit": "afb19341158b63a1d490a108787c410c2e431431",
+      "default_branch_ci": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45896299790",
+      "default_branch_infrastructure_ci": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45896299754",
+      "evidence": "All applicable PR checks passed and the merged tree matches the tested head. Six API and cleanup tests, a disposable Azurite run, and four offline scenarios on the exact Jam Day browser source passed. The existing name and headcount form stays the attendee flow.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7203483637",
+      "remaining": "Operator-selected deadlines, backup and restore handling, and controlled qualification through protected Fleet deployment."
     }
   ]
 }
