@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T23:28:04+00:00",
+    "updated_at": "2026-11-26T23:35:53+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3558,6 +3558,22 @@
       "evidence": "Identical checked and merged trees. The Functions proxy handler sent synthetic device uploads over loopback HTTPS to the VM handler and migrated PostgreSQL 16.9/PostGIS 3.5. Separate ownership for equal keys, cross-device session rejection before storage, exact durable receipt replay, changed-content preservation, and denial after credential disablement passed. Both PostGIS integrations and 60 focused local tests passed on Node 24.22.3.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7205561324",
       "remaining": "Cross-user shared-object ownership, live device mTLS, protected Wardriver cutover and public authority retirement, and exact migration and recovery receipts."
+    },
+    {
+      "at": "2026-11-26T23:35:53+00:00",
+      "task": "society-131",
+      "status": "disposable_shared_object_authorization_merged",
+      "repository": "pH34r-pH/blue-swallow-society",
+      "pull_request": 146,
+      "checked_head": "ac81e52d7053798813b12e7b46772d241cc3d31f",
+      "merge_commit": "d771b85edbe75d24224624a4e440b8e5cdb9cc3d",
+      "default_branch_ci": "https://github.com/pH34r-pH/blue-swallow-society/actions/runs/45911732230",
+      "default_branch_governance": "https://github.com/pH34r-pH/blue-swallow-society/actions/runs/45911732245",
+      "main_fixture_image": "sha256:c1bd383cef4138be6d37a57f4e022490c57e52fb481ea3e1476cfc7dad1cd8fb",
+      "evidence": "Identical checked and merged trees. Node 24.22.3 and Azurite 3.37.0 verified durable viewer logins, exact group-scoped Blob reads, denial before storage for anonymous and cross-group viewers, roster membership, stale revision denial, mutable head removal upon signed revocation, and read access to retained immutable history. Browser, VM and PostGIS CI passed.",
+      "issue_evidence": "https://github.com/pH34r-pH/blue-swallow-society/issues/131#issuecomment-7205684212",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7205686375",
+      "remaining": "Disposable migration and recovery qualification, live device mutual TLS and managed identity, protected Wardriver cutover, public authority retirement, and exact live recovery receipts."
     }
   ]
 }
