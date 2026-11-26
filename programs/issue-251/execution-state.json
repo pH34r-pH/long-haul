@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T22:43:22+00:00",
+    "updated_at": "2026-11-26T22:52:23+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3289,6 +3289,229 @@
       "evidence": "Lean v4.34.0-rc2 checked both unit-premise counterexamples plus the existing proof and axiom audits; 23 script regression tests passed. The previous bundle passed exact-source and signer verification plus all 32 member digests and 22 Git source blobs.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7204923776",
       "remaining": "Applicability mappings for FRM-000001 through FRM-000007, a refreshed bundle through the manual retention workflow when authorized, and the separate upstream tool rights decision under #11."
+    },
+    {
+      "at": "2026-11-26T22:52:23+00:00",
+      "task": "theorem-20",
+      "status": "seven_foundational_applicability_records_merged",
+      "repository": "pH34r-pH/theorem-library",
+      "pull_request": 30,
+      "checked_head": "032c07252cb9143b0cbb039aac4b9cec0feb96f7",
+      "merge_commit": "e5ff8f1d1ec2352f30c4ab833f628563181700b1",
+      "default_branch_ci": "https://github.com/pH34r-pH/theorem-library/actions/runs/45907183823",
+      "default_branch_governance": "https://github.com/pH34r-pH/theorem-library/actions/runs/45907183713",
+      "evidence": "Main and checked-head trees matched. Lean resolved 32 qualified declarations across 12 applicability records. All 25 Python regressions, the pinned proof build, proof audit, and code-independent docs checks passed.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7205051525",
+      "remaining": "Map the 35 additional top-level theorem declarations or identify their supporting scope. Refreshed proof candidate retention and upstream mutation-tool usage rights remain separate."
+    },
+    {
+      "at": "2026-11-26T22:52:23+00:00",
+      "task": "program-final-reconcile",
+      "status": "all_shared_governance_profiles_and_exact_ci_verified",
+      "issue": "https://github.com/pH34r-pH/long-haul/issues/251",
+      "receipt_sha256": "sha256:18532fb55d2633dac25550154f7646207562258fa30283ad16ed718142dcc4b6",
+      "receipt_encoding": "UTF-8 JSON with sorted keys, compact separators and trailing LF",
+      "receipt": {
+        "observed_at": "2026-11-26T22:50:57+00:00",
+        "snapshots": [
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45882967317",
+            "head": "28e20ef0c867b36146116deb2dce3455628ba4a8",
+            "profile_sha256": "66248d9498e56e36b703b21a1b93544408af5c5709085c15d66e6564dfa5542e",
+            "repository": "pH34r-pH/experiment-compiler",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45896299762",
+            "head": "afb19341158b63a1d490a108787c410c2e431431",
+            "profile_sha256": "bacc501ea464e6afee91e733c6c45d7ce4f932c196e57991845b091781a25cd8",
+            "repository": "pH34r-pH/long-haul-fleet",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/long-haul/actions/runs/45781121027",
+            "head": "660d0258da03950682a37a23d39a2a2b910372c1",
+            "profile_sha256": "15f3230ec13f548e3f37b524a3b1987a1a9264b59fb78cd08affe32385136c0d",
+            "repository": "pH34r-pH/long-haul",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/compiled-experiments/actions/runs/44421515812",
+            "head": "279acd76fdaf6aabda29163fdb29091f4a7f8884",
+            "profile_sha256": "6ff9adcf4e3540b1472bc8631d7b4f76c194219103af8222746bd676a7288012",
+            "repository": "pH34r-pH/compiled-experiments",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/specified-development/actions/runs/45875769030",
+            "head": "d09b9dfedf858b5253a3ae0fdfab929fada84afb",
+            "profile_sha256": "ce4a621e1d8000a08c5c39353f36ea63ab37e2f3bac09f04f6b39d1f61112286",
+            "repository": "pH34r-pH/specified-development",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/domain-scaling-lab/actions/runs/45762753458",
+            "head": "d1fcbff91557cf9d817db3bdbc6b83d8f660452e",
+            "profile_sha256": "881916f88b8f36a1834d406fdf9e1db4488e08b1afee25d4b36cdd682e44c99d",
+            "repository": "pH34r-pH/domain-scaling-lab",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45885026694",
+            "head": "60eb06aaed51601323439808a95cf79dfe263d75",
+            "profile_sha256": "ed0c880e6c489eb9c7d351cdc6fc55ec89df62dbfa80dca9620361202970a9ea",
+            "repository": "pH34r-pH/knowledge",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/theorem-library/actions/runs/45907183713",
+            "head": "e5ff8f1d1ec2352f30c4ab833f628563181700b1",
+            "profile_sha256": "e00a4cfbfc970034f0a96b108bc3febcc01796ccedec0a4898e9e80f599ea599",
+            "repository": "pH34r-pH/theorem-library",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/tone/actions/runs/45905361881",
+            "head": "3ad97d18a80c44e9e8248b5e1e05f9e0bcb900bf",
+            "profile_sha256": "ec9f4ba91c8a9db28437065b3c8c830b01d94f16799e5533ce9a37c9302d2b73",
+            "repository": "pH34r-pH/tone",
+            "workflow": ".github/workflows/documentation-quality.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/research-notes/actions/runs/45875979400",
+            "head": "68b9009605cee7164ffe1a6e690fb17f46ce1a01",
+            "profile_sha256": "dbc6ca99becbc7c81db69667d3c6be8d601ca01e5e048088992d14408c8476b2",
+            "repository": "pH34r-pH/research-notes",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/nacre-recall/actions/runs/45893381147",
+            "head": "8c7010882408694725260af0da71fd42244098d2",
+            "profile_sha256": "e8c27efaa4a59d5f1d527a335232c38b60c3899d9933cae66acae5e2c07c7902",
+            "repository": "pH34r-pH/nacre-recall",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/discursive-affective-epistemology/actions/runs/45901545161",
+            "head": "2c44ec5fbab7de9fc2bc0e1804c47ac6cef14789",
+            "profile_sha256": "b587052bfac4bcd05d2b9d8442c7d8e4ab75da592f10b9106a128b4624739afd",
+            "repository": "pH34r-pH/discursive-affective-epistemology",
+            "workflow": ".github/workflows/documentation-quality.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/the-personal-algorithm/actions/runs/45816333685",
+            "head": "409a463f7bc7e7cf5c4deff19ea1b7b725328f90",
+            "profile_sha256": "355a3cc66d91045036e1485f25bab4e3efb50c8bddf3958247df63bb01f86d64",
+            "repository": "pH34r-pH/the-personal-algorithm",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/family-tree/actions/runs/45900301966",
+            "head": "b8f9392a68dd65945777b3f0da28471cc279be15",
+            "profile_sha256": "8ba2be3052343d8923b1d2c09aab192f841602c9699ae2135ddda41e83e23cf3",
+            "repository": "pH34r-pH/family-tree",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/jam-day/actions/runs/45886621328",
+            "head": "1eaaf54140e827c6389b617cdf6646d8dd0f81cf",
+            "profile_sha256": "38c297f55435757a9b8530a99adde9cad6d789eb9218adc0c60659d9d1d0e8f9",
+            "repository": "pH34r-pH/jam-day",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/blue-swallow-wardriver/actions/runs/45166227439",
+            "head": "7632eaaddbf6396f2b21d5cb15d89c3fdb91e03e",
+            "profile_sha256": "f9c68ffe7df139b510fe268f726d650e4fe5c72a4e783fe4efb9b98d6717f0e6",
+            "repository": "pH34r-pH/blue-swallow-wardriver",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/Portfolio/actions/runs/43478789802",
+            "head": "4d07fe350d1f49b2a421a922683e55fd02f00a2a",
+            "profile_sha256": "dbb2e12135f206c4301313368a8246ab30f8ee61cfda4d8a45f2ac7e1ab9033d",
+            "repository": "pH34r-pH/Portfolio",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/blue-swallow-society/actions/runs/44395041308",
+            "head": "9ddbf6783bb35b2908a093a7e18eb1e51946d9c8",
+            "profile_sha256": "b954ca97ed1ac268c13ea9e42c0a921e6b0aa710e9ca471b0afd9ff79c77ad07",
+            "repository": "pH34r-pH/blue-swallow-society",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/agent-readable-calling-card/actions/runs/43061368436",
+            "head": "e6a7e9f2abd38a1f723090ab340d6f471602b3a3",
+            "profile_sha256": "49150ddc43194b11186f99ee4b6cb21a7534b9b2a2f7645155af4650f540c4f5",
+            "repository": "pH34r-pH/agent-readable-calling-card",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/socials/actions/runs/45904539867",
+            "head": "4a1a7e36088deba14aaa94a3a4b0b1d0e217c863",
+            "profile_sha256": "45e4a8373168d1e2b9a552930e9e43628d419587fd18d32e23efa841dc56b6ae",
+            "repository": "pH34r-pH/socials",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/book-development/actions/runs/43061127187",
+            "head": "7348385558abe9aaeac758bd90de18bbe7224519",
+            "profile_sha256": "aaebb8e32a1f34409a71dfaeed02570c7f27c8258b2a95987402a03163b13574",
+            "repository": "pH34r-pH/book-development",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/blackbox/actions/runs/45883176855",
+            "head": "3da36031251c31cfc07144c6f014346e9de3e307",
+            "profile_sha256": "c6b690df83db0335a101f271c091041c4291af2b323bbc14819c0b7833b1caf5",
+            "repository": "pH34r-pH/blackbox",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/longband/actions/runs/45897600352",
+            "head": "c3bde9c42c496d77d89b7e6e40a701795874d969",
+            "profile_sha256": "5a4c2cccfe67c41feb7eef239f81bc910015cbd0ec693a26a83bed846ec16d5c",
+            "repository": "pH34r-pH/longband",
+            "workflow": ".github/workflows/repository-governance.yml"
+          },
+          {
+            "default_branch": "main",
+            "governance_ci": "https://github.com/pH34r-pH/home-bot/actions/runs/45899121089",
+            "head": "17833c94691fd5b1bcd9e056c87d787d4223b38b",
+            "profile_sha256": "e9971bfbb51fed115e6b05fc24a2643f249cd9097a0035baffe73e6be1b59494",
+            "repository": "pH34r-pH/home-bot",
+            "workflow": ".github/workflows/repository-governance.yml"
+          }
+        ],
+        "validator_commit": "28b9afbd17faa2baea9f2fb302abe7db71ee9882"
+      },
+      "evidence": "The same pinned validator passed all 24 exact default-branch profiles. Every active workflow executed the pinned step successfully at its audited source revision. The action source repository uses byte-identical in-tree action files.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7205051525",
+      "remaining": "23 repository stabilization issues remain open. Independent acceptance, protected actions, and the later program exit criteria remain separate."
     }
   ]
 }
