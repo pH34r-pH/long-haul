@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+from datetime import datetime
 from pathlib import Path
 
 from .registry import load_vessel
@@ -47,6 +48,22 @@ def _parser() -> argparse.ArgumentParser:
     native.add_argument("--profile-id", required=True)
     native.add_argument("--raw", required=True)
     native.add_argument("--output", required=True)
+    native.add_argument("--source-id")
+    native.add_argument("--source-repository")
+    native.add_argument("--source-commit")
+    native.add_argument("--importer-commit")
+    native.add_argument("--measured-at")
+    native.add_argument("--work-contract-id")
+    native.add_argument("--request-id")
+    native.add_argument("--compiler-attempt-id")
+    native.add_argument("--traceparent")
+
+    export = sub.add_parser("export-benchmark-facts")
+    export.add_argument("--input", required=True)
+    export.add_argument("--output", required=True)
+    export.add_argument("--reference-id")
+    export.add_argument("--not-before")
+    export.add_argument("--as-of")
     return parser
 
 
@@ -104,10 +121,69 @@ def _replay(args) -> None:
 
 
 def _native(args) -> None:
-    from .llama_bench_import import import_profile
+    from .benchmarks import BenchmarkCorrelation
+    from .llama_bench_import import LlamaBenchImportOptions, import_profile
 
-    result = import_profile(args.manifest, args.profile_id, args.raw, args.output)
+    correlation_fields = {
+        "work_contract_id": args.work_contract_id,
+        "request_id": args.request_id,
+        "compiler_attempt_id": args.compiler_attempt_id,
+        "traceparent": args.traceparent,
+    }
+    correlation = (
+        BenchmarkCorrelation(**correlation_fields)
+        if any(value is not None for value in correlation_fields.values())
+        else None
+    )
+
+    result = import_profile(
+        args.manifest,
+        args.profile_id,
+        args.raw,
+        args.output,
+        options=LlamaBenchImportOptions(
+            measured_at=_parse_datetime(args.measured_at),
+            source_id=args.source_id,
+            source_repository=args.source_repository,
+            source_commit=args.source_commit,
+            importer_commit=args.importer_commit,
+            correlation=correlation,
+        ),
+    )
     print(json.dumps(result, indent=2))
+
+
+def _parse_datetime(value: str | None) -> datetime | None:
+    if value is None:
+        return None
+    return datetime.fromisoformat(value)
+
+
+def _export_benchmarks(args) -> None:
+    from .benchmarks.export import write_benchmark_export
+
+    result = write_benchmark_export(
+        args.input,
+        args.output,
+        reference_observation_id=args.reference_id,
+        not_before=_parse_datetime(args.not_before),
+        as_of=_parse_datetime(args.as_of),
+    )
+    compatible = None
+    if result["comparison"] is not None:
+        compatible = sum(
+            run["comparison"]["query_compatible"]
+            for run in result["comparison"]["facts"]
+        )
+    print(
+        json.dumps(
+            {
+                "output": args.output,
+                "fact_count": len(result["facts"]),
+                "comparison_compatible_count": compatible,
+            }
+        )
+    )
 
 
 def main() -> None:
@@ -120,6 +196,7 @@ def main() -> None:
         "benchmark-matrix": _benchmark,
         "benchmark-scheduler": _replay,
         "import-llama-bench": _native,
+        "export-benchmark-facts": _export_benchmarks,
     }
     handler = handlers.get(args.command)
     if handler is None:

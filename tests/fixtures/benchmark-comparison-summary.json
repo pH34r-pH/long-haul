@@ -1,0 +1,21 @@
+{
+  "fixture_provenance": "synthetic",
+  "policy": "BenchmarkStore.query_compatible/v1",
+  "runs": [
+    {
+      "observation_id": "legacy-unbound",
+      "query_compatible": false,
+      "reasons": ["runtime_unbound"]
+    },
+    {
+      "observation_id": "reference",
+      "query_compatible": true,
+      "reasons": []
+    },
+    {
+      "observation_id": "replicate",
+      "query_compatible": true,
+      "reasons": []
+    }
+  ]
+}

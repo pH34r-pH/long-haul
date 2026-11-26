@@ -1,21 +1,53 @@
 """Import native llama-bench JSON into Long Haul benchmark evidence."""
 from __future__ import annotations
 
+import hashlib
 import json
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 from pydantic import BaseModel, Field
 
 from .benchmark_matrix import MatrixManifest, _profile, load_manifest
-from .benchmarks import BenchmarkObservation, BenchmarkStore, Workload
-from .models import ExecutionMode
+from .benchmarks import (
+    BenchmarkCorrelation,
+    BenchmarkImportProvenance,
+    BenchmarkObservation,
+    BenchmarkStore,
+    Workload,
+    imported_observation_id,
+    source_occurrence_id,
+)
+from .models import ExecutionMode, InferenceProfile
 from .runtime import (
     ProfileValidation,
     RuntimeIdentity,
     ValidationDepth,
     ValidationState,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class LlamaBenchImportOptions:
+    """Caller-supplied identity and correlation metadata for one offline import."""
+
+    runtime_identity: RuntimeIdentity | None = None
+    measured_at: datetime | None = None
+    source_id: str | None = None
+    source_repository: str | None = None
+    source_commit: str | None = None
+    importer_commit: str | None = None
+    correlation: BenchmarkCorrelation | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class _ImportContext:
+    profile: InferenceProfile
+    options: LlamaBenchImportOptions
+    source_id: str
+    source_sha256: str
+    imported_at: datetime
 
 
 class LlamaBenchRow(BaseModel):
@@ -74,21 +106,35 @@ def _rows(path: str | Path) -> list[LlamaBenchRow]:
 
 def _append_observations(
     store: BenchmarkStore,
-    profile,
     rows: list[LlamaBenchRow],
-    runtime_identity: RuntimeIdentity | None = None,
-    measured_at: datetime | None = None,
-) -> list[str]:
-    observation_ids = []
-    for row in rows:
+    context: _ImportContext,
+) -> list[BenchmarkObservation]:
+    observations = []
+    options = context.options
+    for occurrence_index, row in enumerate(rows):
+        occurrence_id = source_occurrence_id(
+            context.source_id, context.source_sha256, occurrence_index
+        )
+        import_provenance = BenchmarkImportProvenance(
+            source_id=context.source_id,
+            source_sha256=context.source_sha256,
+            occurrence_index=occurrence_index,
+            source_occurrence_id=occurrence_id,
+            source_repository=options.source_repository,
+            source_commit=options.source_commit,
+            importer_commit=options.importer_commit,
+            imported_at=context.imported_at,
+            measured_at=options.measured_at,
+        )
         observation = BenchmarkObservation(
-            runtime=runtime_identity or _runtime(row),
-            **({"timestamp": measured_at} if measured_at is not None else {}),
-            profile=profile,
+            id=imported_observation_id(occurrence_id),
+            timestamp=options.measured_at or context.imported_at,
+            runtime=options.runtime_identity or _runtime(row),
+            profile=context.profile,
             plan_mode=ExecutionMode.LOCAL,
-            resources=profile.participating_resources,
+            resources=context.profile.participating_resources,
             workload=_workload(row),
-            provenance="measured",
+            provenance="measured" if options.measured_at is not None else "imported",
             prefill_tps=row.avg_ts if row.n_prompt and not row.n_gen else None,
             decode_tps=row.avg_ts if row.n_gen else None,
             utilization={
@@ -96,15 +142,23 @@ def _append_observations(
                 if row.stddev_ts is not None
                 else 0.0
             },
+            correlation=options.correlation,
+            import_provenance=import_provenance,
         )
-        observation_ids.append(store.append(observation).id)
-    return observation_ids
+        observations.append(store.append_imported(observation))
+    return observations
 
 
-def _validation(profile, row: LlamaBenchRow, runtime_identity=None, measured_at=None) -> ProfileValidation:
+def _validation(
+    profile,
+    row: LlamaBenchRow,
+    runtime_identity=None,
+    measured_at=None,
+    imported_at=None,
+) -> ProfileValidation:
     return ProfileValidation(
         runtime=runtime_identity or _runtime(row),
-        **({"timestamp": measured_at} if measured_at is not None else {}),
+        timestamp=measured_at or imported_at or datetime.now(UTC),
         profile_id=profile.id,
         artifact_key=profile.artifact.key,
         resources=profile.participating_resources,
@@ -138,12 +192,28 @@ def _report(
     }
 
 
-def _record(profile, validation: ProfileValidation, observation_ids: list[str]) -> dict[str, object]:
+def _record(
+    profile,
+    validation: ProfileValidation,
+    observations: list[BenchmarkObservation],
+) -> dict[str, object]:
     measured = validation.model_dump(mode="json")
     return {
         "profile": profile.model_dump(mode="json"),
         "preflight": measured,
-        "runs": [{"observation_id": item} for item in observation_ids],
+        "runs": [
+            {
+                "observation_id": observation.id,
+                **(
+                    {
+                        "source_occurrence_id": observation.import_provenance.source_occurrence_id
+                    }
+                    if observation.import_provenance is not None
+                    else {}
+                ),
+            }
+            for observation in observations
+        ],
         "measured_validation": measured,
     }
 
@@ -154,10 +224,10 @@ def import_profile(
     raw_path: str | Path,
     output_dir: str | Path,
     *,
-    runtime_identity: RuntimeIdentity | None = None,
-    measured_at: datetime | None = None,
+    options: LlamaBenchImportOptions | None = None,
 ) -> dict[str, object]:
-    if measured_at is not None and measured_at.tzinfo is None:
+    selected_options = options or LlamaBenchImportOptions()
+    if selected_options.measured_at is not None and selected_options.measured_at.tzinfo is None:
         raise ValueError("measured_at must be timezone-aware")
     manifest = load_manifest(manifest_path)
     specification = next((item for item in manifest.profiles if item.id == profile_id), None)
@@ -166,12 +236,43 @@ def import_profile(
 
     rows = _rows(raw_path)
     profile = _profile(specification, manifest.artifact, rows[0].model_filename)
+    raw_bytes = Path(raw_path).read_bytes()
+    source_sha256 = hashlib.sha256(raw_bytes).hexdigest()
+    basename_digest = hashlib.sha256(Path(raw_path).name.encode("utf-8")).hexdigest()
+    default_source_id = "file-" + hashlib.sha256(
+        f"{basename_digest}:{source_sha256}".encode("ascii")
+    ).hexdigest()[:32]
+    import_source_id = (
+        selected_options.source_id
+        if selected_options.source_id is not None
+        else default_source_id
+    )
+    imported_at = datetime.now(UTC)
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     benchmark_path = out / "benchmarks.jsonl"
-    observation_ids = _append_observations(BenchmarkStore(benchmark_path), profile, rows, runtime_identity, measured_at)
-    validation = _validation(profile, rows[0], runtime_identity, measured_at)
-    record = _record(profile, validation, observation_ids)
+    context = _ImportContext(
+        profile,
+        selected_options,
+        import_source_id,
+        source_sha256,
+        imported_at,
+    )
+    observations = _append_observations(
+        BenchmarkStore(benchmark_path),
+        rows,
+        context,
+    )
+    validation = _validation(
+        profile,
+        rows[0],
+        selected_options.runtime_identity,
+        selected_options.measured_at,
+        observations[0].import_provenance.imported_at
+        if observations[0].import_provenance is not None
+        else imported_at,
+    )
+    record = _record(profile, validation, observations)
 
     report_path = out / "matrix-report.json"
     report = _report(report_path, manifest, rows[0].model_filename, benchmark_path)
