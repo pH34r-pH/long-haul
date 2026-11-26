@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T22:33:17+00:00",
+    "updated_at": "2026-11-26T22:43:22+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3272,6 +3272,23 @@
       "evidence": "Six existing browser tests passed on matching source and tests. The issue asks for checking confirmation and existing calendar links when the event date changes.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7204776552",
       "remaining": "Organizer-selected dates, retention-aware backup and restore, and controlled qualification."
+    },
+    {
+      "at": "2026-11-26T22:43:22+00:00",
+      "task": "theorem-20",
+      "status": "formal_boundary_evidence_merged_and_previous_attestation_verified",
+      "repository": "pH34r-pH/theorem-library",
+      "pull_request": 29,
+      "checked_head": "8351ecc4f38ace5a4b0fcb5580d59927d138ecab",
+      "merge_commit": "2d07026173ab9a9a98f4a5473e7769a36b84ce52",
+      "default_branch_ci": "https://github.com/pH34r-pH/theorem-library/actions/runs/45906215765",
+      "default_branch_governance": "https://github.com/pH34r-pH/theorem-library/actions/runs/45906215718",
+      "previous_attested_source": "61b17eed011b504270b12f33cbd5312dc1870568",
+      "previous_proof_bundle_sha256": "1dd6a9f911f5e1c90189e6a7f8b20895961709ad1eb3eaf46e48cd6b8ff8ce73",
+      "previous_proof_bundle": "https://github.com/pH34r-pH/theorem-library/actions/runs/45876825364/artifacts/15145655742",
+      "evidence": "Lean v4.34.0-rc2 checked both unit-premise counterexamples plus the existing proof and axiom audits; 23 script regression tests passed. The previous bundle passed exact-source and signer verification plus all 32 member digests and 22 Git source blobs.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7204923776",
+      "remaining": "Applicability mappings for FRM-000001 through FRM-000007, a refreshed bundle through the manual retention workflow when authorized, and the separate upstream tool rights decision under #11."
     }
   ]
 }
