@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T22:24:46+00:00",
+    "updated_at": "2026-11-26T22:33:17+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3248,6 +3248,30 @@
       "evidence": "12 Linux tests and the exact CLI verified claims against approved source excerpts, isolated identity/account/audience, and pinned manual approval and outcome for publish, schedule, correct and delete. Cross-identity invocation and linked input were rejected.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7204653587",
       "remaining": "Owner workspace adoption, human claim review, and the first actual manual outcome across the authorized publication channels."
+    },
+    {
+      "at": "2026-11-26T22:33:17+00:00",
+      "task": "tone-18",
+      "status": "private_manifest_verifier_and_ci_merged",
+      "repository": "pH34r-pH/tone",
+      "pull_request": 20,
+      "checked_head": "fba3002c2290b65d00f0b46f95e105aaf991356a",
+      "merge_commit": "3ad97d18a80c44e9e8248b5e1e05f9e0bcb900bf",
+      "default_branch_ci": "https://github.com/pH34r-pH/tone/actions/runs/45905361881",
+      "evidence": "Exact merged tree matched the checked head. Private Linux CI passed five synthetic manifest tests, eleven runner-routing tests, the pinned governance action, lint, and offline links.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7204776552",
+      "remaining": "Private candidate assembly, source rights and retention, withdrawal propagation, and near-duplicate and iterative contamination review."
+    },
+    {
+      "at": "2026-11-26T22:33:17+00:00",
+      "task": "jam-25",
+      "status": "backlog_narrowed_to_rsvp_and_event_details",
+      "repository": "pH34r-pH/jam-day",
+      "issue": "https://github.com/pH34r-pH/jam-day/issues/25",
+      "checked_main": "1eaaf54140e827c6389b617cdf6646d8dd0f81cf",
+      "evidence": "Six existing browser tests passed on matching source and tests. The issue asks for checking confirmation and existing calendar links when the event date changes.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7204776552",
+      "remaining": "Organizer-selected dates, retention-aware backup and restore, and controlled qualification."
     }
   ]
 }
