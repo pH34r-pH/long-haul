@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T20:16:15+00:00",
+    "updated_at": "2026-11-26T20:32:16+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3108,6 +3108,20 @@
       "evidence": "56 Python tests and both Pi hook tests passed. Exact Long-Haul evaluator and launch writer admitted synthetic approved bytes and withheld changed bytes. Pi removed the old reference from context and skipped settled-turn capture after exposure.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7202479204",
       "remaining": "Live operator-admitted source, setup and refresh receipts and index qualification, and the frozen task contribution and capture scorecard."
+    },
+    {
+      "at": "2026-11-26T20:32:16+00:00",
+      "task": "nacre-24",
+      "status": "source_inventory_setup_and_refresh_merged",
+      "repository": "pH34r-pH/nacre-recall",
+      "pull_request": 26,
+      "checked_head": "24fd33bfe9081baada8bedd31e592304f507cff1",
+      "merge_commit": "456852d10fe6dda14bb07ce5f48fec50543d6b86",
+      "default_branch_checks": "Python 3.11 and 3.12, pinned Pi hook and governance passed",
+      "evidence": "64 Python tests and both Pi hook tests passed. The exact Long-Haul evaluator and launch writer exercised synthetic setup, stable refresh, indexed recall and deletion. Inventory tests cover conflict, deny globs, stale bytes, replay cutoff, expiry and fallback.",
+      "closeout": "https://github.com/pH34r-pH/nacre-recall/issues/4#issuecomment-7202794335",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7202798611",
+      "remaining": "Live operator-admitted workspace and the frozen comparative recall and capture scorecard under Nacre #24 and #7."
     }
   ]
 }
