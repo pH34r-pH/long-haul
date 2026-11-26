@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T23:18:12+00:00",
+    "updated_at": "2026-11-26T23:28:04+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3543,6 +3543,21 @@
       "evidence": "Identical checked and merged trees. Two generated sessions passed login, renewal, logout isolation, private viewer shell and durable expiry on the real Functions HTTP binding and Azurite 3.37.0. Negative Origin, anonymous, wrong password and owner-route checks passed. Node 24.22.3, 449 source tests, browser and PostGIS CI passed.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7205422676",
       "remaining": "Device upload and cross-user object ownership in the disposable stack, protected Wardriver cutover and public authority retirement, and migration/live recovery receipts."
+    },
+    {
+      "at": "2026-11-26T23:28:04+00:00",
+      "task": "society-131",
+      "status": "disposable_device_ingest_ownership_and_receipts_merged",
+      "repository": "pH34r-pH/blue-swallow-society",
+      "pull_request": 145,
+      "checked_head": "c1bef8e194da892736c503d9649508c480caf7d0",
+      "merge_commit": "aade5808f3f6c94ae137ebb420baea8a3e3ff714",
+      "default_branch_ci": "https://github.com/pH34r-pH/blue-swallow-society/actions/runs/45910916691",
+      "default_branch_governance": "https://github.com/pH34r-pH/blue-swallow-society/actions/runs/45910916707",
+      "postgres_image": "postgis/postgis:16-3.5@sha256:94146ac37bc61e2322f88016056c5920729cb8c64c8542ed590af8fc2abdac07",
+      "evidence": "Identical checked and merged trees. The Functions proxy handler sent synthetic device uploads over loopback HTTPS to the VM handler and migrated PostgreSQL 16.9/PostGIS 3.5. Separate ownership for equal keys, cross-device session rejection before storage, exact durable receipt replay, changed-content preservation, and denial after credential disablement passed. Both PostGIS integrations and 60 focused local tests passed on Node 24.22.3.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7205561324",
+      "remaining": "Cross-user shared-object ownership, live device mTLS, protected Wardriver cutover and public authority retirement, and exact migration and recovery receipts."
     }
   ]
 }
