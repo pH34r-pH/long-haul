@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T23:04:54+00:00",
+    "updated_at": "2026-11-26T23:18:12+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3528,6 +3528,21 @@
       "evidence": "Main and the checked head match. All 67 named theorem and defining-module pairs in the nine public modules have mappings across 12 applicability records. Lean rejected both an omitted record and an unknown name. All 26 regressions, the pinned proof checks, and governance passed after fixing the initial generated syntax error.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7205232581",
       "remaining": "Retain and verify a refreshed bundle on authorized exact main through lean.yml with retain_proof_candidate=true. Upstream mutation-tool usage remains a separate #11 decision."
+    },
+    {
+      "at": "2026-11-26T23:18:12+00:00",
+      "task": "society-131",
+      "status": "disposable_viewer_functions_e2e_merged",
+      "repository": "pH34r-pH/blue-swallow-society",
+      "pull_request": 144,
+      "checked_head": "891d79ecac6d4e2dd50d920c03a134ef2de11a9b",
+      "merge_commit": "8509f851b13022b4a7cab90de762a1067b44b7f7",
+      "default_branch_ci": "https://github.com/pH34r-pH/blue-swallow-society/actions/runs/45909922423",
+      "default_branch_governance": "https://github.com/pH34r-pH/blue-swallow-society/actions/runs/45909922436",
+      "main_fixture_image": "sha256:fad46543d2e1f614391c402e4a20342590c3fcdf85f287580aae5967d240a979",
+      "evidence": "Identical checked and merged trees. Two generated sessions passed login, renewal, logout isolation, private viewer shell and durable expiry on the real Functions HTTP binding and Azurite 3.37.0. Negative Origin, anonymous, wrong password and owner-route checks passed. Node 24.22.3, 449 source tests, browser and PostGIS CI passed.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7205422676",
+      "remaining": "Device upload and cross-user object ownership in the disposable stack, protected Wardriver cutover and public authority retirement, and migration/live recovery receipts."
     }
   ]
 }
