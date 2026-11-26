@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T21:11:47+00:00",
+    "updated_at": "2026-11-26T21:23:56+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3151,6 +3151,22 @@
       "evidence": "All applicable PR checks passed and the merged tree matches the tested head. Six API and cleanup tests, a disposable Azurite run, and four offline scenarios on the exact Jam Day browser source passed. The existing name and headcount form stays the attendee flow.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7203483637",
       "remaining": "Operator-selected deadlines, backup and restore handling, and controlled qualification through protected Fleet deployment."
+    },
+    {
+      "at": "2026-11-26T21:23:56+00:00",
+      "task": "longband-76",
+      "status": "claim_evidence_and_python_pin_merged",
+      "repository": "pH34r-pH/longband",
+      "pull_request": 82,
+      "checked_head": "39265537b00cdef89f8d137377401e4de0ada528",
+      "merge_commit": "c3bde9c42c496d77d89b7e6e40a701795874d969",
+      "default_branch_checks": "Python Alpha, OpenMLS, packaging and governance passed",
+      "corpus_digest": "sha256:e40d9f64174863b2a05aa29c7cc9fac2e12984ecfc2cb4fad359a085479fd54e",
+      "python_receipt_digest": "sha256:672beb09fc209f884ca75b595f2b743b5b62d59ba4abb8f08b67738fe7da9e1d",
+      "openmls_receipt_digest": "sha256:431321fefe71f4cde1a78d689d4730c4306d414363045cbb5e391da53644d7ec",
+      "evidence": "The historical hosted jobs used Python 3.14.4 despite the declared 3.12 series. The new main receipts verify Python 3.12.16 and 14 distinct passing cases. A mismatched interpreter emits no receipt. The claim-to-evidence map records exact public prototype and historical deployed scope.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7203686653",
+      "remaining": "Wider convergence, coordinator cancellation, partial-write crash recovery, and exact deployed qualification and independent review under Longband #12."
     }
   ]
 }
