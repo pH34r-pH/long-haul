@@ -2,6 +2,7 @@
 import json
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
 import pytest
 from repository_evaluator_fixture import SyntheticEvaluationRunner, git, profile, setup
@@ -184,6 +185,38 @@ def test_private_production_runner_requires_input_admission(tmp_path):
             admissions=PrivateEvaluationAdmissions(inputs=None, evidence=sink),
         )
     assert not sandbox.calls and not packets
+
+
+@pytest.mark.parametrize("expires_at", ["initial-admission", "retention-admission", "sink"])
+def test_private_deadline_covers_admission_and_retention(tmp_path, monkeypatch, expires_at):
+    _, private, contract, snapshot, runner = private_evaluation_fixture(tmp_path)
+    clock = SimpleNamespace(value=10.0)
+    deadline = clock.value + contract.budget.wall_seconds
+    evaluator_clock = SimpleNamespace(monotonic=lambda: clock.value)
+    monkeypatch.setattr("long_haul.work.repository_evaluator.time", evaluator_clock)
+    admissions = []
+    packets = []
+    original_authorize = PrivateEvidenceAdmission.authorize
+
+    def authorize(self, *args):
+        original_authorize(self, *args)
+        phase = "retention-admission" if admissions else "initial-admission"
+        admissions.append(phase)
+        if expires_at == phase:
+            clock.value = deadline
+
+    def retain(packet):
+        packets.append(packet)
+        if expires_at == "sink":
+            clock.value = deadline
+
+    monkeypatch.setattr(PrivateEvidenceAdmission, "authorize", authorize)
+    sink = evidence_admission(contract, private, "attempt", retain)
+    diagnostic = "reconcile retained evidence" if expires_at == "sink" else "wall budget"
+    with pytest.raises(TimeoutError, match=diagnostic):
+        runner.evaluate_private(contract, snapshot, private, attempt_id="attempt", packet_id="packet", private_sink=sink)
+    assert bool(runner.sandbox.calls) == (expires_at != "initial-admission")
+    assert len(packets) == (1 if expires_at == "sink" else 0)
 
 
 def test_private_evaluation_redacts_hidden_output_and_rejects_raw_public_event(tmp_path):

@@ -44,8 +44,24 @@ class PrivateEvaluationAdmissions:
     evidence: PrivateEvidenceAdmission
 
 
-def _require_wall_budget(started, budget):
-    if time.monotonic() - started >= budget:
+@dataclass(frozen=True)
+class _EvaluationAttempt:
+    attempt_id: str
+    packet_id: str
+    deadline: float
+    candidate_admission: CandidateInputAdmission | None
+
+
+def _evaluation_deadline(contract: WorkContract) -> float:
+    started = time.monotonic()
+    budget = contract.budget.wall_seconds
+    if not math.isfinite(budget) or budget <= 0:
+        raise ValueError("repository evaluator requires a finite positive wall budget")
+    return started + budget
+
+
+def _require_wall_budget(deadline: float) -> None:
+    if time.monotonic() >= deadline:
         raise TimeoutError("repository evaluator exhausted its work-contract wall budget")
 
 
@@ -113,7 +129,7 @@ def _sandbox_observation(result):
             "sandbox_execution": result.execution_receipt, "diagnostic": result.diagnostic}
 
 
-def _observe_check(check, snapshot, target, sandbox, scope_valid, profile):
+def _observe_check(check, snapshot, target, sandbox, scope_valid, profile, deadline):
     started = datetime.now(UTC)
     result = None
     if check.kind == "scope":
@@ -126,7 +142,11 @@ def _observe_check(check, snapshot, target, sandbox, scope_valid, profile):
                           else (EvidenceState.FAIL, "fail"))
     else:
         try:
-            result = sandbox.execute(target, check.command)
+            execute_before = getattr(sandbox, "execute_before", None)
+            if callable(execute_before):
+                result = execute_before(target, check.command, deadline)
+            else:
+                result = sandbox.execute(target, check.command)
         except SandboxCleanupRequired:
             raise  # Preserve the candidate and lease; no later checks may run.
         except (OSError, ValueError, RuntimeError):
@@ -167,38 +187,37 @@ class RepositoryEvaluationRunner:
                  candidate_admission: CandidateInputAdmission | None = None):
         if isinstance(profile, PrivateEvaluatorProfile):
             raise TypeError("private profiles require evaluate_private and an explicit private evidence sink")
-        return self._evaluate(contract, snapshot, profile, attempt_id=attempt_id, packet_id=packet_id,
-                              candidate_admission=candidate_admission)
+        attempt = _EvaluationAttempt(attempt_id, packet_id, _evaluation_deadline(contract), candidate_admission)
+        return self._evaluate(contract, snapshot, profile, attempt)
 
-    def _evaluate(self, contract, snapshot, profile, *, attempt_id, packet_id, candidate_admission):
-        started = time.monotonic()
-        if not math.isfinite(contract.budget.wall_seconds) or contract.budget.wall_seconds <= 0:
-            raise ValueError("repository evaluator requires a finite positive wall budget")
+    def _evaluate(self, contract, snapshot, profile, attempt: _EvaluationAttempt):
+        attempt_id, packet_id = attempt.attempt_id, attempt.packet_id
+        candidate_admission, deadline = attempt.candidate_admission, attempt.deadline
         _validate_binding(contract, snapshot, profile, self.sandbox)
         if type(candidate_admission) is not CandidateInputAdmission:
             raise PermissionError("candidate input admission is required")
         candidate_admission.authorize(snapshot, contract, profile, attempt_id, datetime.now(UTC))
-        _require_wall_budget(started, contract.budget.wall_seconds)
+        _require_wall_budget(deadline)
         assert_ready = getattr(self.sandbox, "assert_ready", None)
         if callable(assert_ready):
             assert_ready()
-        _require_wall_budget(started, contract.budget.wall_seconds)
+        _require_wall_budget(deadline)
         scope_valid = all(contract.permits_path(path) for path in snapshot.candidate.changed_paths)
         with snapshot.materialize(scratch_root=self.scratch_root) as target:
             observations = []
             for check in profile.checks:
                 candidate_admission.authorize(snapshot, contract, profile, attempt_id, datetime.now(UTC))
-                _require_wall_budget(started, contract.budget.wall_seconds)
-                observations.append(_observe_check(check, snapshot, target, self.sandbox, scope_valid, profile))
-                _require_wall_budget(started, contract.budget.wall_seconds)
+                _require_wall_budget(deadline)
+                observations.append(_observe_check(check, snapshot, target, self.sandbox, scope_valid, profile, deadline))
+                _require_wall_budget(deadline)
                 candidate_admission.authorize(snapshot, contract, profile, attempt_id, datetime.now(UTC))
-                _require_wall_budget(started, contract.budget.wall_seconds)
+                _require_wall_budget(deadline)
             observations = tuple(observations)
         invalid = tuple(check.predicate_id + ":" + check.outcome + (":" + check.diagnostic if check.diagnostic else "") for check in observations
                         if check.outcome not in {"pass", "fail"})
         if not scope_valid:
             invalid += ("candidate scope violation",)
-        _require_wall_budget(started, contract.budget.wall_seconds)
+        _require_wall_budget(deadline)
         evidence = _legacy_evidence(contract, snapshot, profile, observations, attempt_id, packet_id)
         packet = RepositoryEvidencePacketV1(
             evidence=evidence, candidate=snapshot.candidate, task=profile.task,
@@ -211,7 +230,7 @@ class RepositoryEvaluationRunner:
             checks=observations, validity="invalid" if invalid else "valid", invalid_reasons=invalid,
         )
         evaluation = evaluate_repository_packet(contract, packet, snapshot.candidate, profile)
-        _require_wall_budget(started, contract.budget.wall_seconds)
+        _require_wall_budget(deadline)
         return packet, evaluation
 
     def evaluate_private(self, contract, snapshot, profile, *, attempt_id, packet_id, admissions):
@@ -219,12 +238,19 @@ class RepositoryEvaluationRunner:
         if (not isinstance(profile, PrivateEvaluatorProfile) or type(admissions) is not PrivateEvaluationAdmissions
                 or not isinstance(admissions.evidence, PrivateEvidenceAdmission)):
             raise TypeError("private evaluation requires a keyed profile and admitted private evidence sink")
+        deadline = _evaluation_deadline(contract)
         admissions.evidence.authorize(contract, profile, attempt_id, datetime.now(UTC))
-        packet, evaluation = self._evaluate(contract, snapshot, profile, attempt_id=attempt_id, packet_id=packet_id,
-                                            candidate_admission=admissions.inputs)
+        _require_wall_budget(deadline)
+        attempt = _EvaluationAttempt(attempt_id, packet_id, deadline, admissions.inputs)
+        packet, evaluation = self._evaluate(contract, snapshot, profile, attempt)
+        summary = _private_summary(packet, profile)
+        _require_wall_budget(deadline)
         admissions.evidence.authorize(contract, profile, attempt_id, datetime.now(UTC))
+        _require_wall_budget(deadline)
         admissions.evidence.writer(packet)
-        return _private_summary(packet, profile), evaluation
+        if time.monotonic() >= deadline:
+            raise TimeoutError("private evidence sink returned after the wall deadline; reconcile retained evidence")
+        return summary, evaluation
 
 
 def _private_summary(packet, profile):

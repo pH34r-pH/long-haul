@@ -247,12 +247,21 @@ class DockerGVisorSandbox:
             raise SandboxCleanupRequired(*pending)
 
     def execute(self, candidate, command):
+        return self._evaluate_candidate(candidate, command, None)
+
+    def execute_before(self, candidate, command, deadline: float) -> SandboxResult:
+        """Cap candidate execution at the evaluator's monotonic deadline."""
+        return self._evaluate_candidate(candidate, command, deadline)
+
+    def _evaluate_candidate(self, candidate, command, deadline):
         self.assert_ready()
         container = None
         result = SandboxResult("invalid", diagnostic="sandbox_invalid", outputs_observed=False)
         removed = False
         try:
             arguments = self._create_arguments(candidate, command)
+            if deadline is not None and time.monotonic() >= deadline:
+                return SandboxResult("timeout", diagnostic="budget_expired", outputs_observed=False)
             try:
                 candidate_id = self._control(*arguments).strip()
                 if len(candidate_id) != 64 or any(c not in "0123456789abcdef" for c in candidate_id):
@@ -262,7 +271,7 @@ class DockerGVisorSandbox:
                 raise SandboxCleanupRequired(*self._pending_cleanup) from None
             container = candidate_id
             self._verify_configuration(container, candidate)
-            result = self._execute(container, command)
+            result = self._execute(container, command, deadline)
         except (OSError, ValueError, KeyError, subprocess.SubprocessError):
             pass
         finally:
@@ -289,14 +298,21 @@ class DockerGVisorSandbox:
                     process.kill()
                 process.communicate(timeout=5)
 
-    def _execute(self, container, command):
+    def _execute(self, container, command, deadline=None):
+        started = time.monotonic()
+        command_deadline = started + self.environment.limits.wall_seconds
+        if deadline is not None:
+            command_deadline = min(deadline, command_deadline)
+        if started >= command_deadline:
+            return SandboxResult("timeout", diagnostic="budget_expired", outputs_observed=False)
         with self._attached_process(container) as process:
-            deadline = time.monotonic() + self.environment.limits.wall_seconds
-            startup = _startup_receipt(process, deadline)
+            startup = _startup_receipt(process, command_deadline)
             if startup != START_MARKER:
+                if time.monotonic() >= command_deadline:
+                    return SandboxResult("timeout", stderr=startup, diagnostic="startup_deadline")
                 return SandboxResult("invalid", stderr=startup, diagnostic="startup_unverified")
             outcome, stdout, stderr = _bounded_output(
-                process, b"\0" + command.stdin.encode(), self.environment.limits, deadline=deadline,
+                process, b"\0" + command.stdin.encode(), self.environment.limits, deadline=command_deadline,
             )
             if outcome != "completed":
                 try:

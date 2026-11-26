@@ -4,6 +4,7 @@ import subprocess
 import sys
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
 import pytest
 from pydantic import ValidationError
@@ -141,6 +142,26 @@ def test_evaluator_materializes_only_under_owned_scratch(tmp_path):
     )
     assert packet.validity == "valid" and sandbox.calls
     assert list(scratch.iterdir()) == []
+
+
+def test_evaluator_passes_one_absolute_deadline_to_sandbox_checks(tmp_path, monkeypatch):
+    _, work, snapshot, profile = setup(tmp_path, FixtureSandbox.identity)
+    monotonic_start = 10.0
+    monkeypatch.setattr("long_haul.work.repository_evaluator.time", SimpleNamespace(monotonic=lambda: monotonic_start))
+    deadlines = []
+
+    class DeadlineSandbox(FixtureSandbox):
+        def execute_before(self, target, command, deadline):
+            deadlines.append(deadline)
+            return self.execute(target, command)
+
+    sandbox = DeadlineSandbox(profile.environment)
+    packet, _ = RepositoryEvaluationRunner(sandbox).evaluate(
+        work, snapshot, profile, attempt_id="attempt-1", packet_id="packet-1",
+    )
+    assert packet.validity == "valid"
+    assert deadlines == [monotonic_start + work.budget.wall_seconds] * len(sandbox.calls)
+    assert len(deadlines) == 2
 
 
 def public_evidence_admission(work, profile, packet):
@@ -592,6 +613,43 @@ def test_failed_kill_requires_observed_stopped_state(tmp_path, monkeypatch, stil
     monkeypatch.setattr("long_haul.work.repository_sandbox._bounded_output", lambda *args, **kw: ("output_limit", b"x", b""))
     command = CandidateCommand(program="program.py", expected_stdout_digest=content_digest(b""))
     assert adapter._execute("f" * 64, command).outcome == expected
+
+
+def test_gvisor_applies_the_remaining_deadline_to_startup_and_output(monkeypatch):
+    from contextlib import contextmanager
+
+    from repository_evaluator_fixture import environment
+
+    from long_haul.work.repository_evaluation_models import CandidateCommand
+
+    adapter = DockerGVisorSandbox.__new__(DockerGVisorSandbox)
+    adapter.environment = environment()
+    clock = SimpleNamespace(monotonic=lambda: 10.0)
+    monkeypatch.setattr("long_haul.work.repository_sandbox.time", clock)
+    budgets = []
+
+    @contextmanager
+    def attached(_):
+        budgets.append("started")
+        yield None
+
+    def startup(_, deadline):
+        budgets.append(deadline)
+        return START_MARKER
+
+    def output(*_, deadline):
+        budgets.append(deadline)
+        return "completed", b"", b""
+
+    monkeypatch.setattr(adapter, "_attached_process", attached)
+    monkeypatch.setattr(adapter, "_control", lambda *_: '[{"State":{"ExitCode":0}}]')
+    monkeypatch.setattr("long_haul.work.repository_sandbox._startup_receipt", startup)
+    monkeypatch.setattr("long_haul.work.repository_sandbox._bounded_output", output)
+    command = CandidateCommand(program="program.py", expected_stdout_digest=content_digest(b""))
+    assert adapter._execute("f" * 64, command, 10.0).outcome == "timeout"
+    assert budgets == []
+    assert adapter._execute("f" * 64, command, 10.25).outcome == "completed"
+    assert budgets == ["started", 10.25, 10.25]
 
 
 def test_docker_controls_ignore_ambient_credentials_and_proxy_config(tmp_path, monkeypatch):
