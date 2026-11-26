@@ -43,6 +43,8 @@ from long_haul.work.harness import (
     harness_attempt,
     progress_event,
     resume_harness_attempt,
+    semantic_trace_bytes,
+    verify_semantic_trace,
 )
 from long_haul.work.repository_models import DigestReference, content_digest
 
@@ -131,6 +133,95 @@ def test_correlated_ordered_actions_preserve_ids_without_private_payloads(tmp_pa
     for canary in ["private canary", "SECRET_REASONING", "fixture/code.py", KEY.decode()]:
         assert canary not in history
     assert [e.payload["semantic_action"]["sequence"] for e in store.events()] == [1, 2, 3]
+
+
+def retained_fixture_trace():
+    _, _, attempt, normalizer = core()
+    projector = PiTrajectoryProjector(normalizer)
+    records = [record for index in range(3)
+               for record in (start(str(index)), end(str(index), error=True))]
+    events = tuple(feed(projector, [*records, {"type": "agent_settled", "aborted": False}]))
+    return projector.state.finish(events, cleanup(attempt)), events
+
+
+def verify_fixture_trace(result, trace, *, expected=None, budget=64 * 1024):
+    return verify_semantic_trace(
+        result.model_dump_json().encode(), trace,
+        expected_result_fingerprint=result.fingerprint if expected is None else expected,
+        max_bytes=budget,
+    )
+
+
+def test_verified_trace_replays_progress_without_tool_payloads():
+    result, events = retained_fixture_trace()
+    trace = semantic_trace_bytes(events)
+    assert result.trace.digest == content_digest(trace)
+    assert b"private canary" not in trace and b"fixture/code.py" not in trace
+    restored, readback = verify_fixture_trace(result, trace)
+    assert restored == result and readback == events
+    assert restored.acceptance == "not_evaluated"
+    monitor = ProgressMonitor()
+    repeated = [progress_event(monitor, event) for event in readback if event.phase == "end"]
+    assert repeated[0] is None
+    assert repeated[1].payload["reason"] == "repeated_failure_pair"
+
+
+def test_trace_identity_and_local_read_budget_are_checked_before_decoding():
+    result, events = retained_fixture_trace()
+    trace = semantic_trace_bytes(events)
+    with pytest.raises(ValueError, match="expected fingerprint"):
+        verify_fixture_trace(result, trace, expected=reference("other").digest)
+    with pytest.raises(ValueError, match="artifact identity"):
+        verify_fixture_trace(result, trace[:-1])
+    with pytest.raises(ValueError, match="byte budget"):
+        verify_fixture_trace(result, trace, budget=len(result.model_dump_json().encode()) + len(trace) - 1)
+
+
+@pytest.mark.parametrize("change", ["reordered", "different session", "wrong count"])
+def test_trace_consistency_requires_exact_provenance_even_if_bytes_match_declared_hash(change):
+    result, events = retained_fixture_trace()
+    count = len(events)
+    if change == "reordered":
+        events = (events[1], events[0], *events[2:])
+    elif change == "different session":
+        events = (events[0].model_copy(update={"session_id": "unrelated"}), *events[1:])
+    else:
+        count += 1
+    trace = semantic_trace_bytes(events)
+    result = result.model_copy(update={
+        "event_count": count, "trace": result.trace.model_copy(update={"digest": content_digest(trace)}),
+    })
+    with pytest.raises(ValueError, match="provenance or ordering|event count"):
+        verify_fixture_trace(result, trace)
+
+
+def test_trace_reader_reports_invalid_data_without_echoing_it():
+    result, events = retained_fixture_trace()
+    event = {**events[0].model_dump(mode="json"), "unexpected": "private test value"}
+    trace = json.dumps(event).encode() + b"\n" + semantic_trace_bytes(events[1:])
+    result = result.model_copy(update={"trace": result.trace.model_copy(update={"digest": content_digest(trace)})})
+    with pytest.raises(ValueError, match="invalid semantic action record") as raised:
+        verify_fixture_trace(result, trace)
+    assert "private test value" not in str(raised.value)
+
+
+def test_trace_reader_requires_canonical_result_bytes():
+    result, events = retained_fixture_trace()
+    with pytest.raises(ValueError, match="result record is not canonical"):
+        verify_semantic_trace(
+            result.model_dump_json(indent=2).encode(), semantic_trace_bytes(events),
+            expected_result_fingerprint=result.fingerprint, max_bytes=64 * 1024,
+        )
+
+
+def test_trace_reader_retains_a_failed_attempt_with_zero_events():
+    _, _, attempt, _ = core()
+    state = HarnessState(attempt)
+    state.settle("provider_failure")
+    result = state.finish((), cleanup(attempt))
+    restored, events = verify_fixture_trace(result, b"")
+    assert not events and restored.terminal == "provider_failure"
+    assert restored.acceptance == "not_evaluated"
 
 
 def test_equivalent_target_and_default_arguments_have_same_keyed_signature():
