@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T21:58:31+00:00",
+    "updated_at": "2026-11-26T22:14:59+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3222,6 +3222,19 @@
       "evidence": "The single retry following terminal cancellation reached startup_failure with zero allocated jobs on the same exact head.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7204237320",
       "remaining": "A successfully allocated exact-head governance check is required to merge the verified source."
+    },
+    {
+      "at": "2026-11-26T22:14:59+00:00",
+      "task": "wardriver-548",
+      "status": "device_qualification_evidence_draft_verified",
+      "repository": "pH34r-pH/blue-swallow-wardriver",
+      "pull_request": 850,
+      "checked_head": "87d47df36f67a3c23d031e33903e01a8c53b4194",
+      "checked_base": "7632eaaddbf6396f2b21d5cb15d89c3fdb91e03e",
+      "hosted_checks": "Five passing PR checks, including the new device evidence contract",
+      "evidence": "10 device-evidence and 30 existing release tests passed on Linux. Android Build Tools 36.0.0 verified disposable signed APKs and the instrumentation target. A changed log failed verification and skipped physical fixture remained incomplete. The offline SDK-free Gradle suite passed 729 tests, including golden replay.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7204501026",
+      "remaining": "The automatic main-push private release path holds the draft. Actual Fleet emulator execution, physical review and outstanding scan/outbox requirements remain open."
     }
   ]
 }
