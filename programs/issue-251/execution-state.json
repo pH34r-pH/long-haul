@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T22:14:59+00:00",
+    "updated_at": "2026-11-26T22:24:46+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3235,6 +3235,19 @@
       "evidence": "10 device-evidence and 30 existing release tests passed on Linux. Android Build Tools 36.0.0 verified disposable signed APKs and the instrumentation target. A changed log failed verification and skipped physical fixture remained incomplete. The offline SDK-free Gradle suite passed 729 tests, including golden replay.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7204501026",
       "remaining": "The automatic main-push private release path holds the draft. Actual Fleet emulator execution, physical review and outstanding scan/outbox requirements remain open."
+    },
+    {
+      "at": "2026-11-26T22:24:46+00:00",
+      "task": "socials-19",
+      "status": "offline_publication_handoff_verifier_merged",
+      "repository": "pH34r-pH/socials",
+      "pull_request": 20,
+      "checked_head": "c702e23578b3affc19e05266132c7cf34c0370ee",
+      "merge_commit": "4a1a7e36088deba14aaa94a3a4b0b1d0e217c863",
+      "default_branch_checks": "Pinned governance and synthetic publication handoff passed with sparse checkout",
+      "evidence": "12 Linux tests and the exact CLI verified claims against approved source excerpts, isolated identity/account/audience, and pinned manual approval and outcome for publish, schedule, correct and delete. Cross-identity invocation and linked input were rejected.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7204653587",
+      "remaining": "Owner workspace adoption, human claim review, and the first actual manual outcome across the authorized publication channels."
     }
   ]
 }
