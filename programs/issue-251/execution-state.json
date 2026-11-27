@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T11:33:12+00:00",
+    "updated_at": "2026-11-27T11:50:06+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -641,6 +641,36 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7215242873",
             "evidence": "All 48 exact Linux tests, six PR workflows, and six exact main workflows passed. An offline probe rejected a stale inventory. GitHub returned every tracked workflow path.",
             "remaining": "The two missing GitHub environment records, protected promotion and recovery receipts, Azure grants, deployed surfaces, live probes, and rollback evidence remain open."
+          },
+          "knowledge_whole_archive_hash": {
+            "status": "knowledge_whole_archive_hash_verified_on_main",
+            "pull_request": 1745,
+            "baseline_commit": "b6cc3d01e3059935280ab8e71d8479955aece27d",
+            "checked_head": "45243e6e5ff8f74b11832bf60905f56c6eb7915b",
+            "ci_checkout": "6b7d0a415a3d3e34e8e92fd1ab86f04ee0f5823b",
+            "checked_tree": "53ad57cdcc1f2fa64c2ae95d44ce220b5ec0315a",
+            "merge_commit": "00fd6f1988f1fee6dd5c7dc1ca63eef35369a175",
+            "knowledge_source_commit": "1163e3e8e02fa5393a752a0ddba93405821765d2",
+            "knowledge_source_run": "https://github.com/pH34r-pH/knowledge/actions/runs/45990939911",
+            "archive_sha256": "dc396f79b601b9ca66fdff6bcea2a9385be025a21e600ee7f2c0c31e88b205e8",
+            "archive_bytes": 253420752,
+            "knowledge_streaming_limit_bytes": 268435456,
+            "standard_archive_limit_bytes": 157286400,
+            "pull_request_ci": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45992469953",
+            "default_branch_ci": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45992984405",
+            "live_intake": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45993015309",
+            "live_intake_attempt": 1,
+            "live_intake_jobs": {
+              "verify": 140485360033,
+              "stage": 140485878093,
+              "archive": 140486481458
+            },
+            "offline_linux_tests": 39,
+            "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7217512960",
+            "knowledge_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7217517235",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7217517516",
+            "evidence": "Exact main read-only intake verified the full Knowledge archive with the hash option enabled. The independent measurement, local CLI, and staged receipt agree. The existing staging and archive jobs retained the digest receipt. All final PR and exact main workflows passed.",
+            "remaining": "Fleet promotion, probe, rollback, and recovery qualification remain queued behind Long-Haul evaluator and boundary prerequisites."
           }
         },
         {
@@ -1057,6 +1087,14 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7217195516",
             "evidence": "Three individually checked Crossref publications match at their recorded date precision. Full deposit dates and exact revisions remain pinned. Offline replay preserves all previous dispositions and removes the new approvals after expiry. Final PR, exact main and default Fleet intake passed.",
             "remaining": "The review queue contains 144 Works. Three Annals of Mathematics deposits need stronger page-range evidence. Optional Fleet whole-archive intake requires an admitted path for the oversized source."
+          },
+          "fleet_whole_archive_hash": {
+            "status": "verified_and_receipt_archived",
+            "source_commit": "1163e3e8e02fa5393a752a0ddba93405821765d2",
+            "archive_sha256": "dc396f79b601b9ca66fdff6bcea2a9385be025a21e600ee7f2c0c31e88b205e8",
+            "archive_bytes": 253420752,
+            "live_intake": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45993015309",
+            "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7217517235"
           }
         },
         {
@@ -5689,6 +5727,21 @@
       "fleet_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7217192397",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7217195516",
       "remaining": "The review queue contains 144 Works. Three Annals of Mathematics deposits need stronger page-range evidence. Optional Fleet whole-archive intake requires an admitted path for the oversized source."
+    },
+    {
+      "at": "2026-11-27T11:50:06+00:00",
+      "task": "fleet-1612",
+      "status": "knowledge_whole_archive_hash_verified_on_main",
+      "repository": "pH34r-pH/long-haul-fleet",
+      "issue": 1612,
+      "issue_state": "open",
+      "pull_request": 1745,
+      "merge_commit": "00fd6f1988f1fee6dd5c7dc1ca63eef35369a175",
+      "live_intake": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45993015309",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7217512960",
+      "knowledge_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7217517235",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7217517516",
+      "remaining": "Fleet promotion, probe, rollback, and recovery qualification remain queued behind Long-Haul evaluator and boundary prerequisites."
     }
   ]
 }
