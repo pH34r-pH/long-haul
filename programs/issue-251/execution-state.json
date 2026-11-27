@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T05:56:10-08:00",
+    "updated_at": "2026-11-27T06:11:29-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -697,6 +697,37 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7219758820",
             "evidence": "Shared canonical path validation rejects case and normalization collisions before staging while preserving valid Unicode member names. The strict decoder rejects exponent overflow. Compile and the verifier member reader both reject the existing small LFS pointer shape. All tests passed in a network-disabled Git checkout with the optional test tooling, and the four main POC artifacts match the frozen ZIP digest and size.",
             "remaining": "Independent ZIP integration cases and the remaining #155 entrypoint coverage remain open. Governed corpus admission, guarded evaluator disclosure and protected publication remain open under #150."
+          },
+          "package_conformance_completion": {
+            "issue": 155,
+            "issue_state": "closed_completed",
+            "acceptance_checkboxes_completed": 14,
+            "pull_request": 196,
+            "baseline_commit": "47a3737e530644b062ff1e1915c952c288916cd3",
+            "checked_head": "443626af2bd9cc64a24128da84624eba745c18fc",
+            "ci_checkout": "f099a15303cab4082a4a35021250ac2fb79f215b",
+            "checked_tree": "a7a1e0980d75b70535e5e83722c231447e8d266f",
+            "merge_commit": "6c944e4555e356d11ef85b5444f84d11c1f8ca13",
+            "local_source_tar_sha256": "644482b45de498180425888a0d2a25377d83316d74dec03fc653643ef3f895a5",
+            "local_linux_tests": 265,
+            "applicable_pr_checks": 10,
+            "pull_request_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/46012452925",
+            "pull_request_quality": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/46012452875",
+            "default_branch_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/46012984767",
+            "default_branch_governance": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/46012984829",
+            "historical_poc_sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+            "historical_poc_size": 15296,
+            "poc_artifacts_verified": [
+              15204685637,
+              15204625728,
+              15204428781,
+              15203709624
+            ],
+            "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/155#issuecomment-7220434221",
+            "parent_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7220447157",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7220447554",
+            "evidence": "Both entrypoints exercised with independent synthetic ZIPs and source recipes. Valid controls pass. The shared check rejects recognized Git LFS placeholders even when their own bytes match the inventory, and rejects malformed JSON, size and digest mismatches, and conflicting member names. CLI refusals preserve the tested input and output paths. All tests passed offline; the four exact-main POC ZIPs match the pinned historical bytes.",
+            "remaining_parent_scope": "Governed corpus admission, guarded evaluator disclosure, and protected publication remain open under #150."
           }
         },
         {
@@ -875,6 +906,22 @@
             "route_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1533#issuecomment-7220075886",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7220107212",
             "remaining": "Protected review of the source pin and host runtime reconciliation are pending. The live intake archive job is still queued."
+          },
+          "proceedings_source_local_readback": {
+            "status": "exact_source_verified_locally",
+            "observed_at": "2026-11-27T06:11:29-08:00",
+            "source_commit": "b9a756c2987a1291a1d523e27eee75150be98339",
+            "fleet_commit": "00fd6f1988f1fee6dd5c7dc1ca63eef35369a175",
+            "source_validation_run": "https://github.com/pH34r-pH/knowledge/actions/runs/46011016343",
+            "source_validation_attempt": 1,
+            "source_validation_job": "offline-integrity",
+            "archive_sha256": "ba46c673f5f81f59a2bfb74abfc77de3d7f430d72d752aeef054fc0469f81047",
+            "independent_local_receipt_sha256": "f05747219eb578c3a0eac15e733d8af992babc2dc98adea4514b3a2ab939735a",
+            "prior_protected_archive": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/46006924014/job/140533253550",
+            "prior_protected_archive_state": "queued",
+            "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7220311466",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7220447554",
+            "remaining": "The newer exact commit awaits protected staging and archive after the existing queued archive and protected runner route reconciliation."
           }
         },
         {
@@ -6370,6 +6417,30 @@
       "source_commit": "d1fcbff91557cf9d817db3bdbc6b83d8f660452e",
       "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1533#issuecomment-7220075886",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7220107212"
+    },
+    {
+      "at": "2026-11-27T06:11:29-08:00",
+      "task": "compiler-150",
+      "status": "package_conformance_issue_completed",
+      "repository": "pH34r-pH/experiment-compiler",
+      "issue": 155,
+      "issue_state": "closed_completed",
+      "pull_request": 196,
+      "merge_commit": "6c944e4555e356d11ef85b5444f84d11c1f8ca13",
+      "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/155#issuecomment-7220434221",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7220447554"
+    },
+    {
+      "at": "2026-11-27T06:11:29-08:00",
+      "task": "fleet-1612",
+      "status": "knowledge_proceedings_source_verified_locally",
+      "repository": "pH34r-pH/long-haul-fleet",
+      "issue": 1612,
+      "issue_state": "open",
+      "source_commit": "b9a756c2987a1291a1d523e27eee75150be98339",
+      "archive_job_state": "queued",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7220311466",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7220447554"
     }
   ]
 }
