@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T06:36:36+00:00",
+    "updated_at": "2026-11-27T07:00:57+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -346,6 +346,22 @@
             "default_branch_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45940054728",
             "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7209844314",
             "scope": "Private repository-agent package and separately retained canonical result and trace. Synthetic successful and failed attempts verified."
+          },
+          "python_qualification": {
+            "pull_request": 183,
+            "closed_issues": [
+              181,
+              168
+            ],
+            "baseline_commit": "07832f26583205f76951642d12c334b81eb18ae1",
+            "checked_head": "4efd362f24ff0fe6fb9401f1cc4e48da51150400",
+            "ci_checkout": "4d0716365cecccb1ae88539a6bed401fd51539c5",
+            "checked_tree": "b42c5a21cbf5f83e13ce8c5bae49075937dc99fc",
+            "merge_commit": "4f9cc87cf05230248c7291fa76db4589da63d453",
+            "main_lifecycle": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45955203768",
+            "main_governance": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45955203843",
+            "minimum_python": "3.11.4",
+            "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7212048206"
           }
         },
         {
@@ -4559,6 +4575,52 @@
       "evidence": "After #318 merged, the draft required candidate input and public packet distribution admissions for the two new hermetic cases. The updated test supplies exact synthetic admissions through existing helpers and proves that missing per-file admission is rejected before execution. Ruff, 84 focused tests, and the full Linux suite with 885 passed and 65 skipped qualified the test-only repair.",
       "remaining": "Real private authority, trusted scheduler and provider, verified retained build, host-loss recovery, cross-host fencing, lifecycle, hard deadlines and independent containment remain unqualified.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7211673047"
+    },
+    {
+      "at": "2026-11-27T07:00:57+00:00",
+      "task": "compiler-150",
+      "repository": "pH34r-pH/experiment-compiler",
+      "status": "python_compatibility_and_core_test_discovery_verified_on_main",
+      "pull_request": 183,
+      "closed_issues": [
+        181,
+        168
+      ],
+      "baseline_commit": "07832f26583205f76951642d12c334b81eb18ae1",
+      "checked_head": "4efd362f24ff0fe6fb9401f1cc4e48da51150400",
+      "ci_checkout": "4d0716365cecccb1ae88539a6bed401fd51539c5",
+      "checked_tree": "b42c5a21cbf5f83e13ce8c5bae49075937dc99fc",
+      "merge_commit": "4f9cc87cf05230248c7291fa76db4589da63d453",
+      "main_lifecycle": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45955203768",
+      "main_governance": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45955203843",
+      "minimum_python": "3.11.4",
+      "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7212048206",
+      "local_source_archive_sha256": "32aebda68cc839e8227291eca67dd4c101f65ce766cfff27ac05a53b80912ef8",
+      "local_exact_source_wheel_sha256": "98c33e4b3adf2ec5330466124fe6d24b47da03ea81586e6f042a601d93498ac5",
+      "historical_poc_sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+      "core_tests": {
+        "linux": {
+          "passed": 146,
+          "skipped": 82
+        },
+        "windows": {
+          "passed": 106,
+          "skipped": 122
+        }
+      },
+      "full_tests": {
+        "linux": {
+          "passed": 228,
+          "skipped": 0
+        },
+        "windows": {
+          "passed": 151,
+          "skipped": 77
+        }
+      },
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7212050677",
+      "evidence": "Identical checked and merged trees. The exact-source wheel rejected 3.11.3 and installed on 3.11.4, which passed all six clean-rebuild and attestation contract tests. Main CI passed on Python 3.11, 3.12, 3.13, and 3.14 and preserved the historical POC digest. Pages deployment was skipped.",
+      "remaining": "Implement the governed corpus profile and guarded private-evaluator disclosure using qualified #248 and #245 contracts. Protected publication verification remains staged. The semantic trajectory readback is merged and verified."
     }
   ]
 }
