@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T07:42:06-08:00",
+    "updated_at": "2026-11-27T07:58:37-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1341,6 +1341,56 @@
               "checks_url": "https://github.com/pH34r-pH/long-haul/pull/323/checks"
             },
             "evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7211437807"
+          },
+          "dcat_published_distribution_pr": {
+            "observed_at": "2026-11-27T07:58:37-08:00",
+            "status": "checks_passed_review_required",
+            "pull_request": 325,
+            "pull_request_url": "https://github.com/pH34r-pH/long-haul/pull/325",
+            "base_commit": "4d5ae441869d9459ed597294b1090fc3f19141c1",
+            "head": "9fb5ebff193fb097a58622668eb8941f7197424c",
+            "ci_checkout": "b9090b73821746b766282055f2ac7cd40f60718e",
+            "tree": "d32136d145f6a354df77b1f6416064c2ac216654",
+            "source_archive_sha256": "0b8748c74e5a18880ac25255b0c2dfff5f6d708d9e9bc02c882c4b63d9129e00",
+            "checks": {
+              "passed": 12,
+              "skipped": 4,
+              "ci_run": 46028685401,
+              "structural_run": 46028685406,
+              "pi_run": 46028685363,
+              "evaluator_run": 46028685413,
+              "public_cpu_run": 46028685372,
+              "offline_python_3_12_tests": {
+                "passed": 630,
+                "skipped": 43
+              },
+              "hosted_python_3_11_tests": {
+                "passed": 630,
+                "skipped": 43
+              },
+              "hosted_python_3_12_tests": {
+                "passed": 630,
+                "skipped": 43
+              }
+            },
+            "published_archive_rehearsal": {
+              "release": "https://github.com/pH34r-pH/compiled-experiments/releases/tag/dsl-issue-152-v1.0.0-archival-reissue-20261006",
+              "archived_commit": "a406be61e711dda31679fc716bd9cf480f531166",
+              "archive_bytes": 4129679,
+              "archive_sha256": "25612d81a480dd5f8148a0dc247db58cb2fd719fe619e75ef0cd4945b3c1364b",
+              "publication_receipt_sha256": "9ad646edc7bdbb10c96dd5e2821fcba530ff61d656626e5ef04815e76e3cfec7",
+              "publication_fingerprint": "sha256:86dc775cb6576db186764029d8409971dbaa8c38a0e300ff847a28ceffa27c93",
+              "dcat_jsonld_sha256": "ea7e86a434471ffedcff6d92e8d794a1d66afed0646f8bac46f4ce76b9e6672b",
+              "dcat_rdf_triples": 17,
+              "combined_tree": "0c2933c3022c783a675301a562f4e4977890059e",
+              "combined_resource_policy_tests": {
+                "passed": 110,
+                "skipped": 1
+              },
+              "scope": "Real public bytes and receipt with an offline rehearsal-only metadata grant. RDFLib and pySHACL independently read back the exact URL, size and digest."
+            },
+            "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7222694338",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7222697486"
           }
         },
         {
@@ -6917,6 +6967,19 @@
       "draft_release_id": 460769652,
       "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/5#issuecomment-7222363209",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7222366869"
+    },
+    {
+      "at": "2026-11-27T07:58:37-08:00",
+      "task": "lh-248-interchange",
+      "status": "dcat_published_distribution_verified_review_required",
+      "repository": "pH34r-pH/long-haul",
+      "issue": 248,
+      "issue_state": "open",
+      "pull_request": 325,
+      "head": "9fb5ebff193fb097a58622668eb8941f7197424c",
+      "published_archive_release": "https://github.com/pH34r-pH/compiled-experiments/releases/tag/dsl-issue-152-v1.0.0-archival-reissue-20261006",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7222694338",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7222697486"
     }
   ]
 }
