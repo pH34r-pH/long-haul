@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T02:23:40+00:00",
+    "updated_at": "2026-11-27T02:33:41+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3854,6 +3854,23 @@
       "issue_evidence": "https://github.com/pH34r-pH/research-notes/issues/31#issuecomment-7208076973",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7208079420",
       "remaining": "Fifteen other articles need claim-level coverage. Ongoing source availability, retraction and backlink checks remain open. Historical cutoff and mask frequencies remain unmeasured."
+    },
+    {
+      "at": "2026-11-27T02:33:41+00:00",
+      "task": "research-notes-31",
+      "status": "public_evidence_and_doi_readback_verified_on_main",
+      "repository": "pH34r-pH/research-notes",
+      "pull_request": 34,
+      "checked_head": "04cdbe7c404e87b3dae99849fdfa280e4c2bdfae",
+      "ci_checkout": "bf439d25935ba233496d43aac4d1e55dff887749",
+      "merge_commit": "e2595640126941c1ad6bf0aee9f3234747ddf2d2",
+      "default_branch_ci": "https://github.com/pH34r-pH/research-notes/actions/runs/45928794775/job/140276343106",
+      "default_branch_governance": "https://github.com/pH34r-pH/research-notes/actions/runs/45928794748",
+      "receipt_sha256": "da01ed9582eda42da8a23ae5b3c052d7057b8c2f9b093dd1e2359cbcf810cebb",
+      "evidence": "All four PR checks passed and checked and merged trees match. Main publication integrity ran 19 tests and built 18 pages. Matching PR and main receipts verify two declared claim source chains, their backlinks, and three declared DOI identities against public producer and bibliographic records. A separate control used the public Crossref retraction example and identified it as retracted.",
+      "issue_evidence": "https://github.com/pH34r-pH/research-notes/issues/31#issuecomment-7208234373",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7208236993",
+      "remaining": "Fifteen other articles still lack claim-level records. Public readback covers declared evidence and the updates available in the registry when checked."
     }
   ]
 }
