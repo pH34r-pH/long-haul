@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T05:16:06+00:00",
+    "updated_at": "2026-11-27T05:33:22+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -453,6 +453,17 @@
               "passed": 12,
               "skipped": 4,
               "checks_url": "https://github.com/pH34r-pH/long-haul/pull/316/checks"
+            }
+          },
+          "croissant_pr": {
+            "pull_request": 321,
+            "head": "71f75bca00aacebf75c73155e3fca1d007ffd501",
+            "status": "review_required",
+            "evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7210725269",
+            "checks": {
+              "passed": 12,
+              "skipped": 4,
+              "checks_url": "https://github.com/pH34r-pH/long-haul/pull/321/checks"
             }
           }
         },
@@ -4300,6 +4311,32 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7210481816",
       "evidence": "Self-hosted x64 scope reconciliation, repo smoke, and documentation completed. ARM64 smoke and all six push workflows passed.",
       "remaining": "Long-Haul #245 platform dependency, common receipt/workflow implementation, and live surface qualification remain open."
+    },
+    {
+      "at": "2026-11-27T05:33:22+00:00",
+      "task": "lh-248-interchange",
+      "status": "croissant_projection_checks_passed_review_required",
+      "repository": "pH34r-pH/long-haul",
+      "pull_request": 321,
+      "baseline_commit": "64c81d31fc8193cd2ff9e96a8df1751f86f8a21c",
+      "checked_head": "71f75bca00aacebf75c73155e3fca1d007ffd501",
+      "ci_checkout": "543a58d372c22a4cafa857cf90fc1a6ecf245a7e",
+      "checked_tree": "aa21f9aadd1fbcd1cf196095981ec5ce1a6ca211",
+      "archive_sha256": "af1682e845f2885dba338abacef7630f8cddda95a86edc00ea64068994b7d3e9",
+      "checks": {
+        "passed": 12,
+        "skipped": 4,
+        "checks_url": "https://github.com/pH34r-pH/long-haul/pull/321/checks"
+      },
+      "pull_request_ci": "https://github.com/pH34r-pH/long-haul/actions/runs/45945662839",
+      "structural_checks": "https://github.com/pH34r-pH/long-haul/actions/runs/45945662928",
+      "croissant_metadata_sha256": "9988e694e7a94bbbf7b420eca7032f130dcec350c03e4a83ac9d9016e4e5445d",
+      "compiler_pending_reference_package_sha256": "af39be44ebb56361dc03e114667864d3e7ae9dd7778fe349be70b042909b4c79",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7210725269",
+      "compiler_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7210724974",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7210727832",
+      "evidence": "Exact Linux source passed full Ruff and 613 tests, with 43 skips. Focused Windows passed 58. The published inventory projection checks exact policy and source-policy closure with the existing derive evaluator. Network-disabled MLCommons validation passed under 1.1.0 and 1.1.1. The Compiler main reference preserved the exact metadata digest and rejected promotion to a qualified corpus.",
+      "remaining": "Approving review for PR 321. SPDX 3.0.1 output and independent ODRL implementation remain open. Actual corpus file bytes, frozen partitions, decontamination and evaluator evidence still need qualification before Compiler corpus readback."
     }
   ]
 }
