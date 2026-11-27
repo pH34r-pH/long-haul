@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T07:58:37-08:00",
+    "updated_at": "2026-11-27T08:10:26-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1983,6 +1983,29 @@
             "remaining": "Owner source rights and retention decisions, complete private inventory, actual retirement or deletion receipts, and private candidate qualification remain open.",
             "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7221158555",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221161673"
+          },
+          "historical_prediction_view": {
+            "observed_at": "2026-11-27T08:10:26-08:00",
+            "status": "merged_and_verified_with_synthetic_sources",
+            "related_issue": "https://github.com/pH34r-pH/tone/issues/21",
+            "pull_request": "https://github.com/pH34r-pH/tone/pull/28",
+            "base_commit": "136abd6f4e2fdf9ae5016767461f46f5d3c341cc",
+            "verified_head": "fa7f1a38903aa9d303e6f2f8ed1e35ef7fbb5e11",
+            "ci_checkout": "82c3098b1a3745255fee7a78beb9715a40d7262f",
+            "verified_tree": "feab4fcdeb5f4b4d6d2682376f5f747313747711",
+            "merge_commit": "20eccc0467c27bc250aaa82624f990e9152335b1",
+            "pull_request_ci": "https://github.com/pH34r-pH/tone/actions/runs/46030859863",
+            "default_branch_ci": "https://github.com/pH34r-pH/tone/actions/runs/46031031346",
+            "default_branch_ci_attempt": 1,
+            "synthetic_corpus_tests": 45,
+            "private_runner_routing_tests": 11,
+            "private_ci_artifact_uploads": 0,
+            "scoped_fixture_archive_sha256": "2d7ae08239acf9e89e1e9bdfe5cb22fa974000b56cae3760c79180e743b7090e",
+            "synthetic_prediction_view_sha256": "aed94742d2c16a6f1a447a1c71769c2f1e254dcc53fc8a84ac37366510a7293e",
+            "scope": "The offline view binds the reviewed corpus release, chronological contamination register and episode packet. Complete episodes export only earlier same-exchange context and training history at the checked cutoff. Synthetic coverage was reproduced without private source data.",
+            "remaining": "Real pilot inputs need source admission and verified authorship, rights, retention, completeness, availability and holdout exposure. The editing view, state annotation schema and controlled consumer pilot remain open.",
+            "issue_evidence": "https://github.com/pH34r-pH/tone/issues/21#issuecomment-7222930596",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7222933904"
           }
         },
         {
@@ -6980,6 +7003,19 @@
       "published_archive_release": "https://github.com/pH34r-pH/compiled-experiments/releases/tag/dsl-issue-152-v1.0.0-archival-reissue-20261006",
       "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7222694338",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7222697486"
+    },
+    {
+      "at": "2026-11-27T08:10:26-08:00",
+      "task": "tone-18",
+      "status": "historical_prediction_view_verified_on_main",
+      "repository": "pH34r-pH/tone",
+      "issue": 18,
+      "issue_state": "open",
+      "related_issue": 21,
+      "pull_request": 28,
+      "merge_commit": "20eccc0467c27bc250aaa82624f990e9152335b1",
+      "issue_evidence": "https://github.com/pH34r-pH/tone/issues/21#issuecomment-7222930596",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7222933904"
     }
   ]
 }
