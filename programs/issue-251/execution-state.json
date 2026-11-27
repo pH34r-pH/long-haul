@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T01:20:55+00:00",
+    "updated_at": "2026-11-27T01:29:10+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3734,6 +3734,22 @@
       "issue_evidence": "https://github.com/pH34r-pH/jam-day/issues/25#issuecomment-7207207478",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7207209951",
       "remaining": "Organizer-selected retention dates, approved handling for any real copies, and protected production qualification. The Fleet repository and Jam Day production environment had neither retention variable name."
+    },
+    {
+      "at": "2026-11-27T01:29:10+00:00",
+      "task": "family-44",
+      "status": "private_record_rights_selection_validator_merged",
+      "repository": "pH34r-pH/family-tree",
+      "pull_request": 49,
+      "checked_head": "2dcf35c2e6df28980612759c34fd4ec264fb1569",
+      "ci_checkout": "2dcf35c2e6df28980612759c34fd4ec264fb1569",
+      "merge_commit": "4d49ee5fbb38a468a47e615f0cbbdc5e68233f58",
+      "default_branch_ci": "https://github.com/pH34r-pH/family-tree/actions/runs/45922732855/job/140256995714",
+      "default_branch_governance": "https://github.com/pH34r-pH/family-tree/actions/runs/45922732827",
+      "evidence": "Identical checked and merged trees. Exact main archive validation passed seven record-rights fixtures and full Atlas and pinned native GLX validation. PR atlas passed 94 Python tests, packaging, and desktop and mobile-size browser validation. The selected raw GLX records and references must have exact matching, compatible owner-supplied permission, consent, retention, deletion and publication decisions. The rights fixtures are synthetic.",
+      "issue_evidence": "https://github.com/pH34r-pH/family-tree/issues/44#issuecomment-7207319664",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7207321419",
+      "remaining": "Owner-approved actual record decisions, reversible identity merges, and policy-filtered, audited GLX, GEDCOM, book, and site exports."
     }
   ]
 }
