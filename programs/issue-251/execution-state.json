@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T07:39:10+00:00",
+    "updated_at": "2026-11-27T07:52:23+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -362,6 +362,37 @@
             "main_governance": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45955203843",
             "minimum_python": "3.11.4",
             "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7212048206"
+          },
+          "offline_integrity_qualification": {
+            "status": "offline_verification_and_radix_readback_verified",
+            "issue": 159,
+            "pull_request": 184,
+            "closed_issues": [
+              159,
+              55
+            ],
+            "baseline_commit": "4f9cc87cf05230248c7291fa76db4589da63d453",
+            "checked_head": "01030f87607957d83855563748ab77d2d66c9ac1",
+            "ci_checkout": "7ff3615c951936fa0a860673b1292e786aa471b0",
+            "checked_tree": "341acdc347c581fc151106c9d7c8920a837f629d",
+            "merge_commit": "4a2e209685bab9d4eebb6fa5cc549871ada2d37e",
+            "pull_request_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45960879133",
+            "default_branch_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45961111335",
+            "default_branch_governance": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45961111338",
+            "local_source_archive_sha256": "ea9bf3cfdcec7cac4c0a22f6982330268bc5322c232bcfafcbe60407fb8491d8",
+            "historical_poc_sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+            "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/159#issuecomment-7212896451",
+            "radix_coverage": {
+              "pull_request": 178,
+              "release_commit": "a406be61e711dda31679fc716bd9cf480f531166",
+              "package_sha256": "25612d81a480dd5f8148a0dc247db58cb2fd719fe619e75ef0cd4945b3c1364b",
+              "coverage_sha256": "fa682fe284ba4294a2aa36c9e42e67301d04a8e77095cbb654478301cdb56270",
+              "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/55#issuecomment-7212881399"
+            },
+            "program_issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7212900697",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7212901040",
+            "evidence": "Exact main passed 230 tests on Python 3.11, 3.12, 3.13 and 3.14. The exact local checkout passed the same suite with networking disabled and reproduced the historical POC digest. Verification reports internal, recipe and archive-pin evidence. Lifecycle write failures and competing outputs preserve previously archived inputs. The read-only report for the tagged radix archive retained four measured primary failures, the unreported calibration, the source 0 of 4 decision and checksum-only screening recovery.",
+            "remaining": "Governed corpus and restricted evaluator disclosure need qualified upstream Long-Haul contracts. Compiler issue 152 retains the source-owned campaign fixtures. Compiled Experiments issue 7 retains independent archive replay and protected publication remains staged."
           }
         },
         {
@@ -4723,6 +4754,40 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7212681299",
       "evidence": "All 294 tests passed locally and on exact main. The network-disabled focused suite passed 61 tests. Generated runs preserve frozen inputs, stable order, and explanation, while explicit ordered impressions link to subsequent interactions. The fenced snapshot restore retained provenance. The existing bounded mutation report records 134 killed and 40 surviving mutants.",
       "remaining": "Source-use admission, interaction-to-preference replay, counterfactual evaluation, and immutable learned policy candidates with operator promotion remain in issue 92. Hosted presentation remains outside the qualified local path."
+    },
+    {
+      "at": "2026-11-27T07:52:23+00:00",
+      "task": "compiler-150",
+      "repository": "pH34r-pH/experiment-compiler",
+      "status": "offline_verification_and_radix_readback_verified",
+      "issue": 159,
+      "pull_request": 184,
+      "closed_issues": [
+        159,
+        55
+      ],
+      "baseline_commit": "4f9cc87cf05230248c7291fa76db4589da63d453",
+      "checked_head": "01030f87607957d83855563748ab77d2d66c9ac1",
+      "ci_checkout": "7ff3615c951936fa0a860673b1292e786aa471b0",
+      "checked_tree": "341acdc347c581fc151106c9d7c8920a837f629d",
+      "merge_commit": "4a2e209685bab9d4eebb6fa5cc549871ada2d37e",
+      "pull_request_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45960879133",
+      "default_branch_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45961111335",
+      "default_branch_governance": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45961111338",
+      "local_source_archive_sha256": "ea9bf3cfdcec7cac4c0a22f6982330268bc5322c232bcfafcbe60407fb8491d8",
+      "historical_poc_sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+      "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/159#issuecomment-7212896451",
+      "radix_coverage": {
+        "pull_request": 178,
+        "release_commit": "a406be61e711dda31679fc716bd9cf480f531166",
+        "package_sha256": "25612d81a480dd5f8148a0dc247db58cb2fd719fe619e75ef0cd4945b3c1364b",
+        "coverage_sha256": "fa682fe284ba4294a2aa36c9e42e67301d04a8e77095cbb654478301cdb56270",
+        "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/55#issuecomment-7212881399"
+      },
+      "program_issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7212900697",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7212901040",
+      "evidence": "Exact main passed 230 tests on Python 3.11, 3.12, 3.13 and 3.14. The exact local checkout passed the same suite with networking disabled and reproduced the historical POC digest. Verification reports internal, recipe and archive-pin evidence. Lifecycle write failures and competing outputs preserve previously archived inputs. The read-only report for the tagged radix archive retained four measured primary failures, the unreported calibration, the source 0 of 4 decision and checksum-only screening recovery.",
+      "remaining": "Governed corpus and restricted evaluator disclosure need qualified upstream Long-Haul contracts. Compiler issue 152 retains the source-owned campaign fixtures. Compiled Experiments issue 7 retains independent archive replay and protected publication remains staged."
     }
   ]
 }
