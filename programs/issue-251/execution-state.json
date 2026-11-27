@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T02:56:47+00:00",
+    "updated_at": "2026-11-27T03:05:53+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -411,11 +411,17 @@
           "id": "knowledge-42",
           "repository": "pH34r-pH/knowledge",
           "issue": 42,
-          "status": "queued",
+          "status": "in_progress",
           "depends_on": [
             "compiler-150"
           ],
-          "acceptance": "Every admitted source has exact trust/use/freshness metadata and prompt-injection-safe ingestion with stale-source invalidation."
+          "acceptance": "Every admitted source has exact trust/use/freshness metadata and prompt-injection-safe ingestion with stale-source invalidation.",
+          "implementation_pr": 44,
+          "merge_commit": "7f4ca84ed221e4976b848a0b757e1f735791ce03",
+          "evidence": [
+            "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7208699800"
+          ],
+          "default_branch_checks": "passed"
         },
         {
           "id": "tone-18",
@@ -441,13 +447,20 @@
           "id": "notes-31",
           "repository": "pH34r-pH/research-notes",
           "issue": 31,
-          "status": "queued",
+          "status": "completed",
           "depends_on": [
             "compiler-150",
             "knowledge-42",
             "dsl-842"
           ],
-          "acceptance": "Articles have machine-readable claim/evidence/correction graphs, exact Compiler links, and stale citation/backlink checks."
+          "acceptance": "Articles have machine-readable claim/evidence/correction graphs, exact Compiler links, and stale citation/backlink checks.",
+          "implementation_pr": 36,
+          "merge_commit": "3d056fe88088d15fce17a31f23245e3325be08d9",
+          "evidence": [
+            "https://github.com/pH34r-pH/research-notes/issues/31#issuecomment-7208565120"
+          ],
+          "receipt_sha256": "8c4515ecbb131f347d92a9e48a8dc56d8d19717864dbd551f391902536c07d9b",
+          "default_branch_checks": "passed"
         },
         {
           "id": "dae-37",
@@ -567,7 +580,7 @@
           "implementation_pr": 6,
           "checked_head": "9d71ce9b8e2686cbe5e46db1c3e8590784f3ba54",
           "qualification": {
-            "status": "local_approved_existing_governance_queued",
+            "status": "local_qualified_existing_governance_startup_failure",
             "candidate_sha256": "707c751fa8d73938894e1c0a46961222cc72e871c492d3a45fc9fbf60374976f",
             "publication_tests_passed": 18,
             "offline_tests_passed": 16,
@@ -579,7 +592,9 @@
             ],
             "governance_run": 43096302292,
             "actual_browser_layout": "unavailable_alternate_engine_content_inspected",
-            "publication_authorized": false
+            "publication_authorized": false,
+            "governance_updated_at": "2026-11-27T03:01:26Z",
+            "governance_job_count": 0
           }
         },
         {
@@ -3907,6 +3922,36 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7208568337",
       "evidence": "All four PR checks passed and the tested and merged trees match. Exact main validation ran 28 tests and built 18 pages. The identical live findings on PR and main cover 20 claim sources, three bibliography entries and 46 article and reference links. Fleet accepted the exact successful workflow with its receipt. An injected failed whole-workflow check rejected candidate intake. The isolated Portfolio export rendered the four-page Muon PDF with valid package, walkthrough and evaluator links. The issue closed as completed.",
       "remaining": "The ten historical empirical records explicitly flag unavailable original run evidence. DOI resolver metadata and individual source sites establish the reported checks at verification time. Scientific review and protected publication remain separate downstream decisions."
+    },
+    {
+      "at": "2026-11-27T03:05:53+00:00",
+      "task": "knowledge-42",
+      "status": "live_source_health_and_dependency_report_verified_on_main",
+      "repository": "pH34r-pH/knowledge",
+      "pull_request": 44,
+      "checked_head": "498626f4e6dde565910319d877f405d62ddd97b2",
+      "ci_checkout": "f8cccb7e7cdff0813a0cc96d12d8b0e86a953db7",
+      "merge_commit": "7f4ca84ed221e4976b848a0b757e1f735791ce03",
+      "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45932042962/job/140286649827",
+      "default_branch_governance": "https://github.com/pH34r-pH/knowledge/actions/runs/45932042909",
+      "registry_sha256": "5e1f65e364503bd90a543f8b8f8b0f419b6aec8b5ef5dd387613511bbedb5a91",
+      "readback_receipt_sha256": "a9b0a7f6ce82eeaff68b84cfc083358d0a953378049423a5269f2da098531913",
+      "evidence": "Tested and merged trees match. All five PR checks and all three main workflows passed. Main and PR receipts agree on all 242 works. Three reviewed sources matched the current arXiv version and exact PDF bytes for bibliographic metadata use. Of the remaining records, 239 have empty use decisions pending review. A negative control revoked metadata eligibility and identified dependent evidence without modifying historic rows.",
+      "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7208699800",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7208702193",
+      "remaining": "Wider reviewed-source coverage and verified downstream consumer handling of live stale-source findings."
+    },
+    {
+      "at": "2026-11-27T03:05:53+00:00",
+      "task": "book-5",
+      "status": "exact_governance_retry_again_terminated_before_job_allocation",
+      "repository": "pH34r-pH/book-development",
+      "pull_request": 6,
+      "checked_head": "9d71ce9b8e2686cbe5e46db1c3e8590784f3ba54",
+      "workflow_run": "https://github.com/pH34r-pH/book-development/actions/runs/43096302292",
+      "evidence": "The same run entered the queue on retry, then reported startup_failure at 2026-11-27T03:01:26Z with zero jobs. The repository reports Actions enabled. The failure precedes governance execution.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7208702193",
+      "remaining": "A successfully allocated exact-head governance check remains necessary to merge the locally qualified source."
     }
   ]
 }
