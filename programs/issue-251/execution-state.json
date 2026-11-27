@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T10:02:42-08:00",
+    "updated_at": "2026-11-27T10:14:28-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -2055,6 +2055,29 @@
             "remaining": "Real pilot inputs need source admission and verified authorship, rights, retention, completeness, availability and holdout exposure. The editing view, state annotation schema and controlled consumer pilot remain open.",
             "issue_evidence": "https://github.com/pH34r-pH/tone/issues/21#issuecomment-7222930596",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7222933904"
+          },
+          "stated_intent_editing_view": {
+            "observed_at": "2026-11-27T10:14:28-08:00",
+            "status": "merged_and_verified_with_synthetic_sources",
+            "related_issue": "https://github.com/pH34r-pH/tone/issues/21",
+            "pull_request": "https://github.com/pH34r-pH/tone/pull/29",
+            "base_commit": "20eccc0467c27bc250aaa82624f990e9152335b1",
+            "verified_head": "b2db0aa424f72c8e66bd5b78d7992b1c06b6a573",
+            "ci_checkout": "6a4f085f0604d9783c0296cff39b8d5ca01e7396",
+            "verified_tree": "c9e0c3a0fc45a6cd8c3ebdf81d81e6f9d18c6144",
+            "merge_commit": "f9d5954e771c6a547238c811a3c3957de5ca5475",
+            "pull_request_ci": "https://github.com/pH34r-pH/tone/actions/runs/46047434590",
+            "default_branch_ci": "https://github.com/pH34r-pH/tone/actions/runs/46047588923",
+            "default_branch_ci_attempt": 1,
+            "synthetic_corpus_tests": 52,
+            "private_runner_routing_tests": 11,
+            "private_ci_artifact_uploads": 0,
+            "synthetic_editing_view_sha256": "a484602e247011848387b614b298875208590d19b49086ad2f14e650abfb989e",
+            "synthetic_editing_receipt_sha256": "0e683b58e0cc3ca074f5c1c142baed0945e836563b68488ed809910a31d6a6aa",
+            "scope": "The offline command binds the brief and optional draft to a frozen corpus release and chronological contamination register. Reviewed human-authored reference spans obey the historical cutoff. The synthetic replay preserved the AI-assisted draft label and withheld authored assessment text.",
+            "remaining": "Real pilot briefs and drafts require owner admission, current rights and retention decisions, reviewed state annotations, an independently frozen pilot packet, and controlled comparison and author evaluation.",
+            "issue_evidence": "https://github.com/pH34r-pH/tone/issues/21#issuecomment-7225268153",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225270613"
           }
         },
         {
@@ -7502,6 +7525,19 @@
       "issue_evidence": "https://github.com/pH34r-pH/Portfolio/issues/141#issuecomment-7225042907",
       "multimodal_handoff": "https://github.com/pH34r-pH/long-haul/issues/247#issuecomment-7225045652",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225048061"
+    },
+    {
+      "at": "2026-11-27T10:14:28-08:00",
+      "task": "tone-18",
+      "status": "stated_intent_editing_view_verified_on_main",
+      "repository": "pH34r-pH/tone",
+      "issue": 18,
+      "issue_state": "open",
+      "related_issue": 21,
+      "pull_request": 29,
+      "merge_commit": "f9d5954e771c6a547238c811a3c3957de5ca5475",
+      "issue_evidence": "https://github.com/pH34r-pH/tone/issues/21#issuecomment-7225268153",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225270613"
     }
   ]
 }
