@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T13:05:57+00:00",
+    "updated_at": "2026-11-27T13:13:19+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1403,7 +1403,26 @@
           "depends_on": [
             "knowledge-42"
           ],
-          "acceptance": "Evaluation corpus and independent evaluator are preregistered, and conceptual, implemented, experimental, and deployed states are machine-distinct."
+          "acceptance": "Evaluation corpus and independent evaluator are preregistered, and conceptual, implemented, experimental, and deployed states are machine-distinct.",
+          "pinned_research_status_check": {
+            "pull_request": 39,
+            "baseline_commit": "2c44ec5fbab7de9fc2bc0e1804c47ac6cef14789",
+            "checked_head": "5bfa56be1bb05cbed405393e20af5050ef92cec0",
+            "checked_tree": "6c20e9f2b2b35d6fff1e2bd633dc6d58fbbd5cad",
+            "merge_commit": "0341dc0e178536b68da73dbe35d96b6c251402e1",
+            "pull_request_ci": "https://github.com/pH34r-pH/discursive-affective-epistemology/actions/runs/46004732098",
+            "default_branch_ci": "https://github.com/pH34r-pH/discursive-affective-epistemology/actions/runs/46004881527",
+            "synthetic_manifest_sha256": "da468ef266cdfabd854b6570f989049351c30dae786fadbfd8444f0039a4aa28",
+            "synthetic_receipt_sha256": "0665a3654eaf75825fc68454f1644f36286895ede6facc7b859773ecf90aa200",
+            "synthetic_linux_source_archive_sha256": "aee2c9b700efa1ddff6be9569ce7ee7e0243ba5d96b31a7d2df6c381862aa771",
+            "private_main_regression_tests": 25,
+            "network_disabled_linux_regression_tests": 11,
+            "actions_artifacts": 0,
+            "scope": "Four evidence stages in the README table with a private CI gate tied to the baseline synthetic fixture and exact receipt. Surrounding scientific prose still requires review.",
+            "issue_evidence": "https://github.com/pH34r-pH/discursive-affective-epistemology/issues/37#issuecomment-7219195980",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7219198830",
+            "remaining": "Governed real-source admission, an independently frozen blinded holdout, qualified human raters, and separate runtime and empirical evidence remain open."
+          }
         }
       ]
     },
@@ -6080,6 +6099,19 @@
       "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7219042961",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7219045091",
       "remaining": "Fleet promotion, probe, rollback, and recovery qualification retain their existing prerequisites and gates."
+    },
+    {
+      "at": "2026-11-27T13:13:19+00:00",
+      "task": "dae-37",
+      "status": "pinned_research_status_verified_on_main",
+      "repository": "pH34r-pH/discursive-affective-epistemology",
+      "issue": 37,
+      "issue_state": "open",
+      "pull_request": 39,
+      "merge_commit": "0341dc0e178536b68da73dbe35d96b6c251402e1",
+      "issue_evidence": "https://github.com/pH34r-pH/discursive-affective-epistemology/issues/37#issuecomment-7219195980",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7219198830",
+      "remaining": "Governed real-source admission, an independently frozen blinded holdout, qualified human raters, and separate runtime and empirical evidence remain open."
     }
   ]
 }
