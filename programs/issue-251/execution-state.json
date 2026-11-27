@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T01:47:42+00:00",
+    "updated_at": "2026-11-27T01:55:39+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3782,6 +3782,22 @@
       "issue_evidence": "https://github.com/pH34r-pH/family-tree/issues/44#merged-privacy-export-and-identity-workflow",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7207578781",
       "remaining": "Actual owner record decisions, reviewed Git application of any real person merge, and policy-filtered book and site exports."
+    },
+    {
+      "at": "2026-11-27T01:55:39+00:00",
+      "task": "family-44",
+      "status": "private_rights_checked_book_and_site_candidates_merged",
+      "repository": "pH34r-pH/family-tree",
+      "pull_request": 52,
+      "checked_head": "9bbbd69f0d590d3d1bb50c436cc313e4fbff0605",
+      "ci_checkout": "9bbbd69f0d590d3d1bb50c436cc313e4fbff0605",
+      "merge_commit": "b4142a119dba545f64fe97406adde997d3700eee",
+      "default_branch_ci": "https://github.com/pH34r-pH/family-tree/actions/runs/45925209837/job/140264812220",
+      "default_branch_governance": "https://github.com/pH34r-pH/family-tree/actions/runs/45925209850",
+      "evidence": "Identical checked and merged trees. Main passed six native export tests, four native merge tests, seven record rights tests and full archive validation. The optional printable HTML register and offline site render from the exact rights-approved GLX selection. Synthetic rebuild was byte-identical, every link resolved, private overlays were excluded, and denied sources blocked output. A Chrome 158 mobile-size preview followed the local citation with zero remote requests and the desktop register had print chapter breaks.",
+      "issue_evidence": "https://github.com/pH34r-pH/family-tree/issues/44#owner-qualification",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7207684908",
+      "remaining": "The owner must supply decisions on actual private records, verify a real reviewed export, and authorize any actual merge or distribution through the private process."
     }
   ]
 }
