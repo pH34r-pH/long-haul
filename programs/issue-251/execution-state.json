@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T04:15:29+00:00",
+    "updated_at": "2026-11-27T04:18:14+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -400,7 +400,12 @@
             "pull_request": 316,
             "head": "741e16af6ca9d0bdac1edea5a164733a0342b190",
             "status": "review_required",
-            "evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7209642137"
+            "evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7209642137",
+            "checks": {
+              "passed": 12,
+              "skipped": 4,
+              "checks_url": "https://github.com/pH34r-pH/long-haul/pull/316/checks"
+            }
           }
         },
         {
@@ -4098,6 +4103,21 @@
       "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7209642137",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7209644441",
       "remaining": "Pull request review and runtime qualification. Native ODRL enforcement for independent consumers, authenticated policy context and Croissant/SPDX exports remain open. Verified trace reader #310 is now an upstream source for the separate Compiler trajectory profile."
+    },
+    {
+      "at": "2026-11-27T04:18:14+00:00",
+      "task": "lh-248-interchange",
+      "status": "compact_jsonld_candidate_checks_passed_review_required",
+      "repository": "pH34r-pH/long-haul",
+      "pull_request": 316,
+      "checked_head": "741e16af6ca9d0bdac1edea5a164733a0342b190",
+      "checks": {
+        "passed": 12,
+        "skipped": 4,
+        "checks_url": "https://github.com/pH34r-pH/long-haul/pull/316/checks"
+      },
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7209685337",
+      "remaining": "GitHub requires one approving review. No merge or default-branch evidence for this change yet."
     }
   ]
 }
