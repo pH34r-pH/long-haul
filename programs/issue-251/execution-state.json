@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T08:10:26-08:00",
+    "updated_at": "2026-11-27T08:27:45-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -2186,6 +2186,40 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216572836",
             "evidence": "The local replay deduplicates producer event IDs, uses UTC time and stable identity order, validates checkpoint prefixes and publishes exclusive immutable candidate files. The exact network-disabled suite and both CLI paths passed. Ranking evidence reproduced through a fresh SQLite store. All five PR and three main workflows passed.",
             "remaining": "Per-source trust and use admission, authorized history coverage, outcome calibration and regret evaluation, and operator-approved promotion and rollback evidence remain."
+          },
+          "governed_replay_source_use": {
+            "observed_at": "2026-11-27T08:27:45-08:00",
+            "status": "merged_and_verified_with_synthetic_sources",
+            "pull_request": "https://github.com/pH34r-pH/the-personal-algorithm/pull/106",
+            "base_commit": "2cfe3af090278618a78d30b468fb38f159867fc9",
+            "verified_head": "b5b2a4b6b3dfa9ba9da4bf26d5920807f7bb3885",
+            "ci_checkout": "e18fbe2b7dab31645f6150144743d555c3d30bc8",
+            "verified_tree": "3260605692c2098128b48d396ac198852fd81c69",
+            "merge_commit": "fa79b7c471bdc10cd8aa879249e1bdbb6e3f5b47",
+            "pull_request_ci": "https://github.com/pH34r-pH/the-personal-algorithm/actions/runs/46033126711",
+            "structural_ci": "https://github.com/pH34r-pH/the-personal-algorithm/actions/runs/46033126772",
+            "mutation_report": "https://github.com/pH34r-pH/the-personal-algorithm/actions/runs/46033126715/artifacts/15215925647",
+            "default_branch_ci": "https://github.com/pH34r-pH/the-personal-algorithm/actions/runs/46033511229",
+            "default_branch_ci_attempt": 1,
+            "offline_tests": 328,
+            "main_tests": 328,
+            "focused_replay_tests": 34,
+            "tested_source_archive_sha256": "a4649eefa6e2d37c76fed84c1d193a874c08e4918f06b7f0e5cb1598900f813c",
+            "legacy_replay_sha256": "14af1efa841c61e008129b8004897f08f162aa349841da520e169483573d5e4d",
+            "cross_repo_rehearsal": {
+              "long_haul_commit": "4d5ae441869d9459ed597294b1090fc3f19141c1",
+              "long_haul_source_archive_sha256": "9c6b3328bffa7fa2ae5dac957fb95eb9b4bde7a9aa689735024fd4abe5878dc5",
+              "evaluator_implementation": "resource-policy-evaluator-v1:sha256:6777cd9dd9e7e6dd8d5c0e2d9f73e1efaf698299bb39c72573fc3da07b5ef436",
+              "synthetic_sources": 7,
+              "upstream_decisions": 14,
+              "source_use_sha256": "19d5a1a01a3f85a300490a68a1ac48242795553c4c0e0e5bf7bf4acf54a91419",
+              "candidate_sha256": "643a5536febfc413d37b0c23df1766007035ace25f331a165f88883bbd86bb8b",
+              "checkpoint_sha256": "2f34db10fa8e0cb7f150c985c266c8a7eacd9b293d868ef6bbdad137a7b14961",
+              "scope": "Seven private evaluation allowances and seven independent model training denials produced by the shared upstream evaluator. The governed offline CLI matched uninterrupted and resumed candidate bytes and refused missing review or missing evaluation."
+            },
+            "remaining": "Current decisions and revocation checks before real-input use, observed-outcome calibration and regret, immutable operator promotion and rollback, and upstream program qualification.",
+            "issue_evidence": "https://github.com/pH34r-pH/the-personal-algorithm/issues/92#issuecomment-7223273529",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7223276664"
           }
         },
         {
@@ -7016,6 +7050,18 @@
       "merge_commit": "20eccc0467c27bc250aaa82624f990e9152335b1",
       "issue_evidence": "https://github.com/pH34r-pH/tone/issues/21#issuecomment-7222930596",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7222933904"
+    },
+    {
+      "at": "2026-11-27T08:27:45-08:00",
+      "task": "personal-92",
+      "status": "governed_replay_source_use_verified_on_main",
+      "repository": "pH34r-pH/the-personal-algorithm",
+      "issue": 92,
+      "issue_state": "open",
+      "pull_request": 106,
+      "merge_commit": "fa79b7c471bdc10cd8aa879249e1bdbb6e3f5b47",
+      "issue_evidence": "https://github.com/pH34r-pH/the-personal-algorithm/issues/92#issuecomment-7223273529",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7223276664"
     }
   ]
 }
