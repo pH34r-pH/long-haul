@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T03:23:12+00:00",
+    "updated_at": "2026-11-27T03:29:13+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -416,12 +416,13 @@
             "compiler-150"
           ],
           "acceptance": "Every admitted source has exact trust/use/freshness metadata and prompt-injection-safe ingestion with stale-source invalidation.",
-          "implementation_pr": 45,
-          "merge_commit": "02241a3df272274590cc9f504c12674d90b008db",
+          "implementation_pr": 46,
+          "merge_commit": "56468d7338963ce24d4190dcfa6f39daaa236ddc",
           "evidence": [
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7208699800",
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7208842903",
-            "https://github.com/pH34r-pH/long-haul-fleet/issues/177#issuecomment-7208910169"
+            "https://github.com/pH34r-pH/long-haul-fleet/issues/177#issuecomment-7208910169",
+            "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209024144"
           ],
           "default_branch_checks": "passed"
         },
@@ -3982,6 +3983,24 @@
       "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7208842903",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7208944312",
       "remaining": "The 239 remaining Work rows require review. KWRK-000053 and KWRK-000080 already appear in existing corpus articles. Only the push freshness result was exercised on live GitHub. The newer scheduled failure was verified by replay."
+    },
+    {
+      "at": "2026-11-27T03:29:13+00:00",
+      "task": "knowledge-42",
+      "status": "all_registered_corpus_arxiv_matches_reviewed_and_verified",
+      "repository": "pH34r-pH/knowledge",
+      "pull_request": 46,
+      "checked_head": "32152748ba59c0862977982c35a2f8148c03a5b4",
+      "ci_checkout": "4fd5c11b3a30ca337f0915ade0b4d6ab542a4c93",
+      "merge_commit": "56468d7338963ce24d4190dcfa6f39daaa236ddc",
+      "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45934318737/job/140293982904",
+      "default_branch_governance": "https://github.com/pH34r-pH/knowledge/actions/runs/45934318745",
+      "registry_sha256": "32356c3d55ce3360640ca8487a9a4ff25b9d77faf4800e97cfc2879b4bfdce2c",
+      "readback_receipt_sha256": "75fb4e3f25f651cc0ecd4a0daf4849078ad6db2b68550d12bd70658a1ee4e1b8",
+      "evidence": "All six PR and all three main workflows passed on matching trees. Main verified five reviewed arXiv records. Two new version-specific CC BY 4.0 PDFs and their attribution are retained. The expiry replay withheld both metadata use decisions and found their article dependencies. The merged Fleet verifier accepted the exact production branch revision through the public API.",
+      "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209024144",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7209026441",
+      "remaining": "The explicit arXiv scan in the canonical corpus found 93 distinct paper IDs. Five matched active Work rows and are reviewed. The 88 other scanned IDs fall outside that registry match. The other 237 Work entries need individual review for use."
     }
   ]
 }
