@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T10:22:24-08:00",
+    "updated_at": "2026-11-27T10:30:03-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -2099,6 +2099,27 @@
             "remaining": "Owner-approved real source and retention decisions, complete private inventory, verified retirement or deletion receipts, and lineage for separately supplied editing inputs, annotations and feedback.",
             "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7225410891",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225413230"
+          },
+          "editing_input_withdrawal": {
+            "observed_at": "2026-11-27T10:30:03-08:00",
+            "status": "merged_and_verified_with_synthetic_sources",
+            "related_issue": "https://github.com/pH34r-pH/tone/issues/21",
+            "pull_request": "https://github.com/pH34r-pH/tone/pull/31",
+            "base_commit": "32b92d406621837f05e6763fe4271c7fee6d1727",
+            "verified_head": "e940f60fe5939c86b7c77d8ed152cd77281d86ee",
+            "ci_checkout": "23f318a12b4743490421a49aa183201d1e5eeafd",
+            "verified_tree": "5f930aadcf9c6ce360633c194d9a6853ad838262",
+            "merge_commit": "947be9b3bc4232bf7c1b3e053a8719461183d1e5",
+            "pull_request_ci": "https://github.com/pH34r-pH/tone/actions/runs/46049551024",
+            "default_branch_ci": "https://github.com/pH34r-pH/tone/actions/runs/46049689248",
+            "default_branch_ci_attempt": 1,
+            "synthetic_corpus_tests": 60,
+            "private_runner_routing_tests": 11,
+            "private_ci_artifact_uploads": 0,
+            "scope": "Version 2 editing packets record direct source identities for supplied briefs and drafts. The withdrawal audit verifies the exact packet and release parent. A revoked brief and an expired draft each blocked a shared synthetic view whose identical output bytes came from two distinct packets. The view preserved the AI-assisted label and the audit emitted aggregate counts and digests.",
+            "remaining": "Owner-approved decisions and private inventory enrollment for actual sources, verified retirement or deletion receipts, and state annotation and author-feedback lineage.",
+            "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7225541963",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225544118"
           }
         },
         {
@@ -7572,6 +7593,19 @@
       "merge_commit": "32b92d406621837f05e6763fe4271c7fee6d1727",
       "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7225410891",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225413230"
+    },
+    {
+      "at": "2026-11-27T10:30:03-08:00",
+      "task": "tone-18",
+      "status": "editing_input_withdrawal_verified_on_main",
+      "repository": "pH34r-pH/tone",
+      "issue": 18,
+      "issue_state": "open",
+      "related_issue": 21,
+      "pull_request": 31,
+      "merge_commit": "947be9b3bc4232bf7c1b3e053a8719461183d1e5",
+      "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7225541963",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225544118"
     }
   ]
 }
