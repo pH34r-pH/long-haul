@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T09:55:08+00:00",
+    "updated_at": "2026-11-27T10:05:06+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -579,7 +579,23 @@
             "governance": "https://github.com/pH34r-pH/compiled-experiments/actions/runs/45952691293",
             "issue_evidence": "https://github.com/pH34r-pH/compiled-experiments/issues/7#issuecomment-7211664852"
           },
-          "remaining": "Merge of the clean replay record, provenance attestation, and the source-owned data-use summary."
+          "remaining": "Required reviews for the clean replay and provenance-gate PRs, producer-signed candidate qualification, and the source-owned data-use summary.",
+          "archive_publication_provenance": {
+            "pull_request": 12,
+            "status": "checks_passed_review_required",
+            "baseline_commit": "9815b62ba7fddb28caf4fc1d33abe885d5b686cd",
+            "checked_head": "e47584e9987a029269014013013b195c2c76d93f",
+            "ci_checkout": "70c48a54b3f098f826b60beec70a060fd61c522a",
+            "checked_tree": "e66f8d756f6510eb35f6d15c0f9a80bc8a726313",
+            "ci": "https://github.com/pH34r-pH/compiled-experiments/actions/runs/45978876384",
+            "governance": "https://github.com/pH34r-pH/compiled-experiments/actions/runs/45978876356",
+            "released_zip_sha256": "25612d81a480dd5f8148a0dc247db58cb2fd719fe619e75ef0cd4945b3c1364b",
+            "existing_tags_commit": "a406be61e711dda31679fc716bd9cf480f531166",
+            "issue_evidence": "https://github.com/pH34r-pH/compiled-experiments/issues/7#issuecomment-7215445391",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7215445716",
+            "evidence": "All 18 offline tests and both hosted checks passed. The exact workflow shell ran against a local bare Git remote with a stand-in for the attestation and release commands. Mismatched archive or package identities, unavailable provenance, and tag conflicts stopped before release creation. Valid and retry cases tagged the same verified commit.",
+            "remaining": "Required PR review, a signed producer candidate and protected publication qualification, and the source-owned data-use summary."
+          }
         }
       ]
     },
@@ -5282,6 +5298,19 @@
       "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7215243315",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7215242873",
       "remaining": "The two missing GitHub environment records, protected promotion and recovery receipts, Azure grants, deployed surfaces, live probes, and rollback evidence remain open."
+    },
+    {
+      "at": "2026-11-27T10:05:06+00:00",
+      "task": "compiled-7",
+      "status": "archive_publication_provenance_checks_passed_review_required",
+      "repository": "pH34r-pH/compiled-experiments",
+      "issue": 7,
+      "issue_state": "open",
+      "pull_request": 12,
+      "checked_head": "e47584e9987a029269014013013b195c2c76d93f",
+      "issue_evidence": "https://github.com/pH34r-pH/compiled-experiments/issues/7#issuecomment-7215445391",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7215445716",
+      "remaining": "Required PR review, a signed producer candidate and protected publication qualification, and the source-owned data-use summary."
     }
   ]
 }
