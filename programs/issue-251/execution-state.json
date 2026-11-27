@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T08:39:59+00:00",
+    "updated_at": "2026-11-27T08:55:40+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -684,7 +684,41 @@
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7210402977",
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7211170998"
           ],
-          "default_branch_checks": "passed"
+          "default_branch_checks": "passed",
+          "exact_arxiv_revision_coverage": {
+            "repository": "pH34r-pH/knowledge",
+            "issue": 42,
+            "issue_state": "open",
+            "pull_request": 53,
+            "baseline_commit": "0dc773afb62e2c7d83f31e7ac0e2ac0ae2439269",
+            "checked_head": "d2afa7f1f00f4f12fa99708380b1f00b2070c0cc",
+            "ci_checkout": "2470c8a454f0709aff083062fb46ff4c18b5e6c8",
+            "checked_tree": "65c6328210ac020606d8892887125e55d9cf73c8",
+            "merge_commit": "79b77807602c9cd9993d1b41c79a5579cf7fea9f",
+            "pull_request_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45969003965",
+            "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45969119126",
+            "main_readback": "https://github.com/pH34r-pH/knowledge/actions/runs/45969119126/artifacts/15184207792",
+            "main_readback_sha256": "a9d2542e1599ab0d29b4f9924f9dfcb0d70a0832f4e79d1fc22ee1c3763c0016",
+            "local_source_archive_sha256": "c793f23d63130a70b4fd5745aeddbba1b690f0fecbbd61776d13dc6be0ed9b9e",
+            "registry_sha256": "8b56f263ebc42fab836065f3b7e73d4ced4f35d74462c2815c279a0d970ee51a",
+            "pinned_arxiv_revisions": 26,
+            "verified_revision_scopes": 23,
+            "revision_review_required": [
+              "2501.12948v1",
+              "2604.14862v2",
+              "2605.10123v2"
+            ],
+            "documents_for_review": 3,
+            "live_verified_metadata_sources": 165,
+            "works_awaiting_use_review": 166,
+            "fleet_verifier_commit": "18a97e1090927a2b853a23fa2f0422f89415d762",
+            "fleet_receipt_sha256": "53868958473aaa6e293fabaf4237a5e62a2cbff88a276516d76c3adc967c5df7",
+            "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7214068253",
+            "fleet_archive_boundary": "https://github.com/pH34r-pH/long-haul-fleet/issues/177#issuecomment-7214068603",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7214071871",
+            "evidence": "All 57 network-disabled Linux tests, all six PR checks and all three exact main workflows passed. The 94 base citation identities and 331 Work records retained their existing report fields. PR and main readbacks matched apart from observation time. Fleet qualified the exact commit. The optional full codeload archive exceeded Fleet's existing 150 MiB limit on baseline and main.",
+            "remaining": "Review the three exact citations and the wider source-use backlog under the existing governed permissions. The full-tree Fleet archive size constraint remains recorded separately."
+          }
         },
         {
           "id": "tone-18",
@@ -4925,6 +4959,43 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7213781800",
       "evidence": "All 242 tests passed on exact network-disabled Linux source. The four hosted Python jobs each ran the eight-case catalog matrix and passed 241 tests. The exact main preview matched the local six-record catalog byte for byte and all detail routes, package digests and byte sizes verified. The generated artifacts preserve the authoritative protocol, execution states, source-owned interpretation, PropertyValue fields, parent ZIPs and existing scientific scope.",
       "remaining": "The broader Compiler issue 150 still needs governed corpus packaging and restricted evaluator disclosure using qualified Long-Haul contracts. The publication workflow retains its manual dispatch."
+    },
+    {
+      "at": "2026-11-27T08:55:40+00:00",
+      "task": "knowledge-42",
+      "status": "exact_arxiv_citation_revisions_verified_on_main",
+      "repository": "pH34r-pH/knowledge",
+      "issue": 42,
+      "issue_state": "open",
+      "pull_request": 53,
+      "baseline_commit": "0dc773afb62e2c7d83f31e7ac0e2ac0ae2439269",
+      "checked_head": "d2afa7f1f00f4f12fa99708380b1f00b2070c0cc",
+      "ci_checkout": "2470c8a454f0709aff083062fb46ff4c18b5e6c8",
+      "checked_tree": "65c6328210ac020606d8892887125e55d9cf73c8",
+      "merge_commit": "79b77807602c9cd9993d1b41c79a5579cf7fea9f",
+      "pull_request_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45969003965",
+      "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45969119126",
+      "main_readback": "https://github.com/pH34r-pH/knowledge/actions/runs/45969119126/artifacts/15184207792",
+      "main_readback_sha256": "a9d2542e1599ab0d29b4f9924f9dfcb0d70a0832f4e79d1fc22ee1c3763c0016",
+      "local_source_archive_sha256": "c793f23d63130a70b4fd5745aeddbba1b690f0fecbbd61776d13dc6be0ed9b9e",
+      "registry_sha256": "8b56f263ebc42fab836065f3b7e73d4ced4f35d74462c2815c279a0d970ee51a",
+      "pinned_arxiv_revisions": 26,
+      "verified_revision_scopes": 23,
+      "revision_review_required": [
+        "2501.12948v1",
+        "2604.14862v2",
+        "2605.10123v2"
+      ],
+      "documents_for_review": 3,
+      "live_verified_metadata_sources": 165,
+      "works_awaiting_use_review": 166,
+      "fleet_verifier_commit": "18a97e1090927a2b853a23fa2f0422f89415d762",
+      "fleet_receipt_sha256": "53868958473aaa6e293fabaf4237a5e62a2cbff88a276516d76c3adc967c5df7",
+      "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7214068253",
+      "fleet_archive_boundary": "https://github.com/pH34r-pH/long-haul-fleet/issues/177#issuecomment-7214068603",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7214071871",
+      "evidence": "All 57 network-disabled Linux tests, all six PR checks and all three exact main workflows passed. The 94 base citation identities and 331 Work records retained their existing report fields. PR and main readbacks matched apart from observation time. Fleet qualified the exact commit. The optional full codeload archive exceeded Fleet's existing 150 MiB limit on baseline and main.",
+      "remaining": "Review the three exact citations and the wider source-use backlog under the existing governed permissions. The full-tree Fleet archive size constraint remains recorded separately."
     }
   ]
 }
