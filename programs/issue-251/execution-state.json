@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T07:00:08-08:00",
+    "updated_at": "2026-11-27T07:12:30-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -956,6 +956,46 @@
             "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7220759197",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7220762300",
             "remaining": "Protected archival and the deployment, recovery, and surface-map acceptance criteria remain open."
+          },
+          "public_source_intake_authority_map": {
+            "observed_at": "2026-11-27T07:12:30-08:00",
+            "status": "merged_and_main_verified",
+            "pull_request": "https://github.com/pH34r-pH/long-haul-fleet/pull/1747",
+            "baseline_commit": "d0a49b0cee19a97eb3dfbab348fa49bd5925c34f",
+            "checked_head": "c09bc8c1aa114bd8acf235ad4e7ebd7c74c545a2",
+            "checked_tree": "90e55b6b7c4986b165d8d5325cf2d956af53fb79",
+            "merge_commit": "e876a90b5537e3b0bcd1fde5dcad4fedc275fb45",
+            "source_archive_sha256": "18bd9ea8de91cd56ff91df7cf37568ef95b4b5ef52a266c2677265f1b33bffd0",
+            "offline_suite": {
+              "passed": 32,
+              "skipped": 1,
+              "skipped_reason": "Linux fixture image lacked PowerShell"
+            },
+            "pr_ci": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/46021653401",
+            "default_branch_ci": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/46022231231",
+            "default_branch_azure_iac_ci": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/46022231229",
+            "applicable_pr_workflows_passed": 5,
+            "applicable_main_workflows_passed": 5,
+            "scope": "Existing CI derives the source intake authority rows from the workflow and delegated Azure login actions. Disposable negative fixtures demonstrate drift detection for environment and login mode.",
+            "github_branch_policies": {
+              "ci-blob-candidates": [
+                "main"
+              ],
+              "ci-blob-archive": [
+                "main"
+              ]
+            },
+            "protected_archive_observation": {
+              "job": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/46006924014/job/140533253550",
+              "status": "queued",
+              "runner_id": 0,
+              "pending_deployment_approvals": 0,
+              "positive_control": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/46003531187",
+              "other_repository_private_lane_observation": "https://github.com/pH34r-pH/tone/actions/runs/46018378036",
+              "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1533#issuecomment-7221658885"
+            },
+            "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7221752128",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221755519"
           }
         },
         {
@@ -6668,6 +6708,18 @@
       "checked_head": "06c4e2553b681355651af889a7958bd5ed07994c",
       "issue_evidence": "https://github.com/pH34r-pH/compiled-experiments/issues/10#issuecomment-7221486127",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221488850"
+    },
+    {
+      "at": "2026-11-27T07:12:30-08:00",
+      "task": "fleet-1612",
+      "status": "public_source_intake_authority_map_verified_on_main",
+      "repository": "pH34r-pH/long-haul-fleet",
+      "issue": 1612,
+      "issue_state": "open",
+      "merge_commit": "e876a90b5537e3b0bcd1fde5dcad4fedc275fb45",
+      "archive_job_state": "queued",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7221752128",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221755519"
     }
   ]
 }
