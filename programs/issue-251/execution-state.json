@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T12:51:54+00:00",
+    "updated_at": "2026-11-27T12:54:43+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1203,6 +1203,40 @@
             "archive_bytes": 253420752,
             "live_intake": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45993015309",
             "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7217517235"
+          },
+          "crossref_citation_supersession": {
+            "pull_request": 60,
+            "baseline_commit": "1163e3e8e02fa5393a752a0ddba93405821765d2",
+            "checked_head": "952c13311d288f27e8267dbfdf2ca710118e6931",
+            "checked_tree": "a2d64987b579526b3223debe36c18050042758ec",
+            "merge_commit": "49f0d32fb3da98773e7b8a1e0875036dce6e47b5",
+            "initial_historical_prefix_failure": "https://github.com/pH34r-pH/knowledge/actions/runs/46001309600",
+            "pull_request_readback": "https://github.com/pH34r-pH/knowledge/actions/runs/46002114929",
+            "default_branch_readback": "https://github.com/pH34r-pH/knowledge/actions/runs/46002297778",
+            "default_branch_governance": "https://github.com/pH34r-pH/knowledge/actions/runs/46002297768",
+            "default_branch_documentation": "https://github.com/pH34r-pH/knowledge/actions/runs/46002297977",
+            "report": "https://github.com/pH34r-pH/knowledge/actions/runs/46002297778/artifacts/15198712034",
+            "report_expires_at": "2026-12-11T12:53:12Z",
+            "report_sha256": "6a3a37e8bfa3487b1b1ef4a96f3e8fcdf5e9b22fe8bb5543f60e035c5c18b655",
+            "registry_sha256": "eb0521abd7d79093f639b9e2fabfb4d051554cc652afe6b12ece44072b5ed85a",
+            "corrected_work": "KWRK-000345",
+            "superseded_work": "KWRK-000002",
+            "publication_date": "2003-12",
+            "doi": "10.1016/j.automatica.2003.07.003",
+            "crossref_revision": "2019-02-24T00:27:09Z",
+            "crossref_snapshot_sha256": "811f61c6daa7daa552635aa87ed95f8448ac7cd288f652d29695518da067efd8",
+            "historical_work_rows_unchanged": 344,
+            "affected_claim": "KCLM-000002",
+            "affected_evidence": "KEVD-000002",
+            "offline_tests": 61,
+            "verified_approved_metadata": 198,
+            "works_requiring_review": 143,
+            "superseded_works": 4,
+            "active_citation_identities": 104,
+            "verified_pinned_arxiv_revisions": 35,
+            "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7218811635",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7218814510",
+            "remaining": "143 Work records still need review. The old Work's claim and evidence require review after supersession. Broader resource scopes remain tied to the qualified Compiler and Long-Haul policy contracts."
           }
         },
         {
@@ -5964,6 +5998,19 @@
       "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/182#issuecomment-7218686274",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7218691446",
       "remaining": "Governed corpus admission, guarded evaluator disclosure, and protected publication verification remain under Compiler #150."
+    },
+    {
+      "at": "2026-11-27T12:54:43+00:00",
+      "task": "knowledge-42",
+      "status": "crossref_citation_supersession_verified_on_main",
+      "repository": "pH34r-pH/knowledge",
+      "issue": 42,
+      "issue_state": "open",
+      "pull_request": 60,
+      "merge_commit": "49f0d32fb3da98773e7b8a1e0875036dce6e47b5",
+      "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7218811635",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7218814510",
+      "remaining": "143 Work records still need review. The old Work's claim and evidence require review after supersession. Broader resource scopes remain tied to the qualified Compiler and Long-Haul policy contracts."
     }
   ]
 }
