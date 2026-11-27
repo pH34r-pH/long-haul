@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T10:30:03-08:00",
+    "updated_at": "2026-11-27T10:37:27-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -2120,6 +2120,27 @@
             "remaining": "Owner-approved decisions and private inventory enrollment for actual sources, verified retirement or deletion receipts, and state annotation and author-feedback lineage.",
             "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7225541963",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225544118"
+          },
+          "episode_state_annotations": {
+            "observed_at": "2026-11-27T10:37:27-08:00",
+            "status": "merged_and_verified_with_synthetic_sources",
+            "related_issue": "https://github.com/pH34r-pH/tone/issues/21",
+            "pull_request": "https://github.com/pH34r-pH/tone/pull/32",
+            "base_commit": "947be9b3bc4232bf7c1b3e053a8719461183d1e5",
+            "verified_head": "f730d243d20e22853aa1ba349dfc713b827e8d57",
+            "ci_checkout": "8271bce70f2a4a7bb357f7219f41b41836114408",
+            "verified_tree": "86a937008bbc216c114a01711deab5c404f6e8f8",
+            "merge_commit": "3892d2ba446663b93cfb71979c4f907595f01d9e",
+            "pull_request_ci": "https://github.com/pH34r-pH/tone/actions/runs/46050543740",
+            "default_branch_ci": "https://github.com/pH34r-pH/tone/actions/runs/46050669323",
+            "default_branch_ci_attempt": 1,
+            "synthetic_corpus_tests": 64,
+            "private_runner_routing_tests": 11,
+            "private_ci_artifact_uploads": 0,
+            "scope": "The private sidecar verifier binds observations to exact spans and reviewed historical or editing packets. Target-derived citations require assessment-only scope. Both normal CLI modes passed while model inputs excluded annotation content. The synthetic withdrawal reached the registered sidecar.",
+            "remaining": "Actual owner-approved sources, reviewed episodes and annotations, author-feedback lineage, a private pilot coverage report and frozen manifests, plus blinded author evaluation.",
+            "issue_evidence": "https://github.com/pH34r-pH/tone/issues/21#issuecomment-7225676456",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225679064"
           }
         },
         {
@@ -7606,6 +7627,19 @@
       "merge_commit": "947be9b3bc4232bf7c1b3e053a8719461183d1e5",
       "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7225541963",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225544118"
+    },
+    {
+      "at": "2026-11-27T10:37:27-08:00",
+      "task": "tone-18",
+      "status": "episode_state_annotations_verified_on_main",
+      "repository": "pH34r-pH/tone",
+      "issue": 18,
+      "issue_state": "open",
+      "related_issue": 21,
+      "pull_request": 32,
+      "merge_commit": "3892d2ba446663b93cfb71979c4f907595f01d9e",
+      "issue_evidence": "https://github.com/pH34r-pH/tone/issues/21#issuecomment-7225676456",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225679064"
     }
   ]
 }
