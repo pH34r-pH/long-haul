@@ -121,6 +121,24 @@ def test_reveal_boundary_enforces_independent_capture_before_disclosure() -> Non
     assert rec.initial_positions[0].evidence == ()
 
 
+def test_untrusted_exception_and_consequential_flag_do_not_bypass_capture() -> None:
+    engine = DecisionEngine()
+    record = DecisionRecord(id="exception", proposal="x", participants={"A", "B"},
+                            consequential=False, exception="caller-supplied bypass")
+    record = engine.capture_initial(record, DecisionPosition(participant="A", position=Position.SUPPORT))
+    with pytest.raises(ValueError, match="cannot reveal"):
+        engine.reveal_initial_positions(record)
+    with pytest.raises(ValueError, match="complete initial capture"):
+        engine.record_final(record, DecisionPosition(participant="A", position=Position.SUPPORT))
+    with pytest.raises(ValueError, match="every participant"):
+        engine.resolve(record, "consent", "act")
+
+
+def test_empty_participant_set_is_rejected() -> None:
+    with pytest.raises(ValueError, match="at least one participant"):
+        DecisionRecord(id="empty", proposal="x", participants=set())
+
+
 def test_consequential_dispatch_gate_and_event_replay(tmp_path: Path) -> None:
     engine = DecisionEngine()
     store = EventStore(tmp_path / "decisions.jsonl")

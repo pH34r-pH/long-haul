@@ -67,6 +67,8 @@ class DecisionRecord(BaseModel):
 
     @model_validator(mode="after")
     def validate_record_invariants(self) -> DecisionRecord:
+        if not self.participants:
+            raise ValueError("decision requires at least one participant")
         _validate_positions_list(self.initial_positions, self.participants, stage="initial_positions")
         _validate_positions_list(self.final_positions, self.participants, stage="final_positions")
         return self
@@ -98,8 +100,12 @@ class DecisionEngine:
         return _updated(record, initial_positions=(*record.initial_positions, position))
 
     def reveal_initial_positions(self, record: DecisionRecord) -> tuple[DecisionPosition, ...]:
-        """Reveal peer initial positions only after full independent capture or explicit exception."""
-        if record.consequential and not self._has_complete_initial_coverage(record) and not record.exception:
+        """Reveal through this helper only after complete capture.
+
+        Recorded exceptions are not yet authenticated or bounded and cannot
+        authorize early disclosure. Direct snapshot access is not isolated.
+        """
+        if not self._has_complete_initial_coverage(record):
             raise ValueError("cannot reveal peer positions before all required initial captures complete")
         return tuple(p.model_copy(deep=True) for p in record.initial_positions)
 
@@ -109,8 +115,8 @@ class DecisionEngine:
             raise ValueError("cannot modify positions after decision resolution")
         if position.participant not in record.participants:
             raise ValueError("unknown participant")
-        if record.consequential and not self._has_complete_initial_coverage(record) and not record.exception:
-            raise ValueError("final disposition requires complete initial capture or recorded exception")
+        if not self._has_complete_initial_coverage(record):
+            raise ValueError("final disposition requires complete initial capture")
         _check_block_rationale(position)
         prior = self.effective_positions(record).get(position.participant)
         withdrawing_block = prior is not None and prior.position is Position.BLOCK and position.position is not Position.BLOCK
@@ -146,8 +152,8 @@ class DecisionEngine:
             raise ValueError("decision resolution requires a nonempty action")
         _validate_positions_list(record.initial_positions, record.participants, stage="initial_positions")
         _validate_positions_list(record.final_positions, record.participants, stage="final_positions")
-        if record.consequential and not self._has_complete_initial_coverage(record) and not record.exception:
-            raise ValueError("consequential decision requires independent initial positions from every participant")
+        if not self._has_complete_initial_coverage(record):
+            raise ValueError("decision requires initial positions from every participant")
         if self.active_blocks(record) and resolution not in ("escalation", "experiment"):
             raise ValueError("unresolved block cannot be bypassed")
         if resolution == "scoped_authority":

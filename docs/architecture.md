@@ -76,6 +76,8 @@ authorized objection disposition. The standalone consequential-dispatch helper
 therefore refuses execution until the event-backed lifecycle and actual runtime
 authorization are integrated. Direct access to a snapshot is not an isolation
 boundary, and an unchecked model copy is not trusted authorization evidence.
+The prototype does not accept early-capture exceptions until those exceptions
+have an authenticated, bounded and replayable authority path.
 
 ## Work-contract boundary
 
