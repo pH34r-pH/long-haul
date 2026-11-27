@@ -1,11 +1,13 @@
 """Hermetic wire/metadata fixtures; no Pi install, subprocess, network, or model."""
 import json
+import sys
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import pytest
 from pydantic import ValidationError
 
+from long_haul.__main__ import main
 from long_haul.adapters.fixture_harness import FixtureCodingHarness
 from long_haul.adapters.harness_trace import (
     TraceAdmissionDenied,
@@ -46,7 +48,9 @@ from long_haul.work.harness import (
     semantic_trace_bytes,
     verify_semantic_trace,
 )
+from long_haul.work.progress import ProgressPolicy
 from long_haul.work.repository_models import DigestReference, content_digest
+from long_haul.work.trace_replay import replay_trajectory
 
 NOW = datetime(2026, 11, 11, tzinfo=UTC)
 KEY = b"hermetic-fixture-external-key-material-256-bits"
@@ -164,6 +168,79 @@ def test_verified_trace_replays_progress_without_tool_payloads():
     repeated = [progress_event(monitor, event) for event in readback if event.phase == "end"]
     assert repeated[0] is None
     assert repeated[1].payload["reason"] == "repeated_failure_pair"
+
+
+def test_replay_report_retains_observed_failures_for_both_policies():
+    result, events = retained_fixture_trace()
+    result_bytes, trace = result.model_dump_json().encode(), semantic_trace_bytes(events)
+    settings = {"expected_result_fingerprint": result.fingerprint, "max_bytes": len(result_bytes) + len(trace)}
+    baseline = replay_trajectory(result_bytes, trace, **settings)
+    alternate = replay_trajectory(
+        result_bytes, trace, **settings, policy=ProgressPolicy(
+            repeated_failure_limit=3, consecutive_limit=4, repeated_call_limit=4, max_no_progress_steps=2,
+        ),
+    )
+    assert baseline["trace"] == alternate["trace"] == result.trace.model_dump(mode="json")
+    assert baseline["result_fingerprint"] == alternate["result_fingerprint"] == result.fingerprint
+    assert baseline["terminal"] == "settled" and baseline["acceptance"] == "not_evaluated"
+    assert baseline["event_phases"] == {"start": 3, "end": 3, "lifecycle": 1}
+    summary = baseline["replay"]
+    assert summary["completed_actions"] == 3 and summary["outcomes"] == {"failure": 3}
+    assert summary["completion_durations"] == {"observed": 3, "missing": 0, "observed_sum_seconds": pytest.approx(0.003)}
+    assert [(s["sequence"], s["reason"]) for s in summary["signals"]] == [
+        (4, "repeated_failure_pair"), (6, "repeated_failure_pair"),
+    ]
+    assert summary["first_termination_signal"] is None
+    assert alternate["replay"]["first_termination_signal"] == 4
+    assert alternate["replay"]["completed_actions"] == 3
+    assert alternate["replay"]["signals"][1]["sequence"] == 6
+    assert baseline == replay_trajectory(result_bytes, trace, **settings)
+    rendered = json.dumps(baseline)
+    assert all(text not in rendered for text in ("fixture/code.py", "private canary", "hmac-sha256:", KEY.decode()))
+
+
+def test_replay_rejects_mixed_normalization_even_for_exact_trace_bytes():
+    result, events = retained_fixture_trace()
+    changed = events[3].model_copy(update={"normalization": reference("different-normalizer")})
+    trace = semantic_trace_bytes((*events[:3], changed, *events[4:]))
+    result = result.model_copy(update={"trace": result.trace.model_copy(update={"digest": content_digest(trace)})})
+    with pytest.raises(ValueError, match="different trace normalization"):
+        replay_trajectory(
+            result.model_dump_json().encode(), trace, expected_result_fingerprint=result.fingerprint,
+            max_bytes=64 * 1024,
+        )
+
+
+def test_replay_cli_retains_empty_failure_and_checks_aggregate_read_budget(tmp_path, monkeypatch, capsys):
+    _, _, attempt, _ = core()
+    state = HarnessState(attempt)
+    state.settle("provider_failure")
+    result = state.finish((), cleanup(attempt))
+    result_path, trace_path, policy_path = (tmp_path / name for name in ("result.json", "trace.jsonl", "policy.json"))
+    result_bytes, policy = result.model_dump_json().encode(), b'{"repeated_failure_limit": 3}'
+    result_path.write_bytes(result_bytes)
+    trace_path.write_bytes(b"")
+    policy_path.write_bytes(policy)
+    budget = len(result_bytes) + len(policy)
+    args = ["long_haul", "replay-trajectory", str(result_path), str(trace_path),
+            "--expected-result-fingerprint", result.fingerprint, "--progress-policy", str(policy_path)]
+    monkeypatch.setattr(sys, "argv", [*args, "--max-bytes", str(budget)])
+    main()
+    report = json.loads(capsys.readouterr().out)
+    assert report["terminal"] == "provider_failure"
+    assert report["observed_events"] == report["replay"]["completed_actions"] == 0
+    assert report["replay"]["completion_durations"]["observed_sum_seconds"] is None
+    assert report["replay"]["signals"] == []
+    assert report["policy"]["repeated_failure_limit"] == 3
+    monkeypatch.setattr(sys, "argv", [*args, "--max-bytes", str(budget - 1)])
+    with pytest.raises(SystemExit, match="byte budget"):
+        main()
+    duplicate = b'{"repeated_failure_limit": 2, "repeated_failure_limit": 3}'
+    policy_path.write_bytes(duplicate)
+    monkeypatch.setattr(sys, "argv", [*args, "--max-bytes", str(len(result_bytes) + len(duplicate))])
+    with pytest.raises(SystemExit, match="invalid progress policy"):
+        main()
+    assert result_path.read_bytes() == result_bytes and trace_path.read_bytes() == b""
 
 
 def test_trace_identity_and_local_read_budget_are_checked_before_decoding():

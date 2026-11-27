@@ -42,6 +42,13 @@ def _parser() -> argparse.ArgumentParser:
     replay.add_argument("--benchmarks", required=True)
     replay.add_argument("--workload")
 
+    trajectory = sub.add_parser("replay-trajectory", help="replay progress over a verified retained attempt")
+    trajectory.add_argument("result", type=Path)
+    trajectory.add_argument("trace", type=Path)
+    trajectory.add_argument("--expected-result-fingerprint", required=True)
+    trajectory.add_argument("--max-bytes", type=int, required=True)
+    trajectory.add_argument("--progress-policy", type=Path)
+
     native = sub.add_parser("import-llama-bench")
     native.add_argument("--manifest", required=True)
     native.add_argument("--profile-id", required=True)
@@ -110,6 +117,19 @@ def _native(args) -> None:
     print(json.dumps(result, indent=2))
 
 
+def _replay_trajectory(args) -> None:
+    from .work.trace_replay import replay_trajectory_files
+
+    try:
+        report = replay_trajectory_files(
+            args.result, args.trace, expected_result_fingerprint=args.expected_result_fingerprint,
+            max_bytes=args.max_bytes, policy=args.progress_policy,
+        )
+    except (OSError, ValueError) as exc:
+        raise SystemExit(f"trajectory replay: {exc}") from None
+    print(json.dumps(report, indent=2, sort_keys=True, allow_nan=False))
+
+
 def main() -> None:
     parser = _parser()
     args = parser.parse_args()
@@ -119,6 +139,7 @@ def main() -> None:
         "validate-reference": _reference,
         "benchmark-matrix": _benchmark,
         "benchmark-scheduler": _replay,
+        "replay-trajectory": _replay_trajectory,
         "import-llama-bench": _native,
     }
     handler = handlers.get(args.command)
