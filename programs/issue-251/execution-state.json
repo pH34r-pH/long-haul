@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T10:05:06+00:00",
+    "updated_at": "2026-11-27T10:17:33+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -879,6 +879,46 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7214888548",
             "evidence": "Eight Crossref deposits match the exact DOI, title, ordered authors, publication date, and registered journal citation components. The original registry rows retain their bytes. All 58 exact Linux tests, six hosted PR checks, and three exact main workflows passed. The expiry replay removed every new use scope. Fleet qualified the exact merged commit.",
             "remaining": "The wider source-use queue contains 155 Works, including 43 DOI records with incomplete, differing, updated, or separately registered metadata."
+          },
+          "acl_anthology_proceedings": {
+            "pull_request": 58,
+            "baseline_commit": "e0f73364484357e6492438117ebe4dd727e5cb4f",
+            "checked_head": "187cd3fb9ef30bbce04c59fd2b9d1de5487d36fa",
+            "ci_checkout": "d4847929d6a86867965dab664911110cd39536fc",
+            "checked_tree": "e129d09e0815f8dcddae664040e148d6251ad215",
+            "merge_commit": "dbd8e1002bde0928f494a2c249f630d9abdc131d",
+            "pull_request_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45980348343",
+            "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45980534011",
+            "main_readback": "https://github.com/pH34r-pH/knowledge/actions/runs/45980534011/artifacts/15188558994",
+            "main_readback_sha256": "0cffb6ac563a453043f006e14c86db65b589107d01ef40285458d900a9d35d30",
+            "local_source_archive_sha256": "82901156171b8a64c7d58be2d9d0fa35b1622e0b2e82a285b62e83a6f51f36fd",
+            "registry_sha256": "3e85404e7216d948e66fbd13fe8298725dce02cf306fbbeda99382cb680e4e55",
+            "publisher_comparison_sha256": "2b30be4fd8ff781e866ab01d55cf9fbfe1c20c007872946b94836e67f23646fe",
+            "reviewed_anthology_records": [
+              "KWRK-000027",
+              "KWRK-000028",
+              "KWRK-000029",
+              "KWRK-000032",
+              "KWRK-000033",
+              "KWRK-000034",
+              "KWRK-000082",
+              "KWRK-000118"
+            ],
+            "pending_anthology_records": [
+              "KWRK-000030",
+              "KWRK-000031",
+              "KWRK-000230"
+            ],
+            "active_base_citation_identities": 104,
+            "verified_revision_scopes": 35,
+            "live_verified_metadata_sources": 194,
+            "works_awaiting_use_review": 147,
+            "fleet_verifier_commit": "b6cc3d01e3059935280ab8e71d8479955aece27d",
+            "fleet_receipt_sha256": "d5cf3c51c5486e25e3144b90f84caedd5b074fdc716b6ce5a5b8fde9f49581c1",
+            "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7215695509",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7215695034",
+            "evidence": "Eight official ACL paper pages matched the pinned Work identities and bibliographic metadata. The existing registries were preserved. All 60 exact Linux tests, six hosted PR checks, and three exact main workflows passed. Replay expired the new scopes and Fleet qualified the merged commit.",
+            "remaining": "The review queue contains 147 Works, including three ACL records with a publisher-listed revision or metadata discrepancy."
           }
         },
         {
@@ -5311,6 +5351,52 @@
       "issue_evidence": "https://github.com/pH34r-pH/compiled-experiments/issues/7#issuecomment-7215445391",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7215445716",
       "remaining": "Required PR review, a signed producer candidate and protected publication qualification, and the source-owned data-use summary."
+    },
+    {
+      "at": "2026-11-27T10:17:33+00:00",
+      "task": "knowledge-42",
+      "status": "acl_anthology_proceedings_verified_on_main",
+      "repository": "pH34r-pH/knowledge",
+      "issue": 42,
+      "issue_state": "open",
+      "pull_request": 58,
+      "baseline_commit": "e0f73364484357e6492438117ebe4dd727e5cb4f",
+      "checked_head": "187cd3fb9ef30bbce04c59fd2b9d1de5487d36fa",
+      "ci_checkout": "d4847929d6a86867965dab664911110cd39536fc",
+      "checked_tree": "e129d09e0815f8dcddae664040e148d6251ad215",
+      "merge_commit": "dbd8e1002bde0928f494a2c249f630d9abdc131d",
+      "pull_request_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45980348343",
+      "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45980534011",
+      "main_readback": "https://github.com/pH34r-pH/knowledge/actions/runs/45980534011/artifacts/15188558994",
+      "main_readback_sha256": "0cffb6ac563a453043f006e14c86db65b589107d01ef40285458d900a9d35d30",
+      "local_source_archive_sha256": "82901156171b8a64c7d58be2d9d0fa35b1622e0b2e82a285b62e83a6f51f36fd",
+      "registry_sha256": "3e85404e7216d948e66fbd13fe8298725dce02cf306fbbeda99382cb680e4e55",
+      "publisher_comparison_sha256": "2b30be4fd8ff781e866ab01d55cf9fbfe1c20c007872946b94836e67f23646fe",
+      "reviewed_anthology_records": [
+        "KWRK-000027",
+        "KWRK-000028",
+        "KWRK-000029",
+        "KWRK-000032",
+        "KWRK-000033",
+        "KWRK-000034",
+        "KWRK-000082",
+        "KWRK-000118"
+      ],
+      "pending_anthology_records": [
+        "KWRK-000030",
+        "KWRK-000031",
+        "KWRK-000230"
+      ],
+      "active_base_citation_identities": 104,
+      "verified_revision_scopes": 35,
+      "live_verified_metadata_sources": 194,
+      "works_awaiting_use_review": 147,
+      "fleet_verifier_commit": "b6cc3d01e3059935280ab8e71d8479955aece27d",
+      "fleet_receipt_sha256": "d5cf3c51c5486e25e3144b90f84caedd5b074fdc716b6ce5a5b8fde9f49581c1",
+      "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7215695509",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7215695034",
+      "evidence": "Eight official ACL paper pages matched the pinned Work identities and bibliographic metadata. The existing registries were preserved. All 60 exact Linux tests, six hosted PR checks, and three exact main workflows passed. Replay expired the new scopes and Fleet qualified the merged commit.",
+      "remaining": "The review queue contains 147 Works, including three ACL records with a publisher-listed revision or metadata discrepancy."
     }
   ]
 }
