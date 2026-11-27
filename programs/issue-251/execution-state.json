@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T06:23:18+00:00",
+    "updated_at": "2026-11-27T06:36:36+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -214,7 +214,16 @@
             "observed_checks": "Pi qualification and pinned CPU parity still running; other applicable checks passed or were skipped. Newer code and ledger commits require their own hosted checks.",
             "tested_code_commit": "715125f",
             "evidence": "https://github.com/pH34r-pH/long-haul/issues/245#issuecomment-6840333447",
-            "remaining": "Real private authority, trusted scheduler and provider, verified retained build, host-loss recovery, cross-host fencing, lifecycle, hard deadlines and independent containment remain unqualified."
+            "remaining": "Real private authority, trusted scheduler and provider, verified retained build, host-loss recovery, cross-host fencing, lifecycle, hard deadlines and independent containment remain unqualified.",
+            "hermetic_integration": {
+              "failed_checkout": "628a248ffdf5b0c4210000e883e892500a4142cd",
+              "base": "4d5ae441869d9459ed597294b1090fc3f19141c1",
+              "checked_head": "67bbef4f31de0aa4fdc836b7404c484ee3893661",
+              "ci_checkout": "329ddf0df65eb40d57dabbec985fe89eea568766",
+              "checked_tree": "438a17b9a9072573beeafcf09f67968476c5db27",
+              "archive_sha256": "ff7536bb51d3793e9fddc9c2404f33f77005f3ab2170b0e82b0044fb304e7975",
+              "evidence": "https://github.com/pH34r-pH/long-haul/pull/265#issuecomment-7211654259"
+            }
           }
         },
         {
@@ -415,11 +424,25 @@
           "id": "compiled-7",
           "repository": "pH34r-pH/compiled-experiments",
           "issue": 7,
-          "status": "queued",
+          "status": "in_progress",
           "depends_on": [
             "compiler-150"
           ],
-          "acceptance": "Releases receive independent clean rebuild verification, attestations, and use-policy summaries."
+          "acceptance": "Releases receive independent clean rebuild verification, attestations, and use-policy summaries.",
+          "clean_replay": {
+            "pull_request": 11,
+            "status": "checks_passed_review_required",
+            "baseline_commit": "9815b62ba7fddb28caf4fc1d33abe885d5b686cd",
+            "checked_head": "42fcc4f84f233c53e1f3b3910d6d91f9806c63c7",
+            "ci_checkout": "9e385bed0b4d9eebb06312c73d5754915838913f",
+            "checked_tree": "f709b2ee9c19764ce03bb12eb28d06f4ddc2d7c8",
+            "released_zip_sha256": "25612d81a480dd5f8148a0dc247db58cb2fd719fe619e75ef0cd4945b3c1364b",
+            "receipt_sha256": "13b352a18b05ea55b8d952963cab23d89d5c4c749d1837315ca5e5cead96a83e",
+            "ci": "https://github.com/pH34r-pH/compiled-experiments/actions/runs/45952691429",
+            "governance": "https://github.com/pH34r-pH/compiled-experiments/actions/runs/45952691293",
+            "issue_evidence": "https://github.com/pH34r-pH/compiled-experiments/issues/7#issuecomment-7211664852"
+          },
+          "remaining": "Merge of the clean replay record, provenance attestation, and the source-owned data-use summary."
         }
       ]
     },
@@ -4500,6 +4523,42 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7211468360",
       "evidence": "Combined main reproduced a consecutive-action warning after two successful checks. The repair retains repeated failure signals. It passed 61 focused tests, all 12 applicable hosted checks, and 608 tests with 43 skips on each hosted Python target.",
       "remaining": "Required review and merge of #324, then final #244 acceptance reconciliation."
+    },
+    {
+      "at": "2026-11-27T06:36:36+00:00",
+      "task": "compiled-7",
+      "repository": "pH34r-pH/compiled-experiments",
+      "status": "clean_archive_replay_verified_review_required",
+      "pull_request": 11,
+      "baseline_commit": "9815b62ba7fddb28caf4fc1d33abe885d5b686cd",
+      "checked_head": "42fcc4f84f233c53e1f3b3910d6d91f9806c63c7",
+      "ci_checkout": "9e385bed0b4d9eebb06312c73d5754915838913f",
+      "checked_tree": "f709b2ee9c19764ce03bb12eb28d06f4ddc2d7c8",
+      "released_zip_sha256": "25612d81a480dd5f8148a0dc247db58cb2fd719fe619e75ef0cd4945b3c1364b",
+      "receipt_sha256": "13b352a18b05ea55b8d952963cab23d89d5c4c749d1837315ca5e5cead96a83e",
+      "ci": "https://github.com/pH34r-pH/compiled-experiments/actions/runs/45952691429",
+      "governance": "https://github.com/pH34r-pH/compiled-experiments/actions/runs/45952691293",
+      "issue_evidence": "https://github.com/pH34r-pH/compiled-experiments/issues/7#issuecomment-7211664852",
+      "evidence": "The exact archived ZIP reproduced the frozen kill decision in a fresh network-disabled Debian 13 container. The pinned Compiler verified all 41 members and rejected a wrong digest. The new replay retained 0 of 4 validated pairs, four tolerated differences and a distinct summary digest. Local archive verification, 15 tests and both hosted workflows passed. No historical rescreening or fresh capture was performed.",
+      "remaining": "Merge of the clean replay record, provenance attestation, and the source-owned data-use summary.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7211673047"
+    },
+    {
+      "at": "2026-11-27T06:36:36+00:00",
+      "task": "lh-245-security",
+      "repository": "pH34r-pH/long-haul",
+      "status": "hermetic_evaluator_draft_integration_verified_locally",
+      "pull_request": 265,
+      "failed_checkout": "628a248ffdf5b0c4210000e883e892500a4142cd",
+      "base": "4d5ae441869d9459ed597294b1090fc3f19141c1",
+      "checked_head": "67bbef4f31de0aa4fdc836b7404c484ee3893661",
+      "ci_checkout": "329ddf0df65eb40d57dabbec985fe89eea568766",
+      "checked_tree": "438a17b9a9072573beeafcf09f67968476c5db27",
+      "archive_sha256": "ff7536bb51d3793e9fddc9c2404f33f77005f3ab2170b0e82b0044fb304e7975",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul/pull/265#issuecomment-7211654259",
+      "evidence": "After #318 merged, the draft required candidate input and public packet distribution admissions for the two new hermetic cases. The updated test supplies exact synthetic admissions through existing helpers and proves that missing per-file admission is rejected before execution. Ruff, 84 focused tests, and the full Linux suite with 885 passed and 65 skipped qualified the test-only repair.",
+      "remaining": "Real private authority, trusted scheduler and provider, verified retained build, host-loss recovery, cross-host fencing, lifecycle, hard deadlines and independent containment remain unqualified.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7211673047"
     }
   ]
 }
