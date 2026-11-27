@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T08:09:50+00:00",
+    "updated_at": "2026-11-27T08:24:49+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -412,6 +412,28 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7213219096",
             "evidence": "The exact network-disabled source and four main Python jobs each passed 236 tests. The existing bounded runner smoke passed. Deterministic fixtures verify pending journal publication, worker validation before settlement, retained private snapshots, idempotent readback, a single recovery writer per attempt, and unchanged prior attempts on rerun. Timeout and cleanup uncertainty remain separate.",
             "remaining": "Compiler issue 156 is open for the wider transition audit and generated operation sequences. Governed corpus packaging and restricted evaluator disclosure still require the qualified Long-Haul contracts."
+          },
+          "attempt_recovery_completion": {
+            "status": "attempt_recovery_contract_completed_on_main",
+            "issue": 156,
+            "issue_state": "closed_completed",
+            "pull_request": 186,
+            "prior_pull_request": 185,
+            "baseline_commit": "9e25ef318ff493b54440aadeb893424ad2644c44",
+            "checked_head": "d6ff0472cae93e4ee91d9ec0fa528be0e18bd8fb",
+            "ci_checkout": "ccc2788b3a3a2b20dbda79cc2fc145f1ce75eac5",
+            "checked_tree": "d326c1335608a5772a470aced0284ae5b7bdeda8",
+            "merge_commit": "d67a0cd2d43a2f96c430ce4141379c1a114c3fe1",
+            "pull_request_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45964897302",
+            "default_branch_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45965120000",
+            "default_branch_governance": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45965120070",
+            "generated_sequence_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45965120000/job/140391853914",
+            "local_source_archive_sha256": "c70c2b959074a10bb61e73abd2e9111d6c27e47673df1098793b92e52fa91b3f",
+            "historical_poc_sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+            "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/156#issuecomment-7213504636",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7213507831",
+            "evidence": "Exact local network-disabled source passed all 240 tests. Each standard hosted main job passed 239 tests on Python 3.11 through 3.14. The dedicated main step passed 40 generated recovery sequences of up to 20 steps with Hypothesis 6.170.17. Typed transitions preserve cancellation, distinguish a possible legacy launch, refuse unproved absence, and retain the output ZIP and cited journal snapshot after a terminal receipt interruption.",
+            "remaining": "The broader Compiler issue 150 still needs the governed corpus and restricted disclosure paths using qualified upstream Long-Haul contracts. Fleet live recovery retains its own evidence and approval boundary."
           }
         },
         {
@@ -4829,6 +4851,31 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7213219096",
       "evidence": "The exact network-disabled source and four main Python jobs each passed 236 tests. The existing bounded runner smoke passed. Deterministic fixtures verify pending journal publication, worker validation before settlement, retained private snapshots, idempotent readback, a single recovery writer per attempt, and unchanged prior attempts on rerun. Timeout and cleanup uncertainty remain separate.",
       "remaining": "Compiler issue 156 is open for the wider transition audit and generated operation sequences. Governed corpus packaging and restricted evaluator disclosure still require the qualified Long-Haul contracts."
+    },
+    {
+      "at": "2026-11-27T08:24:49+00:00",
+      "task": "compiler-150",
+      "repository": "pH34r-pH/experiment-compiler",
+      "status": "attempt_recovery_contract_completed_on_main",
+      "issue": 156,
+      "issue_state": "closed_completed",
+      "pull_request": 186,
+      "prior_pull_request": 185,
+      "baseline_commit": "9e25ef318ff493b54440aadeb893424ad2644c44",
+      "checked_head": "d6ff0472cae93e4ee91d9ec0fa528be0e18bd8fb",
+      "ci_checkout": "ccc2788b3a3a2b20dbda79cc2fc145f1ce75eac5",
+      "checked_tree": "d326c1335608a5772a470aced0284ae5b7bdeda8",
+      "merge_commit": "d67a0cd2d43a2f96c430ce4141379c1a114c3fe1",
+      "pull_request_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45964897302",
+      "default_branch_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45965120000",
+      "default_branch_governance": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45965120070",
+      "generated_sequence_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45965120000/job/140391853914",
+      "local_source_archive_sha256": "c70c2b959074a10bb61e73abd2e9111d6c27e47673df1098793b92e52fa91b3f",
+      "historical_poc_sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+      "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/156#issuecomment-7213504636",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7213507831",
+      "evidence": "Exact local network-disabled source passed all 240 tests. Each standard hosted main job passed 239 tests on Python 3.11 through 3.14. The dedicated main step passed 40 generated recovery sequences of up to 20 steps with Hypothesis 6.170.17. Typed transitions preserve cancellation, distinguish a possible legacy launch, refuse unproved absence, and retain the output ZIP and cited journal snapshot after a terminal receipt interruption.",
+      "remaining": "The broader Compiler issue 150 still needs the governed corpus and restricted disclosure paths using qualified upstream Long-Haul contracts. Fleet live recovery retains its own evidence and approval boundary."
     }
   ]
 }
