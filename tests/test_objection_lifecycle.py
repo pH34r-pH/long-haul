@@ -448,6 +448,33 @@ def test_narrowing_preserves_initial_applicability_and_does_not_discharge(tmp_pa
     assert result.resolved_objection_ids == ()
 
 
+def test_changed_position_cannot_reuse_a_disposed_objection_identity(tmp_path):
+    record = decision()
+    original = record.initial_positions[0]
+    changed = original.model_copy(update={"rationale": "a different runtime hazard"})
+    record = DecisionEngine().capture_final(record, changed)
+    store = EventStore(tmp_path / "events.jsonl")
+    ledger = ObjectionLifecycle(store, record)
+    raise_objection(ledger)
+    assess_objection(ledger, objection_id="obj-1", actor="NAV", source="fixture:assessment", expected_revision=1,
+                     evidence_ref="profile-validation:current", predicate_id="runtime-profile-compatible",
+                     outcome="satisfied")
+    with pytest.raises(ValueError, match="objection identity.*different position"):
+        DecisionEngine().resolve_with_events(record, "consent", "proceed", store.events())
+
+
+def test_identical_position_can_refer_to_same_objection_identity(tmp_path):
+    record = decision()
+    record = DecisionEngine().capture_final(record, record.initial_positions[0])
+    store = EventStore(tmp_path / "events.jsonl")
+    ledger = ObjectionLifecycle(store, record)
+    raise_objection(ledger)
+    assess_objection(ledger, objection_id="obj-1", actor="NAV", source="fixture:assessment", expected_revision=1,
+                     evidence_ref="profile-validation:current", predicate_id="runtime-profile-compatible",
+                     outcome="satisfied")
+    assert DecisionEngine().resolve_with_events(record, "consent", "proceed", store.events()).resolution == "consent"
+
+
 def test_stale_transition_and_duplicate_or_out_of_order_events_fail_closed(tmp_path):
     record = decision()
     store = EventStore(tmp_path / "events.jsonl")

@@ -228,9 +228,13 @@ def replay_decisions(events: Sequence[Event]) -> dict[str, DecisionRecord]:
 
 
 def _validate_position_objection_links(record: DecisionRecord, projection: ObjectionProjection) -> None:
+    positions_by_objection: dict[str, DecisionPosition] = {}
     for position in _positions_for(record):
         if position.objection_id is None:
             continue
+        prior = positions_by_objection.setdefault(position.objection_id, position)
+        if prior != position:
+            raise ValueError("objection identity cannot bind a different position")
         try:
             objection = projection.get(position.objection_id)
         except KeyError as exc:
