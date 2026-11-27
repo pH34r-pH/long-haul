@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-26T23:45:10+00:00",
+    "updated_at": "2026-11-27T00:03:18+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3593,6 +3593,27 @@
       "issue_evidence": "https://github.com/pH34r-pH/blue-swallow-society/issues/131#issuecomment-7205821039",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7205824447",
       "remaining": "Protected Fleet and Wardriver promotion and coordinated frontend/backend recovery, live health and authorization proofs and post-user database recovery receipts, physical device mutual TLS, and public authority retirement."
+    },
+    {
+      "at": "2026-11-27T00:03:18+00:00",
+      "task": "fleet-1612",
+      "status": "society_coordinated_release_recovery_rehearsal_merged",
+      "repository": "pH34r-pH/long-haul-fleet",
+      "supporting_issue": "https://github.com/pH34r-pH/long-haul-fleet/issues/1631",
+      "pull_request": 1723,
+      "checked_head": "09bbe5f99181b6d9a9f7db628404e440ca2aeb17",
+      "ci_checkout": "35c1d23804f168904eb619ad5f14ffece8ce2d71",
+      "merge_commit": "535e6aeb33b741b2075243c6038790ee6f4dd7af",
+      "default_branch_ci": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45914221003",
+      "default_branch_governance": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45914220884",
+      "fixture_ci_job": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45914221003/job/140229544515",
+      "wardriver_skipped_publication": "https://github.com/pH34r-pH/blue-swallow-wardriver/actions/runs/45167131781",
+      "fixture_previous_frontend_sha256": "f6155a4295d43ae6a3e4c9516c8edd22f0a37ae03fa2134886a6b101e8c61c36",
+      "fixture_candidate_frontend_sha256": "35d160f27cf1c279f764e60e0ebce387b225bdf1000c8c0669baaa577b4b5710",
+      "evidence": "Identical checked and merged trees. The loopback site and API used actual Fleet probes for a frontend-first interruption, previous-pair verification, and successful retry. Exact identities and separate receipts passed Fleet CI. A green Wardriver recovery run with the actual publication job skipped remained skipped, and the unrelated device observation remained unknown.",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1631#issuecomment-7206128227",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7206130315",
+      "remaining": "Protected release pins and compatibility checks for an exact live candidate, independent APK retrieval, browser and phone observations, old-backend retain-or-retire decision, and the wider Fleet workflow and receipt gates."
     }
   ]
 }
