@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T06:11:29-08:00",
+    "updated_at": "2026-11-27T06:25:48-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -922,6 +922,40 @@
             "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7220311466",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7220447554",
             "remaining": "The newer exact commit awaits protected staging and archive after the existing queued archive and protected runner route reconciliation."
+          },
+          "public_source_check_attempt_binding": {
+            "status": "merged_and_main_verified",
+            "observed_at": "2026-11-27T06:25:48-08:00",
+            "pull_request": "https://github.com/pH34r-pH/long-haul-fleet/pull/1746",
+            "base_commit": "00fd6f1988f1fee6dd5c7dc1ca63eef35369a175",
+            "reviewed_head": "3c8fa4f9bdeba7b4e6b09fd9e5243fa39e1bf1f1",
+            "merge_commit": "d0a49b0cee19a97eb3dfbab348fa49bd5925c34f",
+            "verified_tree": "cb775f508cbdade0a93c5babe03d169a1ce8c3b5",
+            "verification": {
+              "pr_ci": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/46015168379",
+              "main_ci": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/46015470991",
+              "applicable_pr_checks": "passed",
+              "applicable_main_workflows": 5,
+              "main_workflow_result": "passed",
+              "offline_focused_tests_passed": 72,
+              "live_public_main_repositories_verified": [
+                "long-haul",
+                "longband",
+                "Portfolio",
+                "knowledge",
+                "research-notes",
+                "theorem-library"
+              ],
+              "knowledge_source_commit": "b9a756c2987a1291a1d523e27eee75150be98339",
+              "knowledge_run": "https://github.com/pH34r-pH/knowledge/actions/runs/46011016343",
+              "knowledge_run_attempt": 1
+            },
+            "scope": "Source intake, Knowledge freshness, Long-Haul and Longband archive readback, and Portfolio producer checks verify jobs against the selected run attempt. Existing receipt fields are preserved.",
+            "prior_protected_archive": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/46006924014/job/140533253550",
+            "prior_protected_archive_state": "queued",
+            "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7220759197",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7220762300",
+            "remaining": "Protected archival and the deployment, recovery, and surface-map acceptance criteria remain open."
           }
         },
         {
@@ -6441,6 +6475,18 @@
       "archive_job_state": "queued",
       "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7220311466",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7220447554"
+    },
+    {
+      "at": "2026-11-27T06:25:48-08:00",
+      "task": "fleet-1612",
+      "status": "public_source_check_attempt_binding_merged_and_verified",
+      "repository": "pH34r-pH/long-haul-fleet",
+      "issue": 1612,
+      "issue_state": "open",
+      "merge_commit": "d0a49b0cee19a97eb3dfbab348fa49bd5925c34f",
+      "archive_job_state": "queued",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7220759197",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7220762300"
     }
   ]
 }
