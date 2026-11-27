@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T09:34:43-08:00",
+    "updated_at": "2026-11-27T09:47:31-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -2390,7 +2390,64 @@
             "lh-243-evaluator"
           ],
           "external_gate": "physical_device_qualification",
-          "acceptance": "Android qualification stages are split, scan/outbox state is replayable, and exact emulator versus physical evidence is retained."
+          "acceptance": "Android qualification stages are split, scan/outbox state is replayable, and exact emulator versus physical evidence is retained.",
+          "local_emulator_qualification": {
+            "status": "exact_main_disposable_emulator_qualification_verified",
+            "source_commit": "6a493f4957cf1ba66285f0d68dd1be2237780b78",
+            "checked_tree": "4a89f3406d2df40c7b3273b245a3bd79d848be6f",
+            "merged_verifier_pr": 850,
+            "ordinary_source_ci": "https://github.com/pH34r-pH/blue-swallow-wardriver/actions/runs/45942139789",
+            "build": {
+              "wrapper_tasks": [
+                ":vnext-app:assembleDebug",
+                ":vnext-app:assembleDebugAndroidTest"
+              ],
+              "jdk": 17,
+              "sdk_platform": "36.1",
+              "build_tools": "36.0.0",
+              "app_sha256": "cedfb1e895314c8e37e15b61caf627887a8bd00a649bddd67cdbbf773c4c310c",
+              "instrumentation_apk_sha256": "4041c7a7f54858807384d59065240b5e773d24ca20781f82ffbc359d79850cdb"
+            },
+            "emulator": {
+              "api": 36,
+              "default_network": "none",
+              "outcomes": {
+                "passed": 10,
+                "failed": 0,
+                "skipped": 0
+              },
+              "planned_scope": "Golden Room replay and restore; duplicate rollback and reopen; conflicting journals; outbox staging, migration, lost-response retry and race winners; foreground activity recreation and Stop.",
+              "plan_sha256": "1a8f4134775847da0788ec5cc4497856b66eb44b85646f4afd95ff34b8bccf12",
+              "report_sha256": "32b2b03bd5c0cb551c81fa293bfe02fdb28e7230f429ba54b9edcef4cef35be9",
+              "verified_receipt_sha256": "b92eeef2a7f5ba454e91ab7b3a202ce9a54e89eee56ad4454921fe4f621a6982",
+              "modified_log": "rejected",
+              "wrong_plan_pin": "rejected"
+            },
+            "dashboard": {
+              "image_dimensions": [
+                1080,
+                2340
+              ],
+              "app_owned_ui_nodes": 69,
+              "ui_tree_sha256": "f2883efa3b5ffd657363e824d953eb59da4eefa6a753a76d8649e11c750f08e2",
+              "screenshot_sha256": "4e749f5726e55eddeec7b9c9131cff05cc735a946ba461d3978b35285d741b56",
+              "app_crash_detected": false
+            },
+            "offline_linux_contract_tests": {
+              "device_evidence": 10,
+              "release_contract": 30
+            },
+            "local_evidence": {
+              "directory": "wardriver-emulator-evidence-6a493f4",
+              "verified_file_count": 20,
+              "sha256sums_sha256": "16de2c9e71e73183a0bec91e6a37ad169a79d267a0f20521c12543bf8d9f77d3"
+            },
+            "release_switch_enabled": false,
+            "remaining": "Fleet-hosted emulator execution under Wardriver #446 and Fleet #1581, physical field and signed release qualification under Wardriver #205, and remaining scan/outbox exit criteria.",
+            "issue_evidence": "https://github.com/pH34r-pH/blue-swallow-wardriver/issues/548",
+            "multimodal_handoff": "https://github.com/pH34r-pH/long-haul/issues/247#issuecomment-7224777390",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7224780217"
+          }
         },
         {
           "id": "society-131",
@@ -2675,6 +2732,14 @@
             "fresh_comparison_sha256": "83285eb09550a2b6e69f2b828c70a209a7b288d4262f513058bcedbbafd905ff",
             "scope": "Exact simulation identity, distinct pilot and evaluator inventories, negative results and nonaligned control/sample detection.",
             "evidence": "https://github.com/pH34r-pH/long-haul/issues/247#issuecomment-7224546877"
+          },
+          "wardriver_android_evidence": {
+            "status": "producer_android_emulator_evidence_verified",
+            "repository": "pH34r-pH/blue-swallow-wardriver",
+            "source_commit": "6a493f4957cf1ba66285f0d68dd1be2237780b78",
+            "verified_receipt_sha256": "b92eeef2a7f5ba454e91ab7b3a202ce9a54e89eee56ad4454921fe4f621a6982",
+            "scope": "Disposable API 36 emulator with exact app and instrumentation identities, staged permissions, offline runtime, test logs, paired dashboard image and UI hierarchy, and no observed app crash.",
+            "evidence": "https://github.com/pH34r-pH/long-haul/issues/247#issuecomment-7224777390"
           }
         },
         {
@@ -7345,6 +7410,18 @@
       "issue_evidence": "https://github.com/pH34r-pH/home-bot/issues/2#issuecomment-7224544623",
       "multimodal_handoff": "https://github.com/pH34r-pH/long-haul/issues/247#issuecomment-7224546877",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7224549203"
+    },
+    {
+      "at": "2026-11-27T09:47:31-08:00",
+      "task": "wardriver-548",
+      "status": "exact_main_disposable_emulator_qualification_verified",
+      "repository": "pH34r-pH/blue-swallow-wardriver",
+      "issue": 548,
+      "issue_state": "open",
+      "source_commit": "6a493f4957cf1ba66285f0d68dd1be2237780b78",
+      "issue_evidence": "https://github.com/pH34r-pH/blue-swallow-wardriver/issues/548",
+      "multimodal_handoff": "https://github.com/pH34r-pH/long-haul/issues/247#issuecomment-7224777390",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7224780217"
     }
   ]
 }
