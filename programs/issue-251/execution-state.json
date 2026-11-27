@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T01:29:10+00:00",
+    "updated_at": "2026-11-27T01:39:21+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3750,6 +3750,22 @@
       "issue_evidence": "https://github.com/pH34r-pH/family-tree/issues/44#issuecomment-7207319664",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7207321419",
       "remaining": "Owner-approved actual record decisions, reversible identity merges, and policy-filtered, audited GLX, GEDCOM, book, and site exports."
+    },
+    {
+      "at": "2026-11-27T01:39:21+00:00",
+      "task": "family-44",
+      "status": "private_rights_checked_glx_and_gedcom_generation_merged",
+      "repository": "pH34r-pH/family-tree",
+      "pull_request": 50,
+      "checked_head": "5fa539c7f3185ce57b960a13b709189ad9194017",
+      "ci_checkout": "5fa539c7f3185ce57b960a13b709189ad9194017",
+      "merge_commit": "82a6c2b4959703f8b4d51ba25ee3dd95711d66f7",
+      "default_branch_ci": "https://github.com/pH34r-pH/family-tree/actions/runs/45923665060/job/140259958769",
+      "default_branch_governance": "https://github.com/pH34r-pH/family-tree/actions/runs/45923665110",
+      "evidence": "Checked and merged trees match. Main CI ran seven rights fixtures and four native export fixtures and validated the full archive. The exact rights-checked GLX selection and native GEDCOM 7 conversion reproduced a synthetic package and its fingerprints. Missing rights, a living person, and a mismatched binary blocked output. Existing ZIP bytes were preserved. Tests used the checksum-verified pinned tool on Windows and Linux.",
+      "issue_evidence": "https://github.com/pH34r-pH/family-tree/issues/44#issuecomment-7207463309",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7207465703",
+      "remaining": "Actual private owner decision review, reversible merges, and policy-filtered book and site formats."
     }
   ]
 }
