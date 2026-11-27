@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T00:25:49+00:00",
+    "updated_at": "2026-11-27T00:37:28+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3656,6 +3656,29 @@
       "evidence": "Six paired rehearsal cases passed within 52 focused Linux tests. All five PR checks passed, including 233 Python tests in hosted fast CI. The writer and reader used real bundle and Blob command adapter logic with simulated external services. GitHub returned zero Actions artifacts and no exact legacy prerelease for the historical producer.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7206453655",
       "remaining": "A protected merge because the enabled Wardriver main trigger can publish. Confirm or re-establish protected historical Blob availability and run the exact archive reader with the protected producer record. Fleet Node 24 live promotion remains open."
+    },
+    {
+      "at": "2026-11-27T00:37:28+00:00",
+      "task": "fleet-1612",
+      "status": "society_public_basemap_readback_merged",
+      "repository": "pH34r-pH/long-haul-fleet",
+      "pull_request": 1725,
+      "checked_head": "c38bac840233c484f13901cce1211b92f3620ce1",
+      "ci_checkout": "06f2ae2fc4d7c61f46a3a2f1130e1ac8c85ce780",
+      "merge_commit": "07d1962330f7f19f0ec07023b3b1dcfe915e3041",
+      "default_branch_monitor": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45917598727/job/140240451718",
+      "default_branch_governance": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45917598725",
+      "publication": "https://github.com/pH34r-pH/blue-swallow-society/actions/runs/30221871972",
+      "publication_attempt": "30221871972-1",
+      "publication_source": "03542863b2d1da815decef7d24f6d93fac659f06",
+      "style_sha256": "c18e825bfac4f88f4f9568ddcd0a144f3db297dffb2067f4d851cb3b70b848f4",
+      "provenance_sha256": "ec074a7a19286d9618f69b44a01f7d1e80c2a208a9a00007f02b2ba4a106f7e9",
+      "sample_tile_sha256": "c6e9239cf8770143da1859499fe430a00c5b2fc15be22aa180defc598131df78",
+      "evidence": "The checked and merged trees and PR and main public readback receipts matched. The read-only monitor verified live style and provenance, the immutable generation and exact sample tile bytes, both cache policies, and stable pointer readback. The frontend job passed independently. The receipt sampled one of 8,519 tiles declared by provenance.",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/630#issuecomment-7206610654",
+      "handoff_evidence": "https://github.com/pH34r-pH/blue-swallow-wardriver/issues/47#issuecomment-7206612579",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7206614775",
+      "remaining": "Protected Fleet basemap publisher and private source/toolchain access, exact promotion and recovery, protected Society live receipt and physical pilot, and public authority retirement."
     }
   ]
 }
