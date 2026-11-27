@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T07:19:29-08:00",
+    "updated_at": "2026-11-27T07:24:15-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -728,6 +728,90 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7220447554",
             "evidence": "Both entrypoints exercised with independent synthetic ZIPs and source recipes. Valid controls pass. The shared check rejects recognized Git LFS placeholders even when their own bytes match the inventory, and rejects malformed JSON, size and digest mismatches, and conflicting member names. CLI refusals preserve the tested input and output paths. All tests passed offline; the four exact-main POC ZIPs match the pinned historical bytes.",
             "remaining_parent_scope": "Governed corpus admission, guarded evaluator disclosure, and protected publication remain open under #150."
+          },
+          "alpha_release_candidate": {
+            "observed_at": "2026-11-27T07:24:15-08:00",
+            "issue": "https://github.com/pH34r-pH/experiment-compiler/issues/5",
+            "status": "draft_assets_verified_publication_review_pending",
+            "draft": {
+              "id": 460769652,
+              "url": "https://github.com/pH34r-pH/experiment-compiler/releases/tag/untagged-fc4d78ebbb63f19ceb11",
+              "tag_name": "v0.1.0a1",
+              "target": "6c944e4555e356d11ef85b5444f84d11c1f8ca13",
+              "draft": true,
+              "published_at": null,
+              "assets": {
+                "SHA256SUMS": {
+                  "asset_id": 800987584,
+                  "sha256": "349c3eb438b96b796f471ec8867d6a9bec40c62939a3c84a8270ec0306332c5f",
+                  "bytes": 104
+                },
+                "build-receipt.json": {
+                  "asset_id": 800987574,
+                  "sha256": "704140d4e742808d1296e8b561d84d3ca96e5b4f803702792891da5576aa40d2",
+                  "bytes": 832
+                },
+                "experiment_compiler-0.1.0a1-py3-none-any.whl": {
+                  "asset_id": 800987585,
+                  "sha256": "dc9659388f54876469d5c65bb9495dd307abc2bb0bde0054de10928a3d05d5e2",
+                  "bytes": 119113
+                },
+                "issue-164-experiment-package.zip": {
+                  "asset_id": 800987581,
+                  "sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+                  "bytes": 15296
+                },
+                "verification.json": {
+                  "asset_id": 800987572,
+                  "sha256": "38aeb97d8e5753f877b1aa56ade4fe6e9e60fcfdc699f0f2a1d00c69b986eb93",
+                  "bytes": 624
+                }
+              },
+              "remote_tag_present": false
+            },
+            "main_build": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/46012984767",
+            "producer_artifacts": {
+              "3.11": {
+                "id": 15204685637,
+                "api_sha256": "20a323a22a3790d88619bffd373299c2747a530c2d2034f9d311ed9953030cd1",
+                "expires_at": "2026-12-04T14:07:52Z"
+              },
+              "3.12": {
+                "id": 15204625728,
+                "api_sha256": "00e2e7eefb3ea994af606632a635d9e40c830582910207a36799c52d790ed1e9",
+                "expires_at": "2026-12-04T14:08:01Z"
+              },
+              "3.13": {
+                "id": 15204428781,
+                "api_sha256": "42b01bde9200e13257f9a8f7d174d175bb1c323ea7182bd0a9e292608c1a3f91",
+                "expires_at": "2026-12-04T14:07:55Z"
+              },
+              "3.14": {
+                "id": 15203709624,
+                "api_sha256": "c94567f59df995a201defe5c2b41009baa9ff8ed7d042aca3ddab5f79ccbdcb4",
+                "expires_at": "2026-12-04T14:08:08Z"
+              }
+            },
+            "selected_artifact": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/46012984767/artifacts/15204625728",
+            "offline_wheel_readback": {
+              "python": [
+                "3.11.4",
+                "3.12.15"
+              ],
+              "network": "disabled",
+              "fixture_source_tar_sha256": "00339812b5c812ca706e73056a459fb3f342389955bb7f0ceb107477961e10c4",
+              "historical_zip_sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+              "historical_zip_bytes": 15296,
+              "verification_receipt_sha256": "38aeb97d8e5753f877b1aa56ade4fe6e9e60fcfdc699f0f2a1d00c69b986eb93",
+              "zip_and_receipt_match_draft": true
+            },
+            "signed_provenance_check": {
+              "scope": "exact source and Compiler lifecycle workflow",
+              "result": "unverified_http_404"
+            },
+            "remaining": "Signed provenance verification and owner publication review, public release/tag creation, and README download link.",
+            "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/5#issuecomment-7222000094",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7222003387"
           }
         },
         {
@@ -6765,6 +6849,18 @@
       "merge_commit": "a5b97156cd687a3b1a63f4ec2a49b8e2689e6a97",
       "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7221901070",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221904348"
+    },
+    {
+      "at": "2026-11-27T07:24:15-08:00",
+      "task": "compiler-150",
+      "status": "alpha_release_draft_assets_verified",
+      "repository": "pH34r-pH/experiment-compiler",
+      "issue": 5,
+      "issue_state": "open",
+      "source_commit": "6c944e4555e356d11ef85b5444f84d11c1f8ca13",
+      "draft_release_id": 460769652,
+      "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/5#issuecomment-7222000094",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7222003387"
     }
   ]
 }
