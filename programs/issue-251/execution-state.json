@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T07:52:23+00:00",
+    "updated_at": "2026-11-27T08:09:50+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -393,6 +393,25 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7212901040",
             "evidence": "Exact main passed 230 tests on Python 3.11, 3.12, 3.13 and 3.14. The exact local checkout passed the same suite with networking disabled and reproduced the historical POC digest. Verification reports internal, recipe and archive-pin evidence. Lifecycle write failures and competing outputs preserve previously archived inputs. The read-only report for the tagged radix archive retained four measured primary failures, the unreported calibration, the source 0 of 4 decision and checksum-only screening recovery.",
             "remaining": "Governed corpus and restricted evaluator disclosure need qualified upstream Long-Haul contracts. Compiler issue 152 retains the source-owned campaign fixtures. Compiled Experiments issue 7 retains independent archive replay and protected publication remains staged."
+          },
+          "attempt_recovery_qualification": {
+            "status": "deterministic_attempt_recovery_verified_on_main",
+            "issue": 156,
+            "pull_request": 185,
+            "baseline_commit": "4a2e209685bab9d4eebb6fa5cc549871ada2d37e",
+            "checked_head": "e968a247e011f05ec0cdcce7e13e1d68c9db030b",
+            "ci_checkout": "2ebf68db367d4ca100489bfe61b2436b807c14f5",
+            "checked_tree": "ad846bfb5164e219c2604103a722e5a052362c9e",
+            "merge_commit": "9e25ef318ff493b54440aadeb893424ad2644c44",
+            "pull_request_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45962953160",
+            "default_branch_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45963190958",
+            "default_branch_governance": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45963190979",
+            "local_source_archive_sha256": "5f2d487ffaecebf01c96d4ab370d9a8b599221adffb10df783595f1b7f625231",
+            "historical_poc_sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+            "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/156#issuecomment-7213216245",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7213219096",
+            "evidence": "The exact network-disabled source and four main Python jobs each passed 236 tests. The existing bounded runner smoke passed. Deterministic fixtures verify pending journal publication, worker validation before settlement, retained private snapshots, idempotent readback, a single recovery writer per attempt, and unchanged prior attempts on rerun. Timeout and cleanup uncertainty remain separate.",
+            "remaining": "Compiler issue 156 is open for the wider transition audit and generated operation sequences. Governed corpus packaging and restricted evaluator disclosure still require the qualified Long-Haul contracts."
           }
         },
         {
@@ -4788,6 +4807,28 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7212901040",
       "evidence": "Exact main passed 230 tests on Python 3.11, 3.12, 3.13 and 3.14. The exact local checkout passed the same suite with networking disabled and reproduced the historical POC digest. Verification reports internal, recipe and archive-pin evidence. Lifecycle write failures and competing outputs preserve previously archived inputs. The read-only report for the tagged radix archive retained four measured primary failures, the unreported calibration, the source 0 of 4 decision and checksum-only screening recovery.",
       "remaining": "Governed corpus and restricted evaluator disclosure need qualified upstream Long-Haul contracts. Compiler issue 152 retains the source-owned campaign fixtures. Compiled Experiments issue 7 retains independent archive replay and protected publication remains staged."
+    },
+    {
+      "at": "2026-11-27T08:09:50+00:00",
+      "task": "compiler-150",
+      "repository": "pH34r-pH/experiment-compiler",
+      "status": "deterministic_attempt_recovery_verified_on_main",
+      "issue": 156,
+      "pull_request": 185,
+      "baseline_commit": "4a2e209685bab9d4eebb6fa5cc549871ada2d37e",
+      "checked_head": "e968a247e011f05ec0cdcce7e13e1d68c9db030b",
+      "ci_checkout": "2ebf68db367d4ca100489bfe61b2436b807c14f5",
+      "checked_tree": "ad846bfb5164e219c2604103a722e5a052362c9e",
+      "merge_commit": "9e25ef318ff493b54440aadeb893424ad2644c44",
+      "pull_request_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45962953160",
+      "default_branch_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45963190958",
+      "default_branch_governance": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45963190979",
+      "local_source_archive_sha256": "5f2d487ffaecebf01c96d4ab370d9a8b599221adffb10df783595f1b7f625231",
+      "historical_poc_sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+      "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/156#issuecomment-7213216245",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7213219096",
+      "evidence": "The exact network-disabled source and four main Python jobs each passed 236 tests. The existing bounded runner smoke passed. Deterministic fixtures verify pending journal publication, worker validation before settlement, retained private snapshots, idempotent readback, a single recovery writer per attempt, and unchanged prior attempts on rerun. Timeout and cleanup uncertainty remain separate.",
+      "remaining": "Compiler issue 156 is open for the wider transition audit and generated operation sequences. Governed corpus packaging and restricted evaluator disclosure still require the qualified Long-Haul contracts."
     }
   ]
 }
