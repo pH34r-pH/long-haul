@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T00:37:28+00:00",
+    "updated_at": "2026-11-27T00:57:14+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3679,6 +3679,22 @@
       "handoff_evidence": "https://github.com/pH34r-pH/blue-swallow-wardriver/issues/47#issuecomment-7206612579",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7206614775",
       "remaining": "Protected Fleet basemap publisher and private source/toolchain access, exact promotion and recovery, protected Society live receipt and physical pilot, and public authority retirement."
+    },
+    {
+      "at": "2026-11-27T00:57:14+00:00",
+      "task": "fleet-1612",
+      "status": "society_basemap_private_input_preflight_merged",
+      "repository": "pH34r-pH/long-haul-fleet",
+      "pull_request": 1726,
+      "checked_head": "445b5bb15cf8e0d36aa4a0486ee84f9b3ce64f0e",
+      "ci_checkout": "1740cda022c1f84b5eddc01cdf3e633940271cd3",
+      "merge_commit": "08148dedcded711b51b1b311ab42caf382b0450d",
+      "default_branch_ci": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45919419210/job/140246466813",
+      "default_branch_governance": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45919419115",
+      "evidence": "Identical checked and merged trees. Main Fleet smoke passed 34 release guard tests. The owner-only manual preflight is routed to a dedicated environment and tests exact account and identity checks, private container policy, ETag-bounded input reads, provenance and byte digests, and public generation readback. Validation used synthetic provider responses. The environment is absent in the repository inventory and the manual operation had no run.",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/630#issuecomment-7206886741",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7206888589",
+      "remaining": "Approved protected reader environment and role scopes, live private input receipt, protected publisher transfer and publication and recovery evidence, physical pilot and old authority retirement."
     }
   ]
 }
