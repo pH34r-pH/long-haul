@@ -164,20 +164,34 @@ class Scheduler:
             preemption_penalty,
         )
 
-    def _placement_reasons(self, mission: MissionRequirements, plan: ExecutionPlan, profile: InferenceProfile) -> list[str]:
+    def _vessel_and_resource_reasons(
+        self,
+        mission: MissionRequirements,
+        plan: ExecutionPlan,
+        profile: InferenceProfile,
+        actual_vessels: list[str],
+        unknown_resources: list[str],
+    ) -> list[str]:
         reasons: list[str] = []
-        if not mission.safety_ok: reasons.append("hard safety constraint failed")
-        if not mission.cooperation_ok: reasons.append("hard cooperation-integrity constraint failed")
-        if plan.mode not in mission.allow_modes: reasons.append("mode is outside mission constraints")
-        if not mission.required_resources <= set(plan.resources): reasons.append("required resource placement missing")
-        if set(profile.participating_resources) != set(plan.resources): reasons.append("plan/profile resource pairing mismatch")
-        actual_vessels, unknown_resources = self._derived_vessels(profile)
+        if not mission.required_resources <= set(plan.resources):
+            reasons.append("required resource placement missing")
+        if set(profile.participating_resources) != set(plan.resources):
+            reasons.append("plan/profile resource pairing mismatch")
         if unknown_resources:
             reasons.append("unknown participating resource: " + ", ".join(sorted(set(unknown_resources))))
         if set(plan.vessels) != set(actual_vessels):
             reasons.append("plan/profile vessel ownership mismatch")
         if plan.mode is ExecutionMode.LOCAL and len(actual_vessels) != 1:
             reasons.append("LOCAL mode requires exactly one vessel")
+        return reasons
+
+    def _placement_reasons(self, mission: MissionRequirements, plan: ExecutionPlan, profile: InferenceProfile) -> list[str]:
+        reasons: list[str] = []
+        if not mission.safety_ok: reasons.append("hard safety constraint failed")
+        if not mission.cooperation_ok: reasons.append("hard cooperation-integrity constraint failed")
+        if plan.mode not in mission.allow_modes: reasons.append("mode is outside mission constraints")
+        actual_vessels, unknown_resources = self._derived_vessels(profile)
+        reasons.extend(self._vessel_and_resource_reasons(mission, plan, profile, actual_vessels, unknown_resources))
         reasons.extend(self._lease_reasons(mission, plan))
         memory_issue = self._memory_issue(mission, plan, profile)
         if memory_issue is not None:

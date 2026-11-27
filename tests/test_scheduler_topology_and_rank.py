@@ -195,6 +195,30 @@ def test_three_vessel_synchronous_plan_requires_all_pairwise_edges() -> None:
     assert full_scheduler.evaluate(MissionRequirements(id="m"), plan, split3).eligible
 
 
+def _has_measured_direct_edge(links: list[Link], u: str, v: str) -> bool:
+    return any(
+        {lk.source, lk.target} == {u, v}
+        and lk.kind == "tailscale"
+        and lk.direct is True
+        and lk.path == "direct"
+        and lk.measured is True
+        for lk in links
+    )
+
+
+def _sample_links(rng: random.Random, vessel_ids: list[str]) -> list[Link]:
+    links: list[Link] = []
+    for u, v in itertools.combinations(vessel_ids, 2):
+        state = rng.choice(["none", "relay", "unmeasured_direct", "measured_direct"])
+        if state == "relay":
+            links.append(Link(source=u, target=v, kind="tailscale", direct=False, path="relay", measured=True))
+        elif state == "unmeasured_direct":
+            links.append(Link(source=u, target=v, kind="tailscale", direct=True, path="direct", measured=False))
+        elif state == "measured_direct":
+            links.append(_measured_direct_link(u, v))
+    return links
+
+
 def test_generated_property_every_eligible_synchronous_plan_satisfies_all_edges() -> None:
     rng = random.Random(20261127)
     vessels = [
@@ -204,15 +228,7 @@ def test_generated_property_every_eligible_synchronous_plan_satisfies_all_edges(
     for trial in range(80):
         chosen = rng.sample(vessels, rng.randint(2, 4))
         chosen_ids = sorted(v.id for v in chosen)
-        links: list[Link] = []
-        for u, v in itertools.combinations(chosen_ids, 2):
-            state = rng.choice(["none", "relay", "unmeasured_direct", "measured_direct"])
-            if state == "relay":
-                links.append(Link(source=u, target=v, kind="tailscale", direct=False, path="relay", measured=True))
-            elif state == "unmeasured_direct":
-                links.append(Link(source=u, target=v, kind="tailscale", direct=True, path="direct", measured=False))
-            elif state == "measured_direct":
-                links.append(_measured_direct_link(u, v))
+        links = _sample_links(rng, chosen_ids)
         prof = _profile(f"p{trial}", [v.resources[0].id for v in chosen], synchronous_cross_node=rng.choice([True, None]))
         scheduler = Scheduler(vessels, links=links, validations=[_validation(prof)], current_runtimes=[_runtime()])
         mission = MissionRequirements(id=f"m{trial}", requires_synchronous_cross_node=rng.choice([True, False]))
@@ -227,15 +243,7 @@ def test_generated_property_every_eligible_synchronous_plan_satisfies_all_edges(
             res = scheduler.evaluate(mission, plan, prof)
             is_sync = mode is ExecutionMode.PIPELINE or mission.requires_synchronous_cross_node or prof.synchronous_cross_node is True
             if res.eligible and is_sync:
-                for u, v in itertools.combinations(chosen_ids, 2):
-                    assert any(
-                        {lk.source, lk.target} == {u, v}
-                        and lk.kind == "tailscale"
-                        and lk.direct is True
-                        and lk.path == "direct"
-                        and lk.measured is True
-                        for lk in links
-                    )
+                assert all(_has_measured_direct_edge(links, u, v) for u, v in itertools.combinations(chosen_ids, 2))
 
 
 def test_rank_handles_one_shot_iterables_single_traversal_and_stale_ranks() -> None:
