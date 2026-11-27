@@ -1,10 +1,10 @@
 """Deterministic decision protocol policy, capture/reveal boundary, and dispatch gate (#290)."""
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from typing import Literal, TypeVar
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ..events import Event, EventStore
 from ..models import DecisionPosition, Position
@@ -14,19 +14,19 @@ T = TypeVar("T")
 
 
 def _check_block_rationale(position: DecisionPosition) -> None:
-    if position.position is Position.BLOCK and (not position.rationale or position.category == "preference"):
+    if position.position is Position.BLOCK and (not position.rationale or not position.rationale.strip() or position.category in (None, "preference")):
         raise ValueError("a block needs non-preference typed rationale")
 
 
 def _check_scoped_authority(record: DecisionRecord, authority_holder: str | None) -> None:
-    allowed = record.authority_scopes.get(authority_holder, set()) if authority_holder else set()
+    allowed = record.scopes_for(authority_holder) if authority_holder else frozenset()
     if not authority_holder or authority_holder not in record.participants or not record.authority_scope or record.authority_scope not in allowed:
         raise ValueError("scoped authority requires a participating holder with the declared scope")
 
 
 def _validate_positions_list(
-    positions: list[DecisionPosition],
-    participants: set[str],
+    positions: Sequence[DecisionPosition],
+    participants: frozenset[str],
     *,
     stage: str,
 ) -> list[DecisionPosition]:
@@ -44,28 +44,39 @@ def _validate_positions_list(
 
 
 class DecisionRecord(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     id: str
     proposal: str
-    participants: set[str]
+    participants: frozenset[str]
     consequential: bool = True
     exception: str | None = None
-    initial_positions: list[DecisionPosition] = Field(default_factory=list)
-    final_positions: list[DecisionPosition] = Field(default_factory=list)
+    initial_positions: tuple[DecisionPosition, ...] = Field(default_factory=tuple)
+    final_positions: tuple[DecisionPosition, ...] = Field(default_factory=tuple)
     resolution: Resolution | None = None
     action: str | None = None
     authority_holder: str | None = None
     authority_scope: str | None = None
-    authority_scopes: dict[str, set[str]] = Field(default_factory=dict)
+    authority_scopes: tuple[tuple[str, tuple[str, ...]], ...] = Field(default_factory=tuple)
+
+    @field_validator("authority_scopes", mode="before")
+    @classmethod
+    def normalize_authority_scopes(cls, value: object) -> object:
+        items = value.items() if isinstance(value, Mapping) else value or ()
+        return tuple(sorted((str(holder), tuple(sorted(set(scopes)))) for holder, scopes in items))
 
     @model_validator(mode="after")
     def validate_record_invariants(self) -> DecisionRecord:
-        self.initial_positions = _validate_positions_list(
-            self.initial_positions, self.participants, stage="initial_positions"
-        )
-        self.final_positions = _validate_positions_list(
-            self.final_positions, self.participants, stage="final_positions"
-        )
+        _validate_positions_list(self.initial_positions, self.participants, stage="initial_positions")
+        _validate_positions_list(self.final_positions, self.participants, stage="final_positions")
         return self
+
+    def scopes_for(self, participant: str) -> frozenset[str]:
+        return frozenset(scope for holder, scopes in self.authority_scopes if holder == participant for scope in scopes)
+
+
+def _updated(record: DecisionRecord, **changes: object) -> DecisionRecord:
+    return DecisionRecord.model_validate({**record.model_dump(), **changes})
 
 
 class DecisionEngine:
@@ -76,7 +87,7 @@ class DecisionEngine:
         captured = {p.participant for p in record.initial_positions}
         return captured == record.participants
 
-    def capture_initial(self, record: DecisionRecord, position: DecisionPosition) -> None:
+    def capture_initial(self, record: DecisionRecord, position: DecisionPosition) -> DecisionRecord:
         if record.resolution is not None:
             raise ValueError("cannot capture initial position after decision resolution")
         if position.participant not in record.participants:
@@ -84,7 +95,7 @@ class DecisionEngine:
         if any(p.participant == position.participant for p in record.initial_positions):
             raise ValueError("initial position already captured")
         _check_block_rationale(position)
-        record.initial_positions.append(position.model_copy(deep=True))
+        return _updated(record, initial_positions=(*record.initial_positions, position))
 
     def reveal_initial_positions(self, record: DecisionRecord) -> tuple[DecisionPosition, ...]:
         """Reveal peer initial positions only after full independent capture or explicit exception."""
@@ -92,7 +103,7 @@ class DecisionEngine:
             raise ValueError("cannot reveal peer positions before all required initial captures complete")
         return tuple(p.model_copy(deep=True) for p in record.initial_positions)
 
-    def record_final(self, record: DecisionRecord, position: DecisionPosition) -> None:
+    def record_final(self, record: DecisionRecord, position: DecisionPosition) -> DecisionRecord:
         """Record a post-deliberation disposition while preserving immutable initial capture history."""
         if record.resolution is not None:
             raise ValueError("cannot modify positions after decision resolution")
@@ -101,13 +112,13 @@ class DecisionEngine:
         if record.consequential and not self._has_complete_initial_coverage(record) and not record.exception:
             raise ValueError("final disposition requires complete initial capture or recorded exception")
         _check_block_rationale(position)
-        prior = next((p for p in record.initial_positions if p.participant == position.participant), None)
+        prior = self.effective_positions(record).get(position.participant)
         withdrawing_block = prior is not None and prior.position is Position.BLOCK and position.position is not Position.BLOCK
-        if withdrawing_block and not position.rationale:
+        if withdrawing_block and (not position.rationale or not position.rationale.strip()):
             raise ValueError("withdrawing or resolving a block requires an explicit rationale")
         snapshot = position.model_copy(deep=True)
-        record.final_positions = [p for p in record.final_positions if p.participant != snapshot.participant]
-        record.final_positions.append(snapshot)
+        remaining = tuple(p for p in record.final_positions if p.participant != snapshot.participant)
+        return _updated(record, final_positions=(*remaining, snapshot))
 
     @staticmethod
     def effective_positions(record: DecisionRecord) -> dict[str, DecisionPosition]:
@@ -129,6 +140,10 @@ class DecisionEngine:
         *,
         event_store: EventStore | None = None,
     ) -> DecisionRecord:
+        if record.resolution is not None:
+            raise ValueError("decision is already resolved")
+        if not action or not action.strip():
+            raise ValueError("decision resolution requires a nonempty action")
         _validate_positions_list(record.initial_positions, record.participants, stage="initial_positions")
         _validate_positions_list(record.final_positions, record.participants, stage="final_positions")
         if record.consequential and not self._has_complete_initial_coverage(record) and not record.exception:
@@ -137,17 +152,17 @@ class DecisionEngine:
             raise ValueError("unresolved block cannot be bypassed")
         if resolution == "scoped_authority":
             _check_scoped_authority(record, authority_holder)
-        record.resolution, record.action, record.authority_holder = resolution, action, authority_holder
+        resolved = _updated(record, resolution=resolution, action=action, authority_holder=authority_holder)
         if event_store is not None:
             event_store.append(
                 Event(
                     event_type="decision",
                     actor=authority_holder,
                     source="decision_engine",
-                    payload={"record": record.model_dump(mode="json")},
+                    payload={"record": resolved.model_dump(mode="json")},
                 )
             )
-        return record
+        return resolved
 
     def dispatch_consequential(
         self,
