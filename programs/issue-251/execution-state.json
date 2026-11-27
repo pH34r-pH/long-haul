@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T00:03:18+00:00",
+    "updated_at": "2026-11-27T00:15:12+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3614,6 +3614,31 @@
       "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1631#issuecomment-7206128227",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7206130315",
       "remaining": "Protected release pins and compatibility checks for an exact live candidate, independent APK retrieval, browser and phone observations, old-backend retain-or-retire decision, and the wider Fleet workflow and receipt gates."
+    },
+    {
+      "at": "2026-11-27T00:15:12+00:00",
+      "task": "fleet-1612",
+      "status": "wardriver_publication_attempt_evidence_and_society_source_handoff_verified",
+      "repository": "pH34r-pH/long-haul-fleet",
+      "pull_request": 1724,
+      "checked_head": "22b59e5887ac52bc02aeecfece0fa3778ed8d493",
+      "ci_checkout": "e65b7c107a4c363a88dc553871218736ddd8af1c",
+      "merge_commit": "a18c98f7a55fed2f1b3d755a1bfcf556a7846698",
+      "default_branch_ci": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45915416086",
+      "default_branch_governance": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45915416146",
+      "wardriver_run_evidence": [
+        "https://github.com/pH34r-pH/blue-swallow-wardriver/actions/runs/45167131781/job/137669100218",
+        "https://github.com/pH34r-pH/blue-swallow-wardriver/actions/runs/45166227424/job/137663759366"
+      ],
+      "handoff_issue": "https://github.com/pH34r-pH/blue-swallow-wardriver/issues/47#implementation-checkpoint--2026-11-27-utc",
+      "society_source_sha": "e72125da259345e097e3e2f790570d885aa78f6d",
+      "society_source_archive_sha256": "02f1d3f3ca606ae86c0dc1b14af8916b529bf4730639d5c9147b5df4185b8f0c",
+      "society_source_ci": "https://github.com/pH34r-pH/blue-swallow-society/actions/runs/45912590292",
+      "rejected_nonmain_sha": "f9c3bab2e8b43b417c9bf93255af80267ce4c669",
+      "evidence": "Identical checked and merged Fleet trees. Main smoke passed all 27 release guards. The reader binds the full APK version and immutable manifest to the exact Actions attempt and job. Actual skipped job and skipped build/upload evidence remained skipped. A synthetic successful manifest exercised the positive path. Wardriver's source gate accepted exact current Society main and rejected a non-ancestor PR head before downloading.",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1631#issuecomment-7206301973",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7206304777",
+      "remaining": "Protected paired candidate and live compatibility evidence, private APK retrieval and physical browser-to-phone pilot, basemap handoff, legacy authority retirement, and original-backend decision."
     }
   ]
 }
