@@ -8,14 +8,26 @@ from long_haul.decisions import (
     DecisionLifecycleEvent,
     DecisionRecord,
     NarrowObjectionCommand,
-    ObjectionLifecycle,
     RaiseObjectionCommand,
     ReopenObjectionCommand,
     materialize_decision,
     materialize_objections,
 )
+from long_haul.decisions import (
+    ObjectionLifecycle as CanonicalObjectionLifecycle,
+)
 from long_haul.events import Event, EventStore
 from long_haul.models import DecisionPosition, Position
+
+
+class ObjectionLifecycle(CanonicalObjectionLifecycle):
+    """Exercise retained pure-projection fixtures without claiming stored identity."""
+
+    def _decision_for_history(self, history):
+        if any(event.event_type == "decision_lifecycle" and event.payload.get("decision_id") == self.decision.id
+               for event in history):
+            return super()._decision_for_history(history)
+        return self.decision
 
 
 def decision(with_initial_position: bool = True) -> DecisionRecord:

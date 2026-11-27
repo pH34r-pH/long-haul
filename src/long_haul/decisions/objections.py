@@ -301,8 +301,8 @@ def materialize_objections(events: Sequence[Event], decision: DecisionRecord) ->
 class ObjectionLifecycle:
     """Replay typed local commands without claiming authenticated authorization.
 
-    The standalone snapshot path is retained for fixtures only. Actor strings and
-    caller-supplied scopes are not a production identity or policy boundary.
+    The decision must exist in event history. Actor strings and recorded scopes
+    are not a production identity or policy boundary.
     """
 
     def __init__(self, store: EventStore, decision: DecisionRecord):
@@ -312,7 +312,13 @@ class ObjectionLifecycle:
 
     @property
     def projection(self) -> ObjectionProjection:
-        return materialize_objections(self.store.events(), self.decision)
+        history = self.store.events()
+        return materialize_objections(history, self._decision_for_history(history))
+
+    def _decision_for_history(self, history: Sequence[Event]) -> DecisionRecord:
+        from .lifecycle import materialize_decision
+
+        return materialize_decision(history, self.decision.id)
 
     def raise_objection(
         self,
@@ -488,17 +494,7 @@ class ObjectionLifecycle:
         projected: list[ObjectionProjection] = []
 
         def validate(history: list[Event], candidate: Event) -> None:
-            from .lifecycle import materialize_decision
-
-            has_decision_history = any(
-                item.event_type == "decision_lifecycle" and item.payload.get("decision_id") == self.decision.id
-                for item in history
-            )
-            if has_decision_history:
-                current = materialize_decision(history, self.decision.id)
-            else:
-                # Compatibility for the retained standalone test fixture only.
-                current = self.decision
+            current = self._decision_for_history(history)
             if current.resolution is not None:
                 raise ValueError("objection event follows terminal decision resolution")
             projected.append(materialize_objections((*history, candidate), current))

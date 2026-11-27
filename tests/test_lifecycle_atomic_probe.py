@@ -36,6 +36,32 @@ def _raw_objection(decision_id):
     return Event(event_type="objection_lifecycle", actor="ENG", source="raw", payload=transition.model_dump(mode="json"))
 
 
+def test_objection_writer_requires_a_stored_decision(tmp_path):
+    store = EventStore(tmp_path / "events.jsonl")
+    claimed = DecisionRecord(id="missing", proposal="test", participants={"ENG"}, authority_scopes={"ENG": {"test"}})
+    ledger = ObjectionLifecycle(store, claimed)
+    command = RaiseObjectionCommand(objection_id="o", category="safety", claim="unsafe", scope="test",
+                                    authority_scope="test", resolution_predicate_id="safe")
+    with pytest.raises(KeyError, match="not present"):
+        ledger.raise_objection(command, actor="ENG", source="test")
+    with pytest.raises(KeyError, match="not present"):
+        _ = ledger.projection
+    assert store.events() == []
+
+
+def test_caller_cannot_supply_authority_absent_from_stored_decision(tmp_path):
+    store = EventStore(tmp_path / "events.jsonl")
+    stored = DecisionRecord(id="live", proposal="test", participants={"ENG"})
+    DecisionLifecycle.create(store, stored, actor="ENG", source="test")
+    forged = DecisionRecord(id="live", proposal="test", participants={"ENG"}, authority_scopes={"ENG": {"test"}})
+    ledger = ObjectionLifecycle(store, forged)
+    command = RaiseObjectionCommand(objection_id="o", category="safety", claim="unsafe", scope="test",
+                                    authority_scope="test", resolution_predicate_id="safe")
+    with pytest.raises(ValueError, match="authority scope has no participating resolver"):
+        ledger.raise_objection(command, actor="ENG", source="test")
+    assert len(store.events()) == 1
+
+
 def test_raw_objection_after_terminal_decision_invalidates_replay(tmp_path):
     store = EventStore(tmp_path / "events.jsonl")
     lifecycle = DecisionLifecycle.create(
