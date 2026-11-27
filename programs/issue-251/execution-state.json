@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T02:15:12+00:00",
+    "updated_at": "2026-11-27T02:23:40+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3835,6 +3835,25 @@
       "issue_evidence": "https://github.com/pH34r-pH/blackbox/issues/6#owner-qualification",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7207958656",
       "remaining": "Operator-selected actual recovery export and historical provenance review. Any restoration, derivative admission or external use still requires its own explicit decision."
+    },
+    {
+      "at": "2026-11-27T02:23:40+00:00",
+      "task": "research-notes-31",
+      "status": "pinned_muon_and_normalization_claim_bindings_merged",
+      "repository": "pH34r-pH/research-notes",
+      "pull_request": 33,
+      "checked_head": "df53582c5c1d9d773d43ab22a417515a52bfc65e",
+      "ci_checkout": "d91605cefc411b8a84b82f6d1621bec775c59271",
+      "merge_commit": "2c5b9167bf850a3a3089b3196e21f8cc6c12cea2",
+      "default_branch_ci": "https://github.com/pH34r-pH/research-notes/actions/runs/45927904534/job/140273489278",
+      "default_branch_governance": "https://github.com/pH34r-pH/research-notes/actions/runs/45927904523",
+      "publication_source_sha256": "235374f1731458c90b48e3ed6de8751b8aef92301fb3a7879ab3ed02f30fd8e3",
+      "compiler_source": "a471d390a81193324098abb1fc85324c7f0f894c",
+      "lean_source": "950b48d502015daa1c648b5ce7a3b72eee367995",
+      "evidence": "Identical PR and main trees and publication receipts. Main passed 12 tests and rendered 18 pages. The CLI verified seven exact Compiler artifact digests and the Lean proof source against pinned applicability. Both rendered pages retained their source link and exact downloadable claim record. A syntactically valid wrong result hash failed real object audit, and a synthetic successor preserved the earlier claim.",
+      "issue_evidence": "https://github.com/pH34r-pH/research-notes/issues/31#issuecomment-7208076973",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7208079420",
+      "remaining": "Fifteen other articles need claim-level coverage. Ongoing source availability, retraction and backlink checks remain open. Historical cutoff and mask frequencies remain unmeasured."
     }
   ]
 }
