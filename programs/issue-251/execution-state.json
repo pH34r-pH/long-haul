@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T11:01:14+00:00",
+    "updated_at": "2026-11-27T11:09:14+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1095,7 +1095,29 @@
             "compiler-150",
             "lh-64-pilot"
           ],
-          "acceptance": "Approved source admission and the Long-Haul memory scorecard pass without cross-scope, stale, poisoned, or policy leakage."
+          "acceptance": "Approved source admission and the Long-Haul memory scorecard pass without cross-scope, stale, poisoned, or policy leakage.",
+          "reference_root_separation": {
+            "status": "reference_root_separation_verified_on_main",
+            "pull_request": 28,
+            "baseline_commit": "8c7010882408694725260af0da71fd42244098d2",
+            "checked_head": "6f5d2fc76d2800f215258330a3e7fd0ae4d6e961",
+            "ci_checkout": "804f657acb94c5909b80da0c15266bf90c61492e",
+            "checked_tree": "f36736f35f9b04c202f36f738a34853c43c676bc",
+            "merge_commit": "c2d3482422ff424b4fdb309b204023567f2553a7",
+            "pull_request_ci": "https://github.com/pH34r-pH/nacre-recall/actions/runs/45987697674",
+            "default_branch_ci": "https://github.com/pH34r-pH/nacre-recall/actions/runs/45987808051",
+            "governance_ci": "https://github.com/pH34r-pH/nacre-recall/actions/runs/45987808101",
+            "scorecard_log": "https://github.com/pH34r-pH/nacre-recall/actions/runs/45987808051/job/140467772368",
+            "scorecard_digest": "sha256:702c0d1a104205a6c17d5a1813574f07b02f7832417871a4b95f7614bebbf9c2",
+            "scorecard_treatments": 8,
+            "scorecard_hard_failures": 0,
+            "offline_tests": 72,
+            "pi_integration_tests": 2,
+            "issue_evidence": "https://github.com/pH34r-pH/nacre-recall/issues/24#issuecomment-7216727314",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216730635",
+            "evidence": "Live reference admission and inventory setup enforce the same workspace and state separation before source reads. Four synthetic root configurations failed before the fix and passed afterward. Network-disabled Linux validation and both PR and main workflows passed.",
+            "remaining": "Governed source admission and independent live recall and capture qualification depend on Compiler #150 and Long-Haul #64."
+          }
         },
         {
           "id": "personal-92",
@@ -5556,6 +5578,19 @@
       "issue_evidence": "https://github.com/pH34r-pH/the-personal-algorithm/issues/92#issuecomment-7216572476",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216572836",
       "remaining": "Per-source trust and use admission, authorized history coverage, outcome calibration and regret evaluation, and operator-approved promotion and rollback evidence remain."
+    },
+    {
+      "at": "2026-11-27T11:09:14+00:00",
+      "task": "nacre-24",
+      "status": "reference_root_separation_verified_on_main",
+      "repository": "pH34r-pH/nacre-recall",
+      "issue": 24,
+      "issue_state": "open",
+      "pull_request": 28,
+      "merge_commit": "c2d3482422ff424b4fdb309b204023567f2553a7",
+      "issue_evidence": "https://github.com/pH34r-pH/nacre-recall/issues/24#issuecomment-7216727314",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216730635",
+      "remaining": "Governed source admission and independent live recall and capture qualification depend on Compiler #150 and Long-Haul #64."
     }
   ]
 }
