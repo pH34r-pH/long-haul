@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T12:08:10+00:00",
+    "updated_at": "2026-11-27T12:14:08+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1455,7 +1455,19 @@
           "depends_on": [
             "compiler-150"
           ],
-          "acceptance": "Adversarial recipes fail safely and every published derivative has an exact source, recipe, transformation, freshness, and artifact manifest."
+          "acceptance": "Adversarial recipes fail safely and every published derivative has an exact source, recipe, transformation, freshness, and artifact manifest.",
+          "transformation_evidence_matrix": {
+            "pull_request": 20,
+            "merge_commit": "ed1fcfdabef7c3e30ff2e114336812588f9bba23",
+            "toolkit_run": "https://github.com/pH34r-pH/agent-readable-calling-card/actions/runs/45996777857",
+            "governance_run": "https://github.com/pH34r-pH/agent-readable-calling-card/actions/runs/45996777944",
+            "checks_passed": 29,
+            "reference_png_sha256": "b7cf2feefe3af64886257f28cb05dabcf32ef193e65c637ff1f7c2d6a3080c1f",
+            "scope": "Separate evaluators and evidence for five transformations, with an opt-in layout byte-match receipt tested using a signed synthetic bundle.",
+            "issue_evidence": "https://github.com/pH34r-pH/agent-readable-calling-card/issues/17#issuecomment-7217989394",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7217992044",
+            "remaining": "Approved signed-release workflow, live release and interoperability evidence, and remaining adversarial fixture coverage."
+          }
         },
         {
           "id": "blackbox-6",
@@ -5826,6 +5838,19 @@
       "issue_evidence": "https://github.com/pH34r-pH/theorem-library/issues/20#issuecomment-7217866412",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7217869956",
       "remaining": "Public release review, durable release retention beyond the CI artifact expiry, the upstream mutation tool use-rights decision, and source-owned downstream study evidence remain."
+    },
+    {
+      "at": "2026-11-27T12:14:08+00:00",
+      "task": "arcc-17",
+      "status": "transformation_evidence_matrix_verified_on_main",
+      "repository": "pH34r-pH/agent-readable-calling-card",
+      "issue": 17,
+      "issue_state": "open",
+      "pull_request": 20,
+      "merge_commit": "ed1fcfdabef7c3e30ff2e114336812588f9bba23",
+      "issue_evidence": "https://github.com/pH34r-pH/agent-readable-calling-card/issues/17#issuecomment-7217989394",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7217992044",
+      "remaining": "Approved signed-release workflow, live release and interoperability evidence, and remaining adversarial fixture coverage."
     }
   ]
 }
