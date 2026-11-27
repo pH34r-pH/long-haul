@@ -55,3 +55,15 @@ Consequential runs store each participant's initial judgment before revealing pe
 ## Stop condition
 
 Do not expand the crew until the two-role architecture either demonstrates positive net value or produces a specific falsifiable question that requires additional roles.
+
+## Hermetic repository benchmark
+
+The [repository attempt fixture](../tests/test_repository_attempt.py) selects context from a frozen toy Git task, runs the scripted harness, freezes the stopped worker's bytes, and records the independent evaluator packet in the existing event store. A corrected candidate passes both checks. A second candidate returns the public answer and fails the sealed case. Both report a successful edit and a settled harness. The synthetic evaluator checks a fixed set of candidate bytes and inputs without executing worker code.
+
+Use `verify_semantic_trace` to read back the canonical result and trace against an independently retained result pin. Then call `long_haul.work.repository_attempt.readback_repository_attempt` with the frozen contract and evaluator profile, the read-back result, and the independently pinned evaluator packet. It checks that the records describe the same attempt and frozen candidate before recomputing the evaluator's disposition.
+
+```sh
+python -m pytest -q tests/test_repository_attempt.py
+```
+
+This fixture covers the Linux hermetic evidence flow for P0. Runtime isolation, real Pi execution, and scored comparisons have separate qualification gates. [Repository benchmark](https://github.com/pH34r-pH/long-haul/issues/64)
