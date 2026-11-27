@@ -39,9 +39,15 @@ curl -fsSL https://raw.githubusercontent.com/w3c/odrl/a4da7f9b42b2c5b02eff2aa644
 python scripts/verify_odrl_ai_source.py --source-dir /tmp/long-haul-odrl-ai
 ```
 
-Runtime code uses the Pydantic projection in `long_haul.resource_policy`; no RDF store is required. `profile_json_schema()` exports the ordinary JSON/YAML authoring schema. The current JSON-LD export and top-level SHACL assets are preliminary: nested policy semantics, lossless import, executable SHACL validation, and Croissant/SPDX package exports remain open under #248. They are not qualified interchange or dataset/BOM outputs.
+Runtime code uses the Pydantic projection in `long_haul.resource_policy`. `profile_json_schema()` exports the JSON/YAML authoring schema. `ResourcePolicyProfile.to_jsonld()` remains a preview. The corresponding SHACL shape requires a linked, explicitly typed ODRL policy.
 
-The preliminary SHACL shape requires an explicitly typed ODRL policy at the linked policy URI. The current exporter does not produce that policy graph and therefore fails this check. Passing the shape alone does not establish that permissions, constraints, prohibitions, or other policy semantics are complete or safe to enforce.
+### Compact JSON-LD interchange
+
+`long_haul.resource_policy_interchange.export_policy_jsonld(profile)` serializes the complete authoring record with a fixed inline context. Ordered fields use RDF lists, including rule actions, duties, and lineage. The compact record includes the profile's existing fingerprint, which also identifies the record URI. [JSON-LD 1.1](https://www.w3.org/TR/json-ld11/)
+
+`import_policy_jsonld(data, expected_fingerprint=reviewed_fingerprint)` accepts the compact form offline against a fingerprint supplied by independently reviewed control. It checks the canonical record, including its context, type, identifier, and nested fields. Whitespace and key order may vary. A valid import is evidence of content identity. Existing authenticated admission and the evaluator govern actual use.
+
+The SHACL record shape checks the graph structure of the compact record. A qualified native ODRL rule projection, independent-consumer policy enforcement, and Croissant/SPDX package exports remain open in #248.
 
 Install `contracts/resource-policy/test-requirements.txt` alongside the development dependencies to run the policy conformance tests locally.
 
