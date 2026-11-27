@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T10:28:12+00:00",
+    "updated_at": "2026-11-27T10:39:02+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -494,6 +494,37 @@
             "program_issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7215909455",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7215908849",
             "evidence": "The exact Linux rerun passed all tests after one existing native-controller timing error on the initial run. Windows passed locale, seed, relocation and mtime checks and skipped two POSIX capability cases. Main retained byte-identical historical artifacts from all four supported Python jobs."
+          },
+          "workflow_action_pins": {
+            "issue": "https://github.com/pH34r-pH/experiment-compiler/issues/166",
+            "issue_state": "closed_completed",
+            "pull_request": 189,
+            "baseline_commit": "6fd7a23b080ef5af58965ac3393fde4f9a82b8ec",
+            "checked_head": "6b9fbad2203402c109d04bbb0e7bbbeeb5ce9c37",
+            "ci_checkout": "851c54e571beaea0f06df6fe9bac7e18f68f9c4c",
+            "checked_tree": "cd6f3ba068aaa85a69c69ba645995a5707590146",
+            "merge_commit": "7a3a3cc6988bda80e16ef78e58405f1bf5ac312c",
+            "pull_request_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45983179915",
+            "default_branch_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45983456764",
+            "main_source_archive_sha256": "1c7200742438218810dde014c25af686d1b755a17ab41685a9f07c308fee514a",
+            "historical_poc_sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+            "local_linux_tests": 251,
+            "replaced_tag_references": 11,
+            "remote_action_references": 30,
+            "verified_upstream_commits": 13,
+            "local_action_references": 3,
+            "local_action_manifests": 5,
+            "wiki_run": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45983456691",
+            "wiki_commit": "4baef3683b8479744d9f708f6d79d49f18958afb",
+            "dependabot_runs": [
+              "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45983469137",
+              "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45983477730"
+            ],
+            "dependabot_update_pr": "https://github.com/pH34r-pH/experiment-compiler/pull/190",
+            "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/166#issuecomment-7216123615",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216130297",
+            "evidence": "Every direct remote commit was verified at its upstream repository. The baseline check found eleven mutable references. All 251 exact Linux tests, three PR workflows, three main push workflows, and two initial Dependabot runs passed. The main artifacts preserve the historical POC digest, and the first grouped dependency PR is open for review.",
+            "remaining": "Governed corpus admission, guarded evaluator disclosure, and protected publication verification remain under Compiler #150."
           }
         },
         {
@@ -5448,6 +5479,20 @@
       "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/169#issuecomment-7215899922",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7215908849",
       "remaining": "Actual same-boundary Podman execution in #87 is gated by Fleet #678. Governed corpus admission and private evaluator disclosure remain open under Compiler #150."
+    },
+    {
+      "at": "2026-11-27T10:39:02+00:00",
+      "task": "compiler-150",
+      "status": "workflow_action_pins_verified_on_main",
+      "repository": "pH34r-pH/experiment-compiler",
+      "issue": 150,
+      "issue_state": "open",
+      "closed_child": 166,
+      "pull_request": 189,
+      "merge_commit": "7a3a3cc6988bda80e16ef78e58405f1bf5ac312c",
+      "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/166#issuecomment-7216123615",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216130297",
+      "remaining": "Governed corpus admission, guarded evaluator disclosure, and protected publication verification remain under Compiler #150."
     }
   ]
 }
