@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T07:11:13+00:00",
+    "updated_at": "2026-11-27T07:20:43+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -611,7 +611,18 @@
             "default_branch_ci": "https://github.com/pH34r-pH/tone/actions/runs/45956490294/job/140364060817",
             "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7212215089"
           },
-          "remaining": "Owner-approved current source decisions, a complete private derivative inventory, actual withdrawal and retention receipts, candidate assembly, and contamination qualification."
+          "remaining": "Owner-reviewed current rights, source and retention decisions, the complete private derivative inventory, actual withdrawal receipts, candidate assembly, and an independently frozen holdout with qualified ancestry and exposure evidence. Chronological and target-derived leakage checks remain with the episode work.",
+          "partition_contamination": {
+            "pull_request": 24,
+            "baseline_commit": "71d5815a1fd85ac3b344725ac15e366219d008e4",
+            "checked_head": "5ca3d2bd45f9b5243a10f98b557d1d6ca6dc90df",
+            "ci_checkout": "e2dca631d78b743bcb1d68a319bca3ebf54b760c",
+            "checked_tree": "63e03a4dbb086a94eb312469f6fe1c464bb697fb",
+            "merge_commit": "e3b7ee27134d3f0b3ebd2a2fd6cf756e0a802ec5",
+            "pull_request_ci": "https://github.com/pH34r-pH/tone/actions/runs/45957417759",
+            "default_branch_ci": "https://github.com/pH34r-pH/tone/actions/runs/45957564347/job/140367477107",
+            "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7212369940"
+          }
         },
         {
           "id": "theorem-20",
@@ -4652,6 +4663,25 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7212218495",
       "evidence": "All 11 synthetic release and withdrawal tests passed locally and on exact private main, alongside 11 routing tests and the governance and documentation checks. The blocked receipt propagated native source withdrawal through a partition, index, candidate, and learned artifact. Changed pins, stale snapshots, missing manifests and parents, and cycles failed closed.",
       "remaining": "Owner-approved current source decisions, a complete private derivative inventory, actual withdrawal and retention receipts, candidate assembly, and contamination qualification."
+    },
+    {
+      "at": "2026-11-27T07:20:43+00:00",
+      "task": "tone-18",
+      "repository": "pH34r-pH/tone",
+      "status": "partition_contamination_audit_verified_on_main",
+      "pull_request": 24,
+      "baseline_commit": "71d5815a1fd85ac3b344725ac15e366219d008e4",
+      "checked_head": "5ca3d2bd45f9b5243a10f98b557d1d6ca6dc90df",
+      "ci_checkout": "e2dca631d78b743bcb1d68a319bca3ebf54b760c",
+      "checked_tree": "63e03a4dbb086a94eb312469f6fe1c464bb697fb",
+      "merge_commit": "e3b7ee27134d3f0b3ebd2a2fd6cf756e0a802ec5",
+      "pull_request_ci": "https://github.com/pH34r-pH/tone/actions/runs/45957417759",
+      "default_branch_ci": "https://github.com/pH34r-pH/tone/actions/runs/45957564347/job/140367477107",
+      "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7212369940",
+      "local_scoped_source_archive_sha256": "eb47f15297304bc46d191c103ef2bc786397ba7e84540cc7e4f939f6cfedba8c",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7212372718",
+      "evidence": "All 19 synthetic corpus tests passed locally on Windows, in network-disabled Linux, and on exact main. Private main also passed 11 routing tests, governance, documentation and the broken-link negative. The audit blocked shared ancestry, repeated attempts, prior test exposure and lexical duplicates. Its 3/4 word-trigram Jaccard screen matched exhaustive comparison on the fixture and found the planted pair in a separate 16,001-row synthetic probe. The receipt binds pinned inputs and records row positions.",
+      "remaining": "Owner-reviewed current rights, source and retention decisions, the complete private derivative inventory, actual withdrawal receipts, candidate assembly, and an independently frozen holdout with qualified ancestry and exposure evidence. Chronological and target-derived leakage checks remain with the episode work."
     }
   ]
 }
