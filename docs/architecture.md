@@ -1,6 +1,47 @@
 # Long Haul MVP Architecture
 
+> Status: current MVP architecture, hardened core guarantees, and near-term plan as of 2026-11-27.
+
 Long Haul separates institutional identity from hardware and model embodiment. This document defines the current MVP architecture; the standards-first shared-epistemic and heterogeneous-execution direction is diagrammed in [North-Star Architecture](north-star.md).
+
+## Design philosophy and architecture overview
+
+Long Haul favors a **small, deterministic, standards-aligned core** where hardware adapters, LLM harnesses, and future reason-maintenance backends remain replaceable edges:
+
+- **Fail closed on missing evidence:** Unknown capacities, conflicting runtime validations, missing pairwise direct Tailscale links, unauthenticated MCP dispatch, and unwired consequential decision dispatch all fail closed rather than guessing defaults.
+- **Keep history immutable and verifiable:** Authoritative events remain human-readable JSONL protected by cross-platform file locking, `fsync`, SHA-256 hash chaining, and explicit trusted checkpoints.
+- **Separate exploration from authority:** A worker or model session can propose work and gather diagnostics, but external evaluators and explicit policy gates determine acceptance.
+
+```mermaid
+flowchart TB
+  subgraph IN["Topology & Evidence Inputs"]
+    VES["Normalized Vessels & Typed Capacities<br/>CPU · GPU · NPU · Memory · Storage"]
+    LNK["Measured Links<br/>PCIe · Memory · Direct/Relay Tailscale"]
+    BMK["Measured Benchmarks & Runtime Validations<br/>exact artifact-v2 key + runtime identity"]
+  end
+
+  subgraph CORE["Long Haul Core (src/long_haul/)"]
+    SCH["Scheduler (scheduler/core.py)<br/>single-vessel LOCAL · all-pairs direct links<br/>single-pass rank() · preemption_penalty"]
+    DEC["DecisionEngine (decisions/engine.py)<br/>immutable snapshots · coverage validation<br/>effective current-objection blocks · fail-closed dispatch"]
+    MCP["MCP Gateway (mcp/gateway.py)<br/>discovery catalog · default-deny admission"]
+    EVT[["EventStore (events/store.py + integrity.py)<br/>lock + fsync · SHA-256 chain + ChainCheckpoint<br/>streaming replay · torn-tail recovery · quarantine"]]
+  end
+
+  subgraph EDGE["Adapters & Independent Evaluation"]
+    HAR["Coding / Inference Harnesses<br/>Pi · llama.cpp · native runners"]
+    EVL["Read-Only Acceptance Evaluator<br/>WorkContract predicates · EvidencePacket"]
+  end
+
+  VES --> SCH
+  LNK --> SCH
+  BMK --> SCH
+  SCH --> DEC
+  DEC --> HAR
+  MCP --> HAR
+  HAR --> EVL --> EVT
+  DEC --> EVT
+  EVT -. "rebuildable WorkCheckpoint / TaskDigest" .-> SCH
+```
 
 ## Core entities
 
@@ -99,7 +140,10 @@ Long Haul classifies harness steps independently of model prose as information a
 
 ## Persistence
 
-The MVP uses append-only JSONL events plus materialized views. SQLite remains an optional future index; event provenance remains exportable and human-readable.
+The MVP uses append-only JSONL events (`src/long_haul/events/store.py` and `src/long_haul/events/integrity.py`) plus materialized views. SQLite remains an optional future index; event provenance remains exportable and human-readable.
+
+- **Streaming replay and recovery (`#288`):** `EventStore.read_replay()` streams line-by-line without full-file duplication and reports typed `ReplayDiagnostic` / `ReplayError` locations (path, 1-based line, byte offset, event ID, reason). An unterminated trailing write is surfaced as `incomplete_tail` in inspection mode without mutating the file, blocks strict replay and ordinary appends, and can be explicitly recovered via `recover_torn_tail()` (archiving original damaged bytes). Unknown `event_type` values and unsupported `schema_version` records are quarantined in inspection/export without gaining operational authority, and missing crew references raise typed `ReplayError` rather than raw `KeyError`.
+- **Write locking and hash-chain integrity (`#289`):** Appends serialize local threads and processes across the full read-tail → validate → sequence → write → `flush()` → `os.fsync()` critical section (`fcntl.flock` on POSIX, `msvcrt.locking` on Windows; network filesystems remain unqualified). New logs record `log_id`, monotonic `seq`, `prev_hash` (genesis-bound), and canonical SHA-256 `event_hash`, verified via `verify_chain(anchor=...)` against an independent `ChainCheckpoint` while keeping legacy unchained logs readable as `legacy_unverified`.
 
 ### Dynamic resources and leases
 
@@ -128,3 +172,15 @@ Performance reuse additionally requires an exact workload including token counts
 A feasible candidate with no reusable performance evidence may still be selected for exploration, with the uncertainty reason retained. Historical store queries retrieve records without certifying them; failed, legacy-unbound, and non-comparable records remain in history and receive no favorable ranking. Invalid historical capacity encodings fail schema admission without rewriting source records.
 
 Acceptance packets and direct work evaluations require unique predicate IDs within each attempt. Identical and conflicting duplicates both raise validation errors; observations in independent attempts remain separate history.
+
+Multi-vessel execution modes obey strict topology semantics (`#286`, `#292`): `LOCAL` requires exactly one vessel matching the profile's derived resources, and `generate()` never emits multi-vessel `LOCAL`. Whenever `plan.mode` is `PIPELINE`, `mission.requires_synchronous_cross_node` is true, or `profile.synchronous_cross_node` is true, **every** unordered vessel pair must have a measured direct Tailscale link (`kind == "tailscale"`, `direct == True`, `path == "direct"`, `measured == True`), regardless of the outer mode label. Independent `POOL` on a relayed link and single-vessel multi-GPU `LOCAL` profiles remain supported. `rank()` materializes its input once so generators are safe, clears stale ranks on ineligible plans, and orders eligible candidates by `(-measured, preemption_penalty, -continuity, -throughput)` with deterministic lexical `plan_id` tie-breaking.
+
+## Current state and near-term plan
+
+| Subsystem | Current State (2026-11-27) | Next Milestones |
+| --- | --- | --- |
+| **Scheduler** | Hardened (`#286`, `#292` closed): topology/link policy enforced across all modes and pairwise edges; single-pass `rank()`. | Add explicit bounded exploration alongside measured candidates (`#287`). |
+| **EventStore** | Hardened (`#288`, `#289` closed): streaming replay, torn-tail recovery, schema quarantine, write locking, `fsync`, and SHA-256 hash chaining with trusted `ChainCheckpoint` anchors. | Broader duplicate/idempotency audit (`#280`) and optional SQLite read index. |
+| **DecisionEngine** | Immutable snapshots, unique/complete coverage validation, effective-block checks, and fail-closed dispatch landed (`#330`). | Integrate event-backed objection lifecycle, authenticated exceptions, and live consequential runtime wiring (`#290`). |
+| **MCP Gateway** | Default-deny policy admission merged (`#307`). | Add positive Cedar authorization and durable audit trail (`#294`, `#16`). |
+| **Developer & CI tooling** | Bare `pytest` collection and `posix_only` platform markers landed (`#319` closed); full POSIX suite runs on `ubuntu-24.04` CI, platform-neutral & Windows discovery tests pass natively on Windows. | Harden empirical experiment harness (`#291`) and evaluator candidate limits (`#293`). |
