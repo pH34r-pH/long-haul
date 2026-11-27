@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T10:54:27-08:00",
+    "updated_at": "2026-11-27T11:02:24-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -2775,6 +2775,32 @@
             "remaining": "Protected signing and publication workflow, live release readback, interoperability qualification, and shared upstream gates.",
             "issue_evidence": "https://github.com/pH34r-pH/agent-readable-calling-card/issues/17#issuecomment-7223804482",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7223807728"
+          },
+          "https_recipe_readback": {
+            "observed_at": "2026-11-27T11:02:24-08:00",
+            "status": "merged_and_verified_on_isolated_https_fixture",
+            "pull_request": "https://github.com/pH34r-pH/agent-readable-calling-card/pull/22",
+            "base_commit": "1b2a9a55b9987a2592adb4414cfaca61a83508fa",
+            "verified_head": "3f7ca63045e4ccde0183fb39aa3f8d4c7caca74f",
+            "ci_checkout": "5cbe38084aa1bbb57876f2a9e41b2f2e7d9becaa",
+            "verified_tree": "f1d8075c7b6eca58f44e55b9a1ba29b09aeee7a1",
+            "merge_commit": "2a10b76389ec96fb92b71052fb9bfe133876cb53",
+            "toolkit_pr_run": 46053574771,
+            "governance_pr_run": 46053574900,
+            "toolkit_main_run": 46053657949,
+            "governance_main_run": 46053657960,
+            "toolkit_tests": 43,
+            "reference_png_sha256": "b7cf2feefe3af64886257f28cb05dabcf32ef193e65c637ff1f7c2d6a3080c1f",
+            "loopback_manifest_sha256": "54121cebe4822667cae77ae038680defa8a4bf2db065dcc6e9420d3c5dff1b9b",
+            "loopback_recipe_sha256": "8084360517e25dcd8329b500331d7ef33828a226b874b7f37afaf388192bcaed",
+            "loopback_receipt_sha256": "df95c571e313f5aa408a15d9c636455374c2623dee354af46d42b21157fb9b10",
+            "loopback_node_version": "v22.23.5",
+            "deployments_for_merge": 0,
+            "published_releases": 0,
+            "scope": "The CLI verifies the signed manifest and approved HTTPS origin, then checks exact inline recipe bytes through the reviewed single redirect. The isolated TLS run accepted a 307-to-200 route and rejected altered bytes, an unapproved redirect, and an untrusted TLS certificate without emitting an acceptance receipt.",
+            "remaining": "Protected release signing and deployment, actual live readback, independent browser and assistant observations, and the shared upstream gate.",
+            "issue_evidence": "https://github.com/pH34r-pH/agent-readable-calling-card/issues/17#issuecomment-7226116236",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7226118418"
           }
         },
         {
@@ -7713,6 +7739,18 @@
       "merge_commit": "ee9e2708190149ddb12819fa4bb36392fbcebe7a",
       "issue_evidence": "https://github.com/pH34r-pH/discursive-affective-epistemology/issues/37#issuecomment-7225980986",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225983629"
+    },
+    {
+      "at": "2026-11-27T11:02:24-08:00",
+      "task": "arcc-17",
+      "status": "https_recipe_readback_verified_on_main",
+      "repository": "pH34r-pH/agent-readable-calling-card",
+      "issue": 17,
+      "issue_state": "open",
+      "pull_request": 22,
+      "merge_commit": "2a10b76389ec96fb92b71052fb9bfe133876cb53",
+      "issue_evidence": "https://github.com/pH34r-pH/agent-readable-calling-card/issues/17#issuecomment-7226116236",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7226118418"
     }
   ]
 }
