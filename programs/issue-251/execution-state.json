@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T05:33:22+00:00",
+    "updated_at": "2026-11-27T05:51:35+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -464,6 +464,17 @@
               "passed": 12,
               "skipped": 4,
               "checks_url": "https://github.com/pH34r-pH/long-haul/pull/321/checks"
+            }
+          },
+          "spdx_pr": {
+            "pull_request": 322,
+            "head": "f282e6fc5bb53dd3e8d8da41549619380e9f2793",
+            "status": "review_required",
+            "evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7210997437",
+            "checks": {
+              "passed": 12,
+              "skipped": 4,
+              "checks_url": "https://github.com/pH34r-pH/long-haul/pull/322/checks"
             }
           }
         },
@@ -4337,6 +4348,35 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7210727832",
       "evidence": "Exact Linux source passed full Ruff and 613 tests, with 43 skips. Focused Windows passed 58. The published inventory projection checks exact policy and source-policy closure with the existing derive evaluator. Network-disabled MLCommons validation passed under 1.1.0 and 1.1.1. The Compiler main reference preserved the exact metadata digest and rejected promotion to a qualified corpus.",
       "remaining": "Approving review for PR 321. SPDX 3.0.1 output and independent ODRL implementation remain open. Actual corpus file bytes, frozen partitions, decontamination and evaluator evidence still need qualification before Compiler corpus readback."
+    },
+    {
+      "at": "2026-11-27T05:51:35+00:00",
+      "task": "lh-248-interchange",
+      "status": "spdx_projection_checks_passed_review_required",
+      "repository": "pH34r-pH/long-haul",
+      "pull_request": 322,
+      "baseline_commit": "64c81d31fc8193cd2ff9e96a8df1751f86f8a21c",
+      "checked_head": "f282e6fc5bb53dd3e8d8da41549619380e9f2793",
+      "ci_checkout": "df54a5de52f4fa99c7a8f93e2b98184267822c8e",
+      "checked_tree": "7cf907ca65213d2ba3c4a3cb0e5f8d72364d751f",
+      "archive_sha256": "816b828ccb0e28df0c5217afe0eb78815aeddac36c0e81be7ca7e3e31f1bb693",
+      "checks": {
+        "passed": 12,
+        "skipped": 4,
+        "checks_url": "https://github.com/pH34r-pH/long-haul/pull/322/checks"
+      },
+      "pull_request_ci": "https://github.com/pH34r-pH/long-haul/actions/runs/45947591300",
+      "locked_runtime_ci": "https://github.com/pH34r-pH/long-haul/actions/runs/45947591281",
+      "structural_checks": "https://github.com/pH34r-pH/long-haul/actions/runs/45947591412",
+      "spdx_metadata_sha256": "2a77f42df6de30f6ee58ce6789b78799d12e740ecffe050648880c34d6b515d9",
+      "combined_policy_candidate_tree": "b33fb7cee4751e742c35898e6dd66d96509cbe8a",
+      "shared_dataset_fixture_sha256": "f3dc212a40d07ab9f871dd977c0637a41180bcf88ee29a81f0dc5fe2fcb17d43",
+      "compiler_fixture_package_sha256": "acb3569e5274691960339fd4c35e9be889e5fbec51646dfd65dda817bde09a0e",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7210997437",
+      "compiler_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7210997099",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7210999581",
+      "evidence": "Exact locked Linux source passed Ruff and 608 tests with 43 skips. The first hosted runtime check required the parser lock update and the final locked runtime passed. The synthetic SPDX BOM passed pinned official JSON Schema and SHACL with networking disabled. The disjoint three-PR combination passed 83 policy tests. Croissant and SPDX described the same dataset bytes; Compiler preserved the exact SPDX file in two identical package builds.",
+      "remaining": "Approving review for PR 322, independent native ODRL enforcement, and corpus qualification with exact source files, frozen partitions, decontamination and evaluator evidence."
     }
   ]
 }
