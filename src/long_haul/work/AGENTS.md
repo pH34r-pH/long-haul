@@ -8,6 +8,10 @@ The work boundary turns a bounded objective into externally checkable evidence. 
 
 The Pi worker checks current READ and AI_AUGMENT policy for all existing files before projecting any bytes. After stopping the worker, changed candidate bytes require a completed, still-authorized derivation. These checks do not by themselves qualify the full adversarial security profile.
 
+A retained semantic trace consumer uses `harness.verify_semantic_trace` with the independently retained result fingerprint and a caller-supplied byte budget. The reader checks canonical result and JSONL bytes, attempt provenance, and sequence before the events enter replay or progress analysis. Access and publication remain governed by the trace resource policy.
+
+`python -m long_haul replay-trajectory RESULT TRACE --expected-result-fingerprint DIGEST --max-bytes N` runs offline on admitted retained evidence. An optional `--progress-policy PATH` selects the replay thresholds from JSON. The byte budget covers all supplied files. [Replay receipt](../../../docs/trajectory-replay.md)
+
 Native write completions must match their authorized UTF-8 payload. Edits are limited to unique exact LF-only UTF-8 replacements; a changed target must match the resulting bytes before a derivation can be recorded.
 
 ## Invariants

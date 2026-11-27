@@ -1,5 +1,10 @@
 """Long Haul MCP capability gateway primitives."""
 
-from .gateway import CapabilityGateway, CapabilityResult
+from .gateway import (
+    CapabilityGateway,
+    CapabilityReason,
+    CapabilityResult,
+    CapabilityStatus,
+)
 
-__all__ = ["CapabilityGateway", "CapabilityResult"]
+__all__ = ["CapabilityGateway", "CapabilityReason", "CapabilityResult", "CapabilityStatus"]

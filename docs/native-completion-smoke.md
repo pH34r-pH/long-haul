@@ -45,6 +45,13 @@ Retain important results in the owning evidence history before convenience
 artifacts expire. This job does not create scientific attempt receipts or replace
 the Compiler/Fleet lifecycle.
 
+The receiver check uses the staged CPU assets in the same job. To retain a copy
+for offline reuse, manually run the CI workflow on `main` with
+`retain_native_assets` selected. The workflow reruns qualification for that exact
+source and keeps the resulting bundle for three days. Normal pushes and pull
+requests retain the smaller qualification evidence without uploading the model
+and executables on every run.
+
 A pass establishes behavior for the exact tested build, conversion and probes.
 It is not universal tokenizer equivalence, instruction competence, a benchmark,
 GPU evidence, native Windows qualification or permission to run a private study.

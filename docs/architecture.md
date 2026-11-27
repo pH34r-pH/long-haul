@@ -70,6 +70,10 @@ The MVP experiment compares this two-role consent/dissent architecture against s
 
 Long Haul owns task objective, scope, authority, budgets, success/failure predicates, provenance, and final disposition. A coding harness such as Pi is an execution adapter: it may render model-specific guidance and recover from provider-specific failures, but it does not redefine contract success. Work-contract events link creation, attempts, evidence, and disposition so later checkpointing and independent evaluation can reconstruct the history.
 
+The MCP gateway exposes a discovery catalog. Each invocation currently returns
+an authorization refusal before reaching an adapter. Contextual authorization
+and durable audit intent must be integrated before the gateway can dispatch.
+
 ## Independent acceptance evaluation
 
 Repository tasks add the explicit [frozen evaluator projection](repository-evaluation.md): evaluator-owned public/sealed checks resolve exact predicate references, execute an immutable read-only candidate, and retain typed invalid outcomes separately from negative task results. Docker/OCI plus pinned gVisor provides the replaceable sandbox adapter; its strict hosted qualification remains distinct from ordinary fixture tests.

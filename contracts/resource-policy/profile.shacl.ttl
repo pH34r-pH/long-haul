@@ -80,3 +80,46 @@ lh:GovernedResourceShape
         sh:minCount 1 ;
         sh:maxCount 1
     ] .
+
+lh:ResourcePolicyRecordShape
+    a sh:NodeShape ;
+    sh:targetClass lh:ResourcePolicyRecord ;
+    sh:nodeKind sh:IRI ;
+    sh:pattern "^https://ph34r[.]dev/ns/long-haul/resource-policy/v1/record/[0-9a-f]{64}$" ;
+    sh:property [
+        sh:path dct:conformsTo ;
+        sh:hasValue <https://ph34r.dev/ns/long-haul/resource-policy/v1> ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path lh:schema_version ;
+        sh:datatype xsd:integer ;
+        sh:hasValue 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path lh:fingerprint ;
+        sh:pattern "^resource-policy-v1:[0-9a-f]{64}$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path lh:identity ;
+        sh:nodeKind sh:BlankNode ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path lh:permissions ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path lh:prohibitions ;
+        sh:nodeKind sh:BlankNodeOrIRI ;
+        sh:minCount 1 ;
+        sh:maxCount 1
+    ] ;
+    sh:property [ sh:path odrl:permission ; sh:maxCount 0 ] ;
+    sh:property [ sh:path odrl:prohibition ; sh:maxCount 0 ] .
