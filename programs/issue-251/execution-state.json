@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T03:05:53+00:00",
+    "updated_at": "2026-11-27T03:23:12+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -416,10 +416,12 @@
             "compiler-150"
           ],
           "acceptance": "Every admitted source has exact trust/use/freshness metadata and prompt-injection-safe ingestion with stale-source invalidation.",
-          "implementation_pr": 44,
-          "merge_commit": "7f4ca84ed221e4976b848a0b757e1f735791ce03",
+          "implementation_pr": 45,
+          "merge_commit": "02241a3df272274590cc9f504c12674d90b008db",
           "evidence": [
-            "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7208699800"
+            "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7208699800",
+            "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7208842903",
+            "https://github.com/pH34r-pH/long-haul-fleet/issues/177#issuecomment-7208910169"
           ],
           "default_branch_checks": "passed"
         },
@@ -3952,6 +3954,34 @@
       "evidence": "The same run entered the queue on retry, then reported startup_failure at 2026-11-27T03:01:26Z with zero jobs. The repository reports Actions enabled. The failure precedes governance execution.",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7208702193",
       "remaining": "A successfully allocated exact-head governance check remains necessary to merge the locally qualified source."
+    },
+    {
+      "at": "2026-11-27T03:23:12+00:00",
+      "task": "knowledge-42",
+      "status": "reviewed_source_freshness_consumed_by_fleet",
+      "repository": "pH34r-pH/knowledge",
+      "pull_request": 45,
+      "checked_head": "272f8f2dcf4db4513d1e24ec62ee59a390b212da",
+      "ci_checkout": "c745d1099341e1309f38d505f9b80c48595305c6",
+      "merge_commit": "02241a3df272274590cc9f504c12674d90b008db",
+      "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45932714850/job/140288858159",
+      "default_branch_governance": "https://github.com/pH34r-pH/knowledge/actions/runs/45932714786",
+      "readback_receipt_sha256": "40e8864ef527bf9b1845cf142672041cb577675021b50c554d276d820889a11c",
+      "consumer": {
+        "repository": "pH34r-pH/long-haul-fleet",
+        "pull_request": 1730,
+        "checked_head": "c4e178b09b05b0f36733deb75b79119d703e0a06",
+        "ci_checkout": "e64e27d9be65b84dd5a86e9744103d8d6ab3aa18",
+        "merge_commit": "f1a9c14e8713d9c3fd8ad05bc91afe3e76305e65",
+        "default_branch_ci": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45933408216",
+        "default_branch_iac": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45933408202",
+        "default_branch_governance": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45933408244",
+        "evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/177#issuecomment-7208910169"
+      },
+      "evidence": "Both checked and merged trees match. Six Knowledge and eleven Fleet PR checks passed, and main workflows passed. Main reviewed-source status covered three declared bibliographic metadata uses. Fleet accepted the exact current result through public API calls without credentials. Negative replay rejected both a failed bound job and a newer failed weekly result. Historical pinning remained identity-only. Source expiry and the existing weekly sweep plus one Fleet poll bound the current decision.",
+      "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7208842903",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7208944312",
+      "remaining": "The 239 remaining Work rows require review. KWRK-000053 and KWRK-000080 already appear in existing corpus articles. Only the push freshness result was exercised on live GitHub. The newer scheduled failure was verified by replay."
     }
   ]
 }
