@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T04:43:10+00:00",
+    "updated_at": "2026-11-27T04:56:44+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -248,6 +248,18 @@
             },
             "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/64#issuecomment-7209975796",
             "scope": "Offline replay of an exact retained fixture. P0 task/evaluator and P1 real Pi qualification remain open."
+          },
+          "hermetic_p0": {
+            "pull_request": 318,
+            "checked_head": "9b124e542951d35559827ed4036b6b1b7a73c57d",
+            "status": "review_required",
+            "checks": {
+              "passed": 12,
+              "skipped": 4,
+              "url": "https://github.com/pH34r-pH/long-haul/pull/318/checks"
+            },
+            "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/64#issuecomment-7210161129",
+            "scope": "Linux frozen toy task, scripted harness, independent synthetic sealed evaluation, retained readback, and Compiler integration."
           }
         },
         {
@@ -4199,6 +4211,31 @@
       "upstream_consumer_evidence": "https://github.com/pH34r-pH/long-haul/issues/244#issuecomment-7209982974",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7210031361",
       "remaining": "One approving review is required. Full P0 task/evaluator rehearsal, admitted P1 execution, and measured dependency and oracle evidence remain open."
+    },
+    {
+      "at": "2026-11-27T04:56:44+00:00",
+      "task": "lh-64-pilot",
+      "status": "hermetic_p0_candidate_checks_passed_review_required",
+      "repository": "pH34r-pH/long-haul",
+      "pull_request": 318,
+      "baseline_commit": "64c81d31fc8193cd2ff9e96a8df1751f86f8a21c",
+      "checked_head": "9b124e542951d35559827ed4036b6b1b7a73c57d",
+      "ci_checkout": "fcaefced21a7cd9015ac2b9f066172a7c3f21154",
+      "checked_tree": "8130024b3200b2858a601aea239d5625476c7eae",
+      "checks": {
+        "passed": 12,
+        "skipped": 4,
+        "url": "https://github.com/pH34r-pH/long-haul/pull/318/checks"
+      },
+      "fixtures": {
+        "shared_trace_sha256": "58a7b80de8f0127f9a64db59b139ef0bd598723d4e93d10e918e88c7fe35e475",
+        "accepted_compiler_receipt_sha256": "b55c73166923da53469dd714ddddc75947bf9a1ce3916065722264f81ed6dc66",
+        "rejected_compiler_receipt_sha256": "555d6a8d15e2ab49478635b8c889c72db54b01ea2901f48f137d3f58abe66167"
+      },
+      "evidence": "Local and hosted Linux passed 595 tests with 43 skips. Both frozen candidates passed the public check and only the corrected candidate passed the sealed check. Work evidence readback rejects mismatched pins, attempt and candidate. Compiler main binds both packages to exact retained results despite identical traces, rejects a swapped result, and rejects their private packages at the publication boundary.",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/64#issuecomment-7210161129",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7210215096",
+      "remaining": "GitHub requires one approving review. Admitted Pi P1, independent runtime qualification, and scored benchmark comparison remain open."
     }
   ]
 }
