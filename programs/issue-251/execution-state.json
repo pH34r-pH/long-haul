@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T00:57:14+00:00",
+    "updated_at": "2026-11-27T01:12:06+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3695,6 +3695,26 @@
       "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/630#issuecomment-7206886741",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7206888589",
       "remaining": "Approved protected reader environment and role scopes, live private input receipt, protected publisher transfer and publication and recovery evidence, physical pilot and old authority retirement."
+    },
+    {
+      "at": "2026-11-27T01:12:06+00:00",
+      "task": "fleet-1612",
+      "status": "society_basemap_recovery_snapshot_verified",
+      "repository": "pH34r-pH/long-haul-fleet",
+      "pull_request": 1727,
+      "checked_head": "b7a87c2ad7b03ffa964f2001c0b8aa9445989d07",
+      "ci_checkout": "8e029b46b95171bf2fb446237758ad16da6acf7d",
+      "merge_commit": "520c8e62de7e740d4233fcffcf9e1f048218418f",
+      "default_branch_monitor": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45920928781/job/140251223838",
+      "default_branch_governance": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45920928736",
+      "publication_attempt": "30221871972-1",
+      "recovery_file": "basemap-recovery-30221871972-1.json",
+      "recovery_sha256": "41da804aa79fc142187632040a00bdb9c51fa8c30bbd8bf8b14da4fe2d57a3e2",
+      "capture_time": "2026-11-27T01:04:17+00:00",
+      "evidence": "Identical checked and merged trees. The main basemap job passed nine tests and live public readback. The saved snapshot independently hashed and extracted style and provenance that matched their recorded fingerprints. The live read-only plan returned zero writes. Fixture rehearsals reproduced the exact pair after one or both pointers were replaced and rejected unknown or changing pointer bytes.",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/630#issuecomment-7207089187",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7207091366",
+      "remaining": "Approved shared recovery location, protected publisher and authorized Azure restore evidence, physical pilot, and old-authority retirement."
     }
   ]
 }
