@@ -1,8 +1,9 @@
 import importlib.util
 import json
-from pathlib import Path
+import sys
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,6 +23,7 @@ class BoundaryTests(unittest.TestCase):
     def inspect(self):
         return m.inventory(self.root, self.data, json.dumps(self.data).encode())
 
+    @unittest.skipIf(sys.platform == "win32", "POSIX-only: requires unprivileged symlinks; run on Linux or WSL")
     def test_git_metadata_symlink(self):
         (self.root / '.git').mkdir()
         (self.root / '.git/config').write_text('private metadata')

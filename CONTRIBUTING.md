@@ -9,6 +9,12 @@ Long Haul welcomes focused changes that strengthen the portable runtime, its evi
 3. Prefer extending an existing adapter, schema, or execution pattern over introducing a parallel abstraction.
 4. Keep concrete private vessel state and credentials out of this repository.
 
+## Local testing
+
+Linux or WSL is the supported development platform for running the full test suite. The repository's Git context isolation (`os.defpath`), `O_NOFOLLOW`/`fstat` worker-freeze guards, pipe `select()` tests, and unprivileged symlink tests require POSIX semantics and are marked `posix_only` so bare `pytest` runs all platform-neutral and Windows discovery tests cleanly on Windows while CI runs the complete suite on `ubuntu-24.04`.
+
+Run the suite with either `pytest -q` or `python -m pytest -q`.
+
 ## Pull requests
 
 Explain the problem, the invariant/boundary affected, and the evidence that validates the change. Add or update tests for new behavior. Hardware claims require measured evidence; simulated fixtures must remain labeled as such.
