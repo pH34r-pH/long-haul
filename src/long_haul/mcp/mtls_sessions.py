@@ -100,6 +100,8 @@ class MutualTLSSessions:
         now = datetime.now(UTC)
         certificate_starts = datetime.fromtimestamp(ssl.cert_time_to_seconds(details["notBefore"]), UTC)
         certificate_expires = datetime.fromtimestamp(ssl.cert_time_to_seconds(details["notAfter"]), UTC)
+        if not timedelta(0) < certificate_expires - certificate_starts <= self.MAX_SESSION:
+            raise ValueError("client certificate lifetime exceeds the allowed bound")
         with self._lock:
             binding = next((entry for entry in self._bindings.values() if entry.fingerprint == fingerprint), None)
             if (binding is None or not max(binding.starts_at, certificate_starts)

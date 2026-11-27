@@ -21,15 +21,53 @@ def certificates(tmp_path_factory):
     root = tmp_path_factory.mktemp("mtls")
 
     def run(*args):
-        subprocess.run(["openssl", *args], cwd=root, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["openssl", *args], cwd=root, check=True, timeout=15,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     run("req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1", "-subj", "/CN=fixture-ca",
+        "-addext", "basicConstraints=critical,CA:TRUE", "-addext", "keyUsage=critical,keyCertSign,cRLSign",
+        "-addext", "subjectKeyIdentifier=hash",
         "-keyout", "ca.key", "-out", "ca.pem")
-    for name, subject in (("server", "localhost"), ("a", "client-a"), ("b", "client-b"), ("next", "client-next")):
+    (root / "newcerts").mkdir()
+    (root / "index.txt").write_text("")
+    (root / "serial").write_text("1000\n")
+    (root / "ca.cnf").write_text("""[ca]
+default_ca = local
+[local]
+database = index.txt
+new_certs_dir = newcerts
+certificate = ca.pem
+private_key = ca.key
+serial = serial
+default_md = sha256
+policy = policy_any
+unique_subject = no
+[policy_any]
+commonName = supplied
+[server_cert]
+basicConstraints = critical,CA:FALSE
+keyUsage = critical,digitalSignature,keyEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = DNS:localhost
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer
+[client_cert]
+basicConstraints = critical,CA:FALSE
+keyUsage = critical,digitalSignature,keyEncipherment
+extendedKeyUsage = clientAuth
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer
+""")
+    start = datetime.now(UTC) - timedelta(minutes=1)
+    for name, subject in (("server", "localhost"), ("a", "client-a"), ("b", "client-b"),
+                          ("next", "client-next"), ("long", "client-long")):
         run("req", "-newkey", "rsa:2048", "-nodes", "-subj", f"/CN={subject}",
             "-keyout", f"{name}.key", "-out", f"{name}.csr")
-        run("x509", "-req", "-in", f"{name}.csr", "-CA", "ca.pem", "-CAkey", "ca.key",
-            "-CAcreateserial", "-days", "1", "-out", f"{name}.pem")
+        end = start + (timedelta(days=1) if name == "long" else timedelta(minutes=11))
+        run("ca", "-batch", "-notext", "-config", "ca.cnf", "-in", f"{name}.csr",
+            "-extensions", "server_cert" if name == "server" else "client_cert",
+            "-startdate", start.strftime("%y%m%d%H%M%SZ"), "-enddate", end.strftime("%y%m%d%H%M%SZ"),
+            "-out", f"{name}.pem")
     run("req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1", "-subj", "/CN=rogue",
         "-keyout", "rogue.key", "-out", "rogue.pem")
     return root
@@ -45,13 +83,17 @@ def contexts(root: Path, client: str):
     server.load_cert_chain(root / "server.pem", root / "server.key")
     server.load_verify_locations(root / "ca.pem")
     server.verify_mode = ssl.CERT_REQUIRED
+    server.verify_flags |= ssl.VERIFY_X509_STRICT
     peer = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=str(root / "ca.pem"))
+    peer.verify_flags |= ssl.VERIFY_X509_STRICT
     peer.load_cert_chain(root / f"{client}.pem", root / f"{client}.key")
     return server, peer
 
 
 def connect(server, client):
     first, second = socket.socketpair()
+    first.settimeout(5)
+    second.settimeout(5)
     server_sock = server.wrap_socket(first, server_side=True, do_handshake_on_connect=False)
     client_sock = client.wrap_socket(second, server_hostname="localhost", do_handshake_on_connect=False)
     with ThreadPoolExecutor(max_workers=2) as executor:
@@ -131,6 +173,21 @@ def test_invalid_replacement_preserves_current_session_and_reused_ids_are_denied
         sessions.revoke("session-a")
         with pytest.raises(ValueError, match="cannot be reused"):
             sessions.activate(current, fingerprint(certificates, "next"), now)
+    finally:
+        server_sock.close()
+        client_sock.close()
+
+
+def test_long_lived_client_certificate_is_not_a_short_lived_workload_credential(certificates):
+    server, client = contexts(certificates, "long")
+    sessions = MutualTLSSessions(server)
+    now = datetime.now(UTC)
+    sessions.activate(SessionIdentity("crew", "session", "embodiment", now + timedelta(minutes=5)),
+                      fingerprint(certificates, "long"), now - timedelta(seconds=1))
+    server_sock, client_sock = connect(server, client)
+    try:
+        with pytest.raises(ValueError, match="certificate lifetime"):
+            sessions.authenticate(server_sock)
     finally:
         server_sock.close()
         client_sock.close()
