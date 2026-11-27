@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T05:51:35+00:00",
+    "updated_at": "2026-11-27T06:03:40+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -497,8 +497,8 @@
             "compiler-150"
           ],
           "acceptance": "Every admitted source has exact trust/use/freshness metadata and prompt-injection-safe ingestion with stale-source invalidation.",
-          "implementation_pr": 51,
-          "merge_commit": "e929dd1b11d6ec49f9e06461df07d79007f9cf36",
+          "implementation_pr": 52,
+          "merge_commit": "0dc773afb62e2c7d83f31e7ac0e2ac0ae2439269",
           "evidence": [
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7208699800",
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7208842903",
@@ -507,7 +507,8 @@
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209178670",
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209317818",
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209426682",
-            "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7210402977"
+            "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7210402977",
+            "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7211170998"
           ],
           "default_branch_checks": "passed"
         },
@@ -4377,6 +4378,28 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7210999581",
       "evidence": "Exact locked Linux source passed Ruff and 608 tests with 43 skips. The first hosted runtime check required the parser lock update and the final locked runtime passed. The synthetic SPDX BOM passed pinned official JSON Schema and SHACL with networking disabled. The disjoint three-PR combination passed 83 policy tests. Croissant and SPDX described the same dataset bytes; Compiler preserved the exact SPDX file in two identical package builds.",
       "remaining": "Approving review for PR 322, independent native ODRL enforcement, and corpus qualification with exact source files, frozen partitions, decontamination and evaluator evidence."
+    },
+    {
+      "at": "2026-11-27T06:03:40+00:00",
+      "task": "knowledge-42",
+      "status": "registered_arxiv_bibliographic_reviews_verified_on_main",
+      "repository": "pH34r-pH/knowledge",
+      "pull_request": 52,
+      "baseline_commit": "e929dd1b11d6ec49f9e06461df07d79007f9cf36",
+      "checked_head": "f201c98cea1a05a43ab98b426f2d7df0613b54ce",
+      "ci_checkout": "ee96a5e7d8abbc7ccfe9f6790e9ae9cd7174e5fb",
+      "checked_tree": "44988b32355811c3198514f14d3e08694b8050d1",
+      "merge_commit": "0dc773afb62e2c7d83f31e7ac0e2ac0ae2439269",
+      "pull_request_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45949123343",
+      "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45949227181",
+      "default_branch_governance": "https://github.com/pH34r-pH/knowledge/actions/runs/45949227233",
+      "fleet_consumed_freshness": "https://github.com/pH34r-pH/knowledge/actions/runs/45949227181/job/140341050928",
+      "registry_sha256": "8b56f263ebc42fab836065f3b7e73d4ced4f35d74462c2815c279a0d970ee51a",
+      "readback_receipt_sha256": "f1f331acb1ed1460e99a8e8dcd51cfd0838c0c66d0fcda89d504f33fef5be644",
+      "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7211170998",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7211173320",
+      "evidence": "Independently checked all 150 previously unreviewed arXiv Works and added 78 reviews with exact publisher revision and bibliographic metadata. Four previously pending cited Works now have a reviewed publisher version. The exact branch passed 55 tests. PR and main receipts agree on 165 current approvals and 94 citation identifiers with one active Work each. Expiry replay withheld all approvals and reported the affected articles. Fleet accepted this exact main revision.",
+      "remaining": "166 Works require use review. Of these, 72 registered arXiv Works have metadata or revision discrepancies, including three cited Works. Other source types and use decisions remain pending."
     }
   ]
 }
