@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T08:24:49+00:00",
+    "updated_at": "2026-11-27T08:39:59+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -434,6 +434,29 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7213507831",
             "evidence": "Exact local network-disabled source passed all 240 tests. Each standard hosted main job passed 239 tests on Python 3.11 through 3.14. The dedicated main step passed 40 generated recovery sequences of up to 20 steps with Hypothesis 6.170.17. Typed transitions preserve cancellation, distinguish a possible legacy launch, refuse unproved absence, and retain the output ZIP and cited journal snapshot after a terminal receipt interruption.",
             "remaining": "The broader Compiler issue 150 still needs the governed corpus and restricted disclosure paths using qualified upstream Long-Haul contracts. Fleet live recovery retains its own evidence and approval boundary."
+          },
+          "catalog_projection_qualification": {
+            "status": "lifecycle_catalog_contract_completed_on_main",
+            "issue": 158,
+            "issue_state": "closed_completed",
+            "pull_request": 187,
+            "baseline_commit": "d67a0cd2d43a2f96c430ce4141379c1a114c3fe1",
+            "checked_head": "e1ae1071f66ea61039a4049f60b32ccc01907fe8",
+            "ci_checkout": "6627bb1b08a2810de8b2969534d3b6544426bca2",
+            "checked_tree": "0403c56a4aa05f215652922988e73c6eacc3d889",
+            "merge_commit": "87f5fefa1cb4bd057fcf4ed331771985aeef4766",
+            "pull_request_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45966815908",
+            "default_branch_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45967068597",
+            "default_branch_governance": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45967068617",
+            "local_source_archive_sha256": "988883c059af64cbb8f748e0effeed8e8851156ce7ecea1d2a27b3d67bd89fcf",
+            "historical_poc_sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+            "site_preview": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45967068597/artifacts/15183536661",
+            "site_preview_sha256": "43cda98b57d164f6ea64ef3e5cd7676de2c3a80ad9b1b3528f5a5f88553e0bd0",
+            "catalog_sha256": "a039197039cdd22f53dcd1cd3ee6742f984e6631df30644640426a54f74a1221",
+            "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/158#issuecomment-7213778506",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7213781800",
+            "evidence": "All 242 tests passed on exact network-disabled Linux source. The four hosted Python jobs each ran the eight-case catalog matrix and passed 241 tests. The exact main preview matched the local six-record catalog byte for byte and all detail routes, package digests and byte sizes verified. The generated artifacts preserve the authoritative protocol, execution states, source-owned interpretation, PropertyValue fields, parent ZIPs and existing scientific scope.",
+            "remaining": "The broader Compiler issue 150 still needs governed corpus packaging and restricted evaluator disclosure using qualified Long-Haul contracts. The publication workflow retains its manual dispatch."
           }
         },
         {
@@ -4876,6 +4899,32 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7213507831",
       "evidence": "Exact local network-disabled source passed all 240 tests. Each standard hosted main job passed 239 tests on Python 3.11 through 3.14. The dedicated main step passed 40 generated recovery sequences of up to 20 steps with Hypothesis 6.170.17. Typed transitions preserve cancellation, distinguish a possible legacy launch, refuse unproved absence, and retain the output ZIP and cited journal snapshot after a terminal receipt interruption.",
       "remaining": "The broader Compiler issue 150 still needs the governed corpus and restricted disclosure paths using qualified upstream Long-Haul contracts. Fleet live recovery retains its own evidence and approval boundary."
+    },
+    {
+      "at": "2026-11-27T08:39:59+00:00",
+      "task": "compiler-150",
+      "repository": "pH34r-pH/experiment-compiler",
+      "status": "lifecycle_catalog_contract_completed_on_main",
+      "issue": 158,
+      "issue_state": "closed_completed",
+      "pull_request": 187,
+      "baseline_commit": "d67a0cd2d43a2f96c430ce4141379c1a114c3fe1",
+      "checked_head": "e1ae1071f66ea61039a4049f60b32ccc01907fe8",
+      "ci_checkout": "6627bb1b08a2810de8b2969534d3b6544426bca2",
+      "checked_tree": "0403c56a4aa05f215652922988e73c6eacc3d889",
+      "merge_commit": "87f5fefa1cb4bd057fcf4ed331771985aeef4766",
+      "pull_request_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45966815908",
+      "default_branch_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45967068597",
+      "default_branch_governance": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45967068617",
+      "local_source_archive_sha256": "988883c059af64cbb8f748e0effeed8e8851156ce7ecea1d2a27b3d67bd89fcf",
+      "historical_poc_sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+      "site_preview": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45967068597/artifacts/15183536661",
+      "site_preview_sha256": "43cda98b57d164f6ea64ef3e5cd7676de2c3a80ad9b1b3528f5a5f88553e0bd0",
+      "catalog_sha256": "a039197039cdd22f53dcd1cd3ee6742f984e6631df30644640426a54f74a1221",
+      "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/158#issuecomment-7213778506",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7213781800",
+      "evidence": "All 242 tests passed on exact network-disabled Linux source. The four hosted Python jobs each ran the eight-case catalog matrix and passed 241 tests. The exact main preview matched the local six-record catalog byte for byte and all detail routes, package digests and byte sizes verified. The generated artifacts preserve the authoritative protocol, execution states, source-owned interpretation, PropertyValue fields, parent ZIPs and existing scientific scope.",
+      "remaining": "The broader Compiler issue 150 still needs governed corpus packaging and restricted evaluator disclosure using qualified Long-Haul contracts. The publication workflow retains its manual dispatch."
     }
   ]
 }
