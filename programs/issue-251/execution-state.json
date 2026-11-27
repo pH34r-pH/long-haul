@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T07:12:30-08:00",
+    "updated_at": "2026-11-27T07:19:29-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1683,6 +1683,40 @@
             },
             "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7220993321",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221000462"
+          },
+          "arxiv_batch_readback_retry": {
+            "observed_at": "2026-11-27T07:19:29-08:00",
+            "status": "merged_and_main_verified",
+            "pull_request": "https://github.com/pH34r-pH/knowledge/pull/64",
+            "baseline_commit": "d369d69137b899499bae3c3a56bb67ae7f39504b",
+            "checked_head": "0fd44ceb8b80a68292eeeb3e0ef4e1d84262ecd5",
+            "checked_tree": "1eeb2dfe689484164205ff08627736ec2675f002",
+            "merge_commit": "a5b97156cd687a3b1a63f4ec2a49b8e2689e6a97",
+            "source_archive_sha256": "49d81791117bea1000ae98d48bdb7cca7372de9701c9b126ba53da514d8d6cdb",
+            "observed_historical_failure": "https://github.com/pH34r-pH/knowledge/actions/runs/46016802514/attempts/1",
+            "pr_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/46023377109",
+            "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/46023538637",
+            "report": "https://github.com/pH34r-pH/knowledge/actions/runs/46023538637/artifacts/15212325147",
+            "report_expires_at": "2026-12-11T15:17:50Z",
+            "report_sha256": "868fc520e8834974132842f97cc3e3493e5746bf0245fabb99546a3b22d88c62",
+            "registry_sha256": "28f7f071cb86effecc372165ebc70c0719fb68287a6e578f8be0e6d921f9ac23",
+            "offline_tests": 68,
+            "final_pr_checks": 6,
+            "main_workflows_passed": 3,
+            "verified_approved_metadata": 209,
+            "verified_pinned_arxiv_revisions": 35,
+            "works_requiring_review": 134,
+            "scope": "One same-batch retry for eligible transient errors. Serialized requests honor the three-second spacing and stop on publisher throttling or wait instructions. Invalid or unavailable evidence still suppresses use.",
+            "fleet_local_intake": {
+              "fleet_commit": "e876a90b5537e3b0bcd1fde5dcad4fedc275fb45",
+              "knowledge_run": 46023538637,
+              "knowledge_run_attempt": 1,
+              "freshness": "current",
+              "receipt_sha256": "5e9048f8a9a5750c72c34a9d5318bd2e71fd21f9078cf441a1a6fefe0f80a837",
+              "protected_archival": "earlier_intake_pending"
+            },
+            "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7221901070",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221904348"
           }
         },
         {
@@ -6720,6 +6754,17 @@
       "archive_job_state": "queued",
       "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7221752128",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221755519"
+    },
+    {
+      "at": "2026-11-27T07:19:29-08:00",
+      "task": "knowledge-42",
+      "status": "arxiv_batch_readback_retry_verified_on_main",
+      "repository": "pH34r-pH/knowledge",
+      "issue": 42,
+      "issue_state": "open",
+      "merge_commit": "a5b97156cd687a3b1a63f4ec2a49b8e2689e6a97",
+      "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7221901070",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221904348"
     }
   ]
 }
