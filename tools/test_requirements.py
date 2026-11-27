@@ -1,11 +1,12 @@
 import copy
 import importlib.util
 import json
-from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('requirements', ROOT / 'tools/requirements.py')
@@ -50,6 +51,7 @@ class SourceTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             m.safe_path(self.root, '/etc/passwd')
 
+    @unittest.skipIf(sys.platform == "win32", "POSIX-only: requires unprivileged symlinks; run on Linux or WSL")
     def test_symlink_escape(self):
         (self.root / 'escape').symlink_to('/etc/passwd')
         with self.assertRaises(ValueError):
@@ -84,7 +86,7 @@ class CueTests(unittest.TestCase):
             files = [str(ROOT / 'contracts/requirements.cue')]
             if definition != '#Requirements':
                 files.append(str(ROOT / 'contracts/vessel-profile.cue'))
-            return subprocess.run(['cue', 'vet', '-c', *files, str(path), '-d', definition], capture_output=True, timeout=30).returncode
+            return subprocess.run(['cue', 'vet', '-c', *files, str(path), '-d', definition], capture_output=True, timeout=30, check=False).returncode
 
     def test_requirements(self):
         self.assertEqual(self.vet(declaration()), 0)
