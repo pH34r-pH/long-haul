@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T12:34:05+00:00",
+    "updated_at": "2026-11-27T12:51:54+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -621,6 +621,52 @@
             "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/167#issuecomment-7218381430",
             "program_issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7218387357",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7218386856",
+            "remaining": "Governed corpus admission, guarded evaluator disclosure, and protected publication verification remain under Compiler #150."
+          },
+          "runner_module_boundaries": {
+            "closed_child": 182,
+            "pull_request": 194,
+            "baseline_commit": "8c6143723fa7404b5b8f7f44ef200f3aa949c00a",
+            "checked_head": "7329ecf88883c0e1b514607fbabe4a82eb3bcd21",
+            "checked_tree": "5acbefa55bdbe714a2e7b66fc55cfd8a71998701",
+            "merge_commit": "a04d5da6680de7759cf006e43b7b2a73995dc615",
+            "dedicated_modules": [
+              "runner_admission.py",
+              "runner_process.py",
+              "runner_receipts.py"
+            ],
+            "runner_orchestration_lines": 396,
+            "matching_function_and_class_bodies": 116,
+            "pull_request_lifecycle": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/46000539374",
+            "pull_request_quality": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/46000539350",
+            "default_branch_lifecycle": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/46000969133",
+            "default_branch_governance": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/46000969179",
+            "retained_lifecycle_artifact": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/46000969133/artifacts/15198430931",
+            "lifecycle_artifact_expires_at": "2026-12-04T12:43:38Z",
+            "verified_lifecycle_sha256": {
+              "linear_regression_plan_result": "fd8194c7af44e28d15373ac0cfe507052e1c8e3bffc9cc73100b516e0cb40b2b",
+              "linear_regression_frozen_result": "ea8143ba5df2376edb3791fb30a64523c174e6d28e02750627d0a886aeb94456",
+              "linear_regression_final": "615b0654bfde701bc8f71671afc0e28b1fba09d0e85d25b7c2b7d0fc72f25ef2"
+            },
+            "mutation_report": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/46000969133/artifacts/15197992915",
+            "admission_report_sha256": "192e9db0aca8b150ff5549d0c623a4429c77d9bb893214e95127f17fafe6b981",
+            "main_mutation_outcomes": {
+              "caught": 303,
+              "survived": 85,
+              "uncovered": 23,
+              "timed_out": 7
+            },
+            "mutation_difference": "One worker-limit mutation timed out on main after being caught in the prior report. The other 417 outcomes matched.",
+            "linux_pytest": {
+              "passed": 249,
+              "skipped": 6,
+              "subtests_passed": 455
+            },
+            "main_python_artifacts": 4,
+            "historical_poc_sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+            "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/182#issuecomment-7218686274",
+            "program_issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7218691085",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7218691446",
             "remaining": "Governed corpus admission, guarded evaluator disclosure, and protected publication verification remain under Compiler #150."
           }
         },
@@ -5903,6 +5949,20 @@
       "merge_commit": "8c6143723fa7404b5b8f7f44ef200f3aa949c00a",
       "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/167#issuecomment-7218381430",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7218386856",
+      "remaining": "Governed corpus admission, guarded evaluator disclosure, and protected publication verification remain under Compiler #150."
+    },
+    {
+      "at": "2026-11-27T12:51:54+00:00",
+      "task": "compiler-150",
+      "status": "runner_module_boundaries_verified_on_main",
+      "repository": "pH34r-pH/experiment-compiler",
+      "issue": 150,
+      "issue_state": "open",
+      "closed_child": 182,
+      "pull_request": 194,
+      "merge_commit": "a04d5da6680de7759cf006e43b7b2a73995dc615",
+      "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/182#issuecomment-7218686274",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7218691446",
       "remaining": "Governed corpus admission, guarded evaluator disclosure, and protected publication verification remain under Compiler #150."
     }
   ]
