@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, datetime
+from io import BytesIO
 from typing import Literal, Protocol, runtime_checkable
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, ValidationError, field_validator, model_validator
 
 from ..events.store import Event
 from .checkpoints import TaskDigest, WorkCheckpoint, WorkSession, resume_session
@@ -17,6 +18,7 @@ HarnessTerminal = Literal[
     "settled", "cancelled", "provider_failure", "context_exhausted", "harness_crash",
     "protocol_error", "resource_exhausted", "policy_denied", "timed_out",
 ]
+SEMANTIC_TRACE_REFERENCE = "artifact:semantic-trace-v1"
 
 
 def harness_time(value: datetime) -> datetime:
@@ -229,6 +231,67 @@ class HarnessResult(FrozenProjection):
             prior = entry
 
 
+def _action_record(event: SemanticActionEventV1) -> bytes:
+    return event.model_dump_json().encode() + b"\n"
+
+
+def semantic_trace_bytes(events: tuple[SemanticActionEventV1, ...]) -> bytes:
+    """Serialize the exact JSONL byte stream committed by HarnessResult."""
+    return b"".join(_action_record(event) for event in events)
+
+
+def _validate_trace(attempt: HarnessAttempt, events: tuple[SemanticActionEventV1, ...]) -> None:
+    provenance = attempt.attempt_id, attempt.session_id, attempt.contract_id, attempt.harness.fingerprint
+    for sequence, event in enumerate(events, 1):
+        actual = event.attempt_id, event.session_id, event.contract_id, event.harness_digest
+        if event.sequence != sequence or actual != provenance:
+            raise ValueError("semantic trace contains mismatched attempt provenance or ordering")
+
+
+def _verified_result(result_bytes: bytes, expected_fingerprint: str) -> HarnessResult:
+    try:
+        result = HarnessResult.model_validate_json(result_bytes)
+    except ValidationError:
+        raise ValueError("invalid semantic trace result record") from None
+    if result.model_dump_json().encode() != result_bytes:
+        raise ValueError("semantic trace result record is not canonical")
+    if result.fingerprint != expected_fingerprint:
+        raise ValueError("semantic trace result does not match the expected fingerprint")
+    return result
+
+
+def _read_action(record: bytes) -> SemanticActionEventV1:
+    try:
+        event = SemanticActionEventV1.model_validate_json(record)
+    except ValidationError:
+        raise ValueError("invalid semantic action record") from None
+    if _action_record(event) != record:
+        raise ValueError("semantic action record is not canonical")
+    return event
+
+
+def verify_semantic_trace(
+    result_bytes: bytes, trace_bytes: bytes, *, expected_result_fingerprint: str, max_bytes: int,
+) -> tuple[HarnessResult, tuple[SemanticActionEventV1, ...]]:
+    """Check canonical result and JSONL against an independently retained result fingerprint.
+
+    The caller supplies a byte budget and controls access to the retained evidence.
+    Verification preserves the result's candidate disposition and acceptance state.
+    """
+    if type(max_bytes) is not int or max_bytes < 1:
+        raise ValueError("semantic trace read budget must be a positive byte count")
+    if len(result_bytes) + len(trace_bytes) > max_bytes:
+        raise ValueError("semantic trace exceeds the caller byte budget")
+    result = _verified_result(result_bytes, expected_result_fingerprint)
+    if result.trace.reference != SEMANTIC_TRACE_REFERENCE or result.trace.digest != content_digest(trace_bytes):
+        raise ValueError("semantic trace does not match the result's artifact identity")
+    events = tuple(_read_action(record) for record in BytesIO(trace_bytes))
+    if result.event_count != len(events):
+        raise ValueError("semantic trace event count differs from the result")
+    _validate_trace(result.attempt, events)
+    return result, events
+
+
 class HarnessState:
     """Trusted executor supplies cleanup evidence; harness prose supplies neither."""
 
@@ -253,12 +316,12 @@ class HarnessState:
         if self.finished or self.terminal is None:
             raise ValueError("attempt is unfinished or already finalized")
         self._validate_cleanup(cleanup)
-        self._validate_trace(events)
-        trace_bytes = b"".join(event.model_dump_json().encode() + b"\n" for event in events)
+        _validate_trace(self.attempt, events)
+        trace_bytes = semantic_trace_bytes(events)
         disposition = "none" if candidate is None else "frozen" if self.terminal == "settled" else "discarded"
         result = HarnessResult(
             attempt=self.attempt, terminal=self.terminal, event_count=len(events), cleanup=cleanup,
-            trace=DigestReference(reference="artifact:semantic-trace-v1", digest=content_digest(trace_bytes)),
+            trace=DigestReference(reference=SEMANTIC_TRACE_REFERENCE, digest=content_digest(trace_bytes)),
             candidate=candidate, candidate_disposition=disposition, inputs=inputs,
         )
         self.finished = True
@@ -266,13 +329,6 @@ class HarnessState:
 
     def _validate_cleanup(self, cleanup):
         _check_cleanup(self.attempt, cleanup)
-
-    def _validate_trace(self, events):
-        for sequence, event in enumerate(events, 1):
-            if (event.sequence != sequence or event.attempt_id != self.attempt.attempt_id
-                    or event.session_id != self.attempt.session_id or event.contract_id != self.attempt.contract_id
-                    or event.harness_digest != self.attempt.harness.fingerprint):
-                raise ValueError("semantic trace contains mismatched attempt provenance or ordering")
 
 
 def resume_harness_attempt(previous: HarnessResult, previous_session: WorkSession,
