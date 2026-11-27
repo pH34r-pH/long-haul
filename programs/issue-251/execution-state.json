@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T11:20:41+00:00",
+    "updated_at": "2026-11-27T11:33:12+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1022,6 +1022,41 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7215695034",
             "evidence": "Eight official ACL paper pages matched the pinned Work identities and bibliographic metadata. The existing registries were preserved. All 60 exact Linux tests, six hosted PR checks, and three exact main workflows passed. Replay expired the new scopes and Fleet qualified the merged commit.",
             "remaining": "The review queue contains 147 Works, including three ACL records with a publisher-listed revision or metadata discrepancy."
+          },
+          "crossref_date_precision": {
+            "status": "crossref_date_precision_verified_on_main",
+            "pull_request": 59,
+            "baseline_commit": "dbd8e1002bde0928f494a2c249f630d9abdc131d",
+            "checked_head": "4d4a3c7294ce88800d43e83eb393ac346446b1a8",
+            "ci_checkout": "ca75775477d17867e0e70f26ee720f34d7291cab",
+            "checked_tree": "e33a0f002d3e68e8e7e3d2869bc303bf2db72db0",
+            "merge_commit": "1163e3e8e02fa5393a752a0ddba93405821765d2",
+            "local_source_tar_sha256": "cbd2055abff484de84d8e3885c2615b8db3ba47e69c3d20bc2d894164350b03b",
+            "pull_request_adapter_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45990791319",
+            "pull_request_quality_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45990791311",
+            "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45990939911",
+            "default_branch_report": "https://github.com/pH34r-pH/knowledge/actions/runs/45990939911/artifacts/15194230024",
+            "report_sha256": "99b970d0f0929d8c67085d9e0a94986cb32179ab521e74196ff31ba5f518c02a",
+            "registry_sha256": "3317b02764c6d7c44350f30f3f1c78f2d5d757dec9f1ad1ec83ea602c1769b31",
+            "newly_reviewed_works": [
+              "KWRK-000218",
+              "KWRK-000225",
+              "KWRK-000228"
+            ],
+            "metadata_expiry_day": "2026-12-27",
+            "live_verified_metadata_sources": 197,
+            "works_awaiting_use_review": 144,
+            "active_base_citation_identities": 104,
+            "verified_revision_scopes": 35,
+            "linux_offline_tests": 60,
+            "fleet_verifier_commit": "b6cc3d01e3059935280ab8e71d8479955aece27d",
+            "fleet_receipt_sha256": "4955cccb71a41c850521b07138bc5bb964b91b794c95ef63ff9cab867e0d40d9",
+            "fleet_archive_check": "Rejected by the existing 150 MiB maximum for the optional archive mode. Default read-only metadata intake passed.",
+            "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7217189307",
+            "fleet_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7217192397",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7217195516",
+            "evidence": "Three individually checked Crossref publications match at their recorded date precision. Full deposit dates and exact revisions remain pinned. Offline replay preserves all previous dispositions and removes the new approvals after expiry. Final PR, exact main and default Fleet intake passed.",
+            "remaining": "The review queue contains 144 Works. Three Annals of Mathematics deposits need stronger page-range evidence. Optional Fleet whole-archive intake requires an admitted path for the oversized source."
           }
         },
         {
@@ -5640,6 +5675,20 @@
       "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/165#issuecomment-7216949903",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216954130",
       "remaining": "Governed corpus admission, guarded evaluator disclosure, and protected publication verification remain under Compiler #150."
+    },
+    {
+      "at": "2026-11-27T11:33:12+00:00",
+      "task": "knowledge-42",
+      "status": "crossref_date_precision_verified_on_main",
+      "repository": "pH34r-pH/knowledge",
+      "issue": 42,
+      "issue_state": "open",
+      "pull_request": 59,
+      "merge_commit": "1163e3e8e02fa5393a752a0ddba93405821765d2",
+      "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7217189307",
+      "fleet_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7217192397",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7217195516",
+      "remaining": "The review queue contains 144 Works. Three Annals of Mathematics deposits need stronger page-range evidence. Optional Fleet whole-archive intake requires an admitted path for the oversized source."
     }
   ]
 }
