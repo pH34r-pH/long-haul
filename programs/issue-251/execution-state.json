@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T02:33:41+00:00",
+    "updated_at": "2026-11-27T02:43:15+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3871,6 +3871,24 @@
       "issue_evidence": "https://github.com/pH34r-pH/research-notes/issues/31#issuecomment-7208234373",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7208236993",
       "remaining": "Fifteen other articles still lack claim-level records. Public readback covers declared evidence and the updates available in the registry when checked."
+    },
+    {
+      "at": "2026-11-27T02:43:15+00:00",
+      "task": "research-notes-31",
+      "status": "claim_records_for_all_articles_verified_on_main",
+      "repository": "pH34r-pH/research-notes",
+      "pull_request": 35,
+      "checked_head": "bf25d619cff0e169f879ee7c1a6beb7f696f25be",
+      "ci_checkout": "1c984621e6185ccd5f74580b1021e8f0de9fa03b",
+      "merge_commit": "5559fee4e89387ab0e5e57390ee5680653e689ec",
+      "default_branch_ci": "https://github.com/pH34r-pH/research-notes/actions/runs/45929876374",
+      "default_branch_governance": "https://github.com/pH34r-pH/research-notes/actions/runs/45929876233",
+      "publication_source_digest": "a7a3b45edc0a2baf0244bbad5a5dad36581ec8502118e4a52814367310442cd7",
+      "readback_receipt_sha256": "ac3da6ee27423c7512275a3e41d504ada453430fc1f8bb45f6c55261c50a7e59",
+      "evidence": "Checked and merged trees match. Main validated 16 of 16 articles, 20 claim records, 13 browser-local cells, 21 tests, and 18 rendered pages. Local HTML verification resolved all the anchors and pinned evidence links and matched the downloadable record bytes. Main and PR readbacks verified the same 20 pinned sources and three declared DOI identities. Ten historical records remain explicitly unverified at the level of original experiment evidence. The sampling-unit correction retains the prior premise.",
+      "issue_evidence": "https://github.com/pH34r-pH/research-notes/issues/31#issuecomment-7208370302",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7208372344",
+      "remaining": "Nine scholarly links embedded directly in articles 007, 010, and 011 remain outside the live gate. Editorial interpretation and downstream publication retain their separate review authority."
     }
   ]
 }
