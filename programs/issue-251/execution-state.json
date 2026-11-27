@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T07:00:57+00:00",
+    "updated_at": "2026-11-27T07:11:13+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -595,11 +595,23 @@
           "id": "tone-18",
           "repository": "pH34r-pH/tone",
           "issue": 18,
-          "status": "queued",
+          "status": "in_progress",
           "depends_on": [
             "compiler-150"
           ],
-          "acceptance": "Immutable corpus releases enforce rights, consent, retention, deletion, partition ancestry, and contamination controls."
+          "acceptance": "Immutable corpus releases enforce rights, consent, retention, deletion, partition ancestry, and contamination controls.",
+          "source_withdrawal": {
+            "pull_request": 23,
+            "baseline_commit": "3ad97d18a80c44e9e8248b5e1e05f9e0bcb900bf",
+            "checked_head": "3022cad5f6b5ca890364e7103fa43ece21e2c5dd",
+            "ci_checkout": "eae1763eaeb9db789b134646c90348dc4b07645d",
+            "checked_tree": "afdae3373ecfdae13c2a8314df457e198fa0725c",
+            "merge_commit": "71d5815a1fd85ac3b344725ac15e366219d008e4",
+            "pull_request_ci": "https://github.com/pH34r-pH/tone/actions/runs/45956353338",
+            "default_branch_ci": "https://github.com/pH34r-pH/tone/actions/runs/45956490294/job/140364060817",
+            "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7212215089"
+          },
+          "remaining": "Owner-approved current source decisions, a complete private derivative inventory, actual withdrawal and retention receipts, candidate assembly, and contamination qualification."
         },
         {
           "id": "theorem-20",
@@ -4621,6 +4633,25 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7212050677",
       "evidence": "Identical checked and merged trees. The exact-source wheel rejected 3.11.3 and installed on 3.11.4, which passed all six clean-rebuild and attestation contract tests. Main CI passed on Python 3.11, 3.12, 3.13, and 3.14 and preserved the historical POC digest. Pages deployment was skipped.",
       "remaining": "Implement the governed corpus profile and guarded private-evaluator disclosure using qualified #248 and #245 contracts. Protected publication verification remains staged. The semantic trajectory readback is merged and verified."
+    },
+    {
+      "at": "2026-11-27T07:11:13+00:00",
+      "task": "tone-18",
+      "repository": "pH34r-pH/tone",
+      "status": "source_withdrawal_impact_verified_on_main",
+      "pull_request": 23,
+      "baseline_commit": "3ad97d18a80c44e9e8248b5e1e05f9e0bcb900bf",
+      "checked_head": "3022cad5f6b5ca890364e7103fa43ece21e2c5dd",
+      "ci_checkout": "eae1763eaeb9db789b134646c90348dc4b07645d",
+      "checked_tree": "afdae3373ecfdae13c2a8314df457e198fa0725c",
+      "merge_commit": "71d5815a1fd85ac3b344725ac15e366219d008e4",
+      "pull_request_ci": "https://github.com/pH34r-pH/tone/actions/runs/45956353338",
+      "default_branch_ci": "https://github.com/pH34r-pH/tone/actions/runs/45956490294/job/140364060817",
+      "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7212215089",
+      "local_scoped_source_archive_sha256": "69ec5258d2a253c4b940802c7d311c125cac9003603f293ade00a7905b9985c1",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7212218495",
+      "evidence": "All 11 synthetic release and withdrawal tests passed locally and on exact private main, alongside 11 routing tests and the governance and documentation checks. The blocked receipt propagated native source withdrawal through a partition, index, candidate, and learned artifact. Changed pins, stale snapshots, missing manifests and parents, and cycles failed closed.",
+      "remaining": "Owner-approved current source decisions, a complete private derivative inventory, actual withdrawal and retention receipts, candidate assembly, and contamination qualification."
     }
   ]
 }
