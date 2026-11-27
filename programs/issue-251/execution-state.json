@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T13:03:13+00:00",
+    "updated_at": "2026-11-27T13:05:57+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -779,6 +779,24 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7217517516",
             "evidence": "Exact main read-only intake verified the full Knowledge archive with the hash option enabled. The independent measurement, local CLI, and staged receipt agree. The existing staging and archive jobs retained the digest receipt. All final PR and exact main workflows passed.",
             "remaining": "Fleet promotion, probe, rollback, and recovery qualification remain queued behind Long-Haul evaluator and boundary prerequisites."
+          },
+          "current_knowledge_citation_intake": {
+            "source_commit": "49f0d32fb3da98773e7b8a1e0875036dce6e47b5",
+            "fleet_commit": "00fd6f1988f1fee6dd5c7dc1ca63eef35369a175",
+            "source_validation_run": "https://github.com/pH34r-pH/knowledge/actions/runs/46002297778",
+            "source_validation_attempt": 1,
+            "source_freshness": "current",
+            "archive_sha256": "dcc032a68d51f03c5301993121d23c74c7035a8bc4dcb9f94f8ad59a7a20cc9b",
+            "independent_local_receipt_sha256": "970965fc0b0ac49591add3186215ce36a935f4da476ebbea0dcadfa705940715",
+            "live_intake": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/46003531187",
+            "live_intake_jobs": {
+              "verify": 140520901052,
+              "stage": 140521140531,
+              "archive": 140521740204
+            },
+            "fleet_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7219042961",
+            "knowledge_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7219043252",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7219045091"
           }
         },
         {
@@ -1236,7 +1254,12 @@
             "verified_pinned_arxiv_revisions": 35,
             "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7218811635",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7218814510",
-            "remaining": "143 Work records still need review. The old Work's claim and evidence require review after supersession. Broader resource scopes remain tied to the qualified Compiler and Long-Haul policy contracts."
+            "remaining": "143 Work records still need review. The old Work's claim and evidence require review after supersession. Broader resource scopes remain tied to the qualified Compiler and Long-Haul policy contracts.",
+            "fleet_intake": {
+              "archive_sha256": "dcc032a68d51f03c5301993121d23c74c7035a8bc4dcb9f94f8ad59a7a20cc9b",
+              "live_intake": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/46003531187",
+              "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7219043252"
+            }
           }
         },
         {
@@ -6043,6 +6066,20 @@
       "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7218987571",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7218990190",
       "remaining": "An actual candidate needs owner-reviewed rights and retention, current withdrawal and holdout exposure evidence, and episode-level context and target checks under Tone #21."
+    },
+    {
+      "at": "2026-11-27T13:05:57+00:00",
+      "task": "fleet-1612",
+      "status": "current_knowledge_revision_verified_and_receipt_archived",
+      "repository": "pH34r-pH/long-haul-fleet",
+      "issue": 1612,
+      "issue_state": "open",
+      "source_commit": "49f0d32fb3da98773e7b8a1e0875036dce6e47b5",
+      "fleet_commit": "00fd6f1988f1fee6dd5c7dc1ca63eef35369a175",
+      "live_intake": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/46003531187",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7219042961",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7219045091",
+      "remaining": "Fleet promotion, probe, rollback, and recovery qualification retain their existing prerequisites and gates."
     }
   ]
 }
