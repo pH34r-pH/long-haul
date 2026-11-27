@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T01:55:39+00:00",
+    "updated_at": "2026-11-27T02:09:04+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3798,6 +3798,26 @@
       "issue_evidence": "https://github.com/pH34r-pH/family-tree/issues/44#owner-qualification",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7207684908",
       "remaining": "The owner must supply decisions on actual private records, verify a real reviewed export, and authorize any actual merge or distribution through the private process."
+    },
+    {
+      "at": "2026-11-27T02:09:04+00:00",
+      "task": "homebot-2",
+      "status": "webots_pilot_trajectory_receipts_and_replay_merged",
+      "repository": "pH34r-pH/home-bot",
+      "pull_request": 4,
+      "checked_head": "8004db695e99ce34913b10ccf3212902222748d5",
+      "ci_checkout": "d9cb806dd21f224afd8883045a8d95a2a5f42759",
+      "merge_commit": "9e87ffc292c8123ffa9ffd40b3af570b82068db1",
+      "default_branch_ci": "https://github.com/pH34r-pH/home-bot/actions/runs/45926521634",
+      "default_branch_governance": "https://github.com/pH34r-pH/home-bot/actions/runs/45926521587",
+      "evidence_archive": "home-bot/artifacts/webots-pilot-8004db6.zip",
+      "evidence_archive_sha256": "1f2be0f08994db3842cb11da08bccd5ddacc8920345f7f9398519a8cf97a31fc",
+      "reference_receipt_sha256": "35863893f07893526a33d176b19636b2c9857e489d007c5496b90f6eac8d4dd8",
+      "incomplete_receipt_sha256": "5f8cef003a6b6cebcd040d61c69ee878d8f13fdf1bb19011c2c2e4be8d1ba3a9",
+      "evidence": "The checked and merged trees match. Main passed 26 tests across Python 3.11–3.13. Clean exact-head Webots R2025a replay preserved both the failed mission and successful scripted reference. The reference replayed 2,002 motion steps, 126 evaluator samples, and ten camera/sensor pairs with zero above-floor contacts. Camera tampering was rejected. The existing smoke also passed 13 checks and replayed 688 steps.",
+      "issue_evidence": "https://github.com/pH34r-pH/home-bot/issues/2#issuecomment-7207867171",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7207869924",
+      "remaining": "Cross-environment calibration, hardware-in-loop and independent physical safety acceptance. Long-Haul multimodal admission remains downstream of the repository benchmark gate."
     }
   ]
 }
