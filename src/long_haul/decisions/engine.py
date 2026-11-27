@@ -13,6 +13,17 @@ Resolution = Literal["consensus", "consent", "scoped_authority", "experiment", "
 T = TypeVar("T")
 
 
+def _check_block_rationale(position: DecisionPosition) -> None:
+    if position.position is Position.BLOCK and (not position.rationale or position.category == "preference"):
+        raise ValueError("a block needs non-preference typed rationale")
+
+
+def _check_scoped_authority(record: DecisionRecord, authority_holder: str | None) -> None:
+    allowed = record.authority_scopes.get(authority_holder, set()) if authority_holder else set()
+    if not authority_holder or authority_holder not in record.participants or not record.authority_scope or record.authority_scope not in allowed:
+        raise ValueError("scoped authority requires a participating holder with the declared scope")
+
+
 def _validate_positions_list(
     positions: list[DecisionPosition],
     participants: set[str],
@@ -26,8 +37,7 @@ def _validate_positions_list(
             raise ValueError(f"unknown participant in {stage}: {position.participant!r}")
         if position.participant in seen:
             raise ValueError(f"duplicate participant in {stage}: {position.participant!r}")
-        if position.position is Position.BLOCK and (not position.rationale or position.category == "preference"):
-            raise ValueError("a block needs non-preference typed rationale")
+        _check_block_rationale(position)
         seen.add(position.participant)
         cloned.append(position.model_copy(deep=True))
     return cloned
@@ -73,8 +83,7 @@ class DecisionEngine:
             raise ValueError("unknown participant")
         if any(p.participant == position.participant for p in record.initial_positions):
             raise ValueError("initial position already captured")
-        if position.position is Position.BLOCK and (not position.rationale or position.category == "preference"):
-            raise ValueError("a block needs non-preference typed rationale")
+        _check_block_rationale(position)
         record.initial_positions.append(position.model_copy(deep=True))
 
     def reveal_initial_positions(self, record: DecisionRecord) -> tuple[DecisionPosition, ...]:
@@ -91,15 +100,10 @@ class DecisionEngine:
             raise ValueError("unknown participant")
         if record.consequential and not self._has_complete_initial_coverage(record) and not record.exception:
             raise ValueError("final disposition requires complete initial capture or recorded exception")
-        if position.position is Position.BLOCK and (not position.rationale or position.category == "preference"):
-            raise ValueError("a block needs non-preference typed rationale")
+        _check_block_rationale(position)
         prior = next((p for p in record.initial_positions if p.participant == position.participant), None)
-        if (
-            prior is not None
-            and prior.position is Position.BLOCK
-            and position.position is not Position.BLOCK
-            and not position.rationale
-        ):
+        withdrawing_block = prior is not None and prior.position is Position.BLOCK and position.position is not Position.BLOCK
+        if withdrawing_block and not position.rationale:
             raise ValueError("withdrawing or resolving a block requires an explicit rationale")
         snapshot = position.model_copy(deep=True)
         record.final_positions = [p for p in record.final_positions if p.participant != snapshot.participant]
@@ -131,13 +135,8 @@ class DecisionEngine:
             raise ValueError("consequential decision requires independent initial positions from every participant")
         if self.active_blocks(record) and resolution not in ("escalation", "experiment"):
             raise ValueError("unresolved block cannot be bypassed")
-        if resolution == "scoped_authority" and (
-            not authority_holder
-            or authority_holder not in record.participants
-            or not record.authority_scope
-            or record.authority_scope not in record.authority_scopes.get(authority_holder, set())
-        ):
-            raise ValueError("scoped authority requires a participating holder with the declared scope")
+        if resolution == "scoped_authority":
+            _check_scoped_authority(record, authority_holder)
         record.resolution, record.action, record.authority_holder = resolution, action, authority_holder
         if event_store is not None:
             event_store.append(
