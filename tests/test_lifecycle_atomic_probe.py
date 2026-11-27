@@ -30,6 +30,28 @@ def test_legacy_snapshot_cannot_claim_objection_dispositions():
         replay_decisions([event])
 
 
+def test_validated_append_rejects_duplicate_event_identity(tmp_path):
+    store = EventStore(tmp_path / "events.jsonl")
+    first = Event(id="duplicate", event_type="observation", payload={"value": "first"})
+    store.append_validated(first, lambda history, candidate: None)
+    second = Event(id="duplicate", event_type="observation", payload={"value": "second"})
+    with pytest.raises(ValueError, match="duplicate event identity"):
+        store.append_validated(second, lambda history, candidate: None)
+    assert len(store.events()) == 1
+
+
+def test_validated_append_rejects_candidate_mutation_before_write(tmp_path):
+    store = EventStore(tmp_path / "events.jsonl")
+    event = Event(event_type="observation", payload={"value": "original"})
+
+    def mutate(history, candidate):
+        candidate.payload["value"] = "changed"
+
+    with pytest.raises(ValueError, match="validator mutated"):
+        store.append_validated(event, mutate)
+    assert store.events() == []
+
+
 def _raw_objection(decision_id):
     transition = ObjectionTransition(operation="raised", decision_id=decision_id, objection_id="raw",
         category="safety", claim="unsafe", scope="test", authority_scope="test", resolution_predicate_id="safe")

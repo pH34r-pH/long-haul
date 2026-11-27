@@ -63,6 +63,16 @@ class Event(BaseModel):
     event_hash: str | None = None
 
 
+def _validate_append_history(path: Path, existing: ReplayResult, event: Event) -> None:
+    if existing.diagnostics:
+        raise ReplayError(existing.diagnostics[0])
+    if existing.quarantined:
+        item = existing.quarantined[0]
+        raise ReplayError(ReplayDiagnostic(str(path), item.line, item.offset, item.reason))
+    if any(item.id == event.id for item in existing.events):
+        raise ValueError("duplicate event identity")
+
+
 def _classify_parsed_record(
     path: Path,
     line_no: int,
@@ -152,11 +162,7 @@ class EventStore:
             if existing.incomplete_tail is not None:
                 raise ReplayError(existing.incomplete_tail)
             if validate is not None:
-                if existing.diagnostics:
-                    raise ReplayError(existing.diagnostics[0])
-                if existing.quarantined:
-                    item = existing.quarantined[0]
-                    raise ReplayError(ReplayDiagnostic(str(self.path), item.line, item.offset, item.reason))
+                _validate_append_history(self.path, existing, event)
             record = event.model_copy(deep=True)
             if self.chain_integrity:
                 if existing.checkpoint is not None:
@@ -180,7 +186,10 @@ class EventStore:
                     dumped = json.loads(record.model_dump_json())
                     record.event_hash = compute_event_hash(dumped)
             if validate is not None:
+                validated_bytes = record.model_dump_json()
                 validate(existing.events, record)
+                if record.model_dump_json() != validated_bytes:
+                    raise ValueError("validator mutated candidate event")
             serialized = record.model_dump_json() + "\n"
             try:
                 with self.path.open("a", encoding="utf-8", newline="\n") as out:
