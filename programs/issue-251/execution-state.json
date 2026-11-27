@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T03:29:13+00:00",
+    "updated_at": "2026-11-27T03:40:35+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -416,13 +416,14 @@
             "compiler-150"
           ],
           "acceptance": "Every admitted source has exact trust/use/freshness metadata and prompt-injection-safe ingestion with stale-source invalidation.",
-          "implementation_pr": 46,
-          "merge_commit": "56468d7338963ce24d4190dcfa6f39daaa236ddc",
+          "implementation_pr": 48,
+          "merge_commit": "7c3c126f08ddb5595f986b67c3d42cb5283a12c5",
           "evidence": [
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7208699800",
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7208842903",
             "https://github.com/pH34r-pH/long-haul-fleet/issues/177#issuecomment-7208910169",
-            "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209024144"
+            "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209024144",
+            "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209178670"
           ],
           "default_branch_checks": "passed"
         },
@@ -4001,6 +4002,40 @@
       "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209024144",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7209026441",
       "remaining": "The explicit arXiv scan in the canonical corpus found 93 distinct paper IDs. Five matched active Work rows and are reviewed. The 88 other scanned IDs fall outside that registry match. The other 237 Work entries need individual review for use."
+    },
+    {
+      "at": "2026-11-27T03:40:35+00:00",
+      "task": "knowledge-42",
+      "status": "explicit_corpus_citation_coverage_report_verified",
+      "repository": "pH34r-pH/knowledge",
+      "pull_request": 47,
+      "checked_head": "431de2cf52dd63d17c8685f89e64771654d9e519",
+      "ci_checkout": "d1993fe46ed82fef45464d47dd900030bd88eb1f",
+      "merge_commit": "f920ce4986aab446d6f480c4283d682feaed50fc",
+      "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45934932242/job/140295841387",
+      "default_branch_governance": "https://github.com/pH34r-pH/knowledge/actions/runs/45934932484",
+      "readback_receipt_sha256": "0900c9a6092e4b3e02f1069cf30a6ce01c2e3cc3a6eada7b258558033d48823c",
+      "evidence": "All six PR checks and all three main workflows passed on matching trees. All 94 explicit identifiers in the scoped corpus scan have citing paths and a classification of registry coverage. The exact baseline was five active Work matches and 89 unregistered links. DOI aliases now resolve to affected articles when their source decisions change.",
+      "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209178670",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7209181170"
+    },
+    {
+      "at": "2026-11-27T03:40:35+00:00",
+      "task": "knowledge-42",
+      "status": "all_scanned_corpus_identifiers_registered",
+      "repository": "pH34r-pH/knowledge",
+      "pull_request": 48,
+      "checked_head": "5ffe744a229f9be7f742e7d2b228cc931b08c979",
+      "ci_checkout": "ff79009e0f4bfce48182171a318be661fae1bc41",
+      "merge_commit": "7c3c126f08ddb5595f986b67c3d42cb5283a12c5",
+      "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45935422762/job/140297483798",
+      "default_branch_governance": "https://github.com/pH34r-pH/knowledge/actions/runs/45935422731",
+      "registry_sha256": "499c5a3f7d0cf6ae2c86646d2821ee413ddf8930ac43f0b4b1daa20fbc95158e",
+      "readback_receipt_sha256": "17d780a7856d54d4f89cceb947da766772e2e0946140cccd4d130fedefe24c93",
+      "evidence": "Both receipts agree on 94 of 94 explicit citation identifiers with one active Work. The primary registration added 88 arXiv and one DOI record and preserved all 242 earlier Work bytes. Three explicitly cited earlier versions remain pinned. The same five reviewed use maps passed live checks. The installed Fleet verifier accepted the exact new main through the public API.",
+      "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209178670",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7209181170",
+      "remaining": "The other 326 Work records await use review. Coverage spans explicit arXiv and DOI links in canonical corpus articles. Other citation formats and broader source-use decisions remain open."
     }
   ]
 }
