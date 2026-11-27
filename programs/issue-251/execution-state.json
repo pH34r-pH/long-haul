@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T03:59:47+00:00",
+    "updated_at": "2026-11-27T04:15:29+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -14,8 +14,8 @@
         "state": "local_projection_and_finalization_security_slice_in_progress",
         "parallel_preparation": {
           "task": "lh-248-interchange",
-          "implementation_pr": "none_until_current_pr_and_security_order_permit",
-          "scope": "disjoint standards adapters after merged qualified Compiler lifecycle core"
+          "implementation_pr": 316,
+          "scope": "Compact JSON-LD round-trip with offline exact-fingerprint verification. Disjoint from the private evaluator draft."
         }
       },
       {
@@ -395,7 +395,13 @@
               "scope": "observed policy implementation identity and Pi/Nacre request binding"
             }
           ],
-          "remaining_current": "Authenticated context and absence, compatibility for purpose-free callers including deletion, trusted expected evaluator identity, source authority, independent ODRL consumer safety and complete standards/interoperability acceptance remain open."
+          "remaining_current": "Authenticated context and absence, compatibility for purpose-free callers including deletion, trusted expected evaluator identity, source authority, independent ODRL consumer safety and complete standards/interoperability acceptance remain open.",
+          "current_pr": {
+            "pull_request": 316,
+            "head": "741e16af6ca9d0bdac1edea5a164733a0342b190",
+            "status": "review_required",
+            "evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7209642137"
+          }
         },
         {
           "id": "dsl-842",
@@ -4074,6 +4080,24 @@
       "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209426682",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7209428723",
       "remaining": "303 Works require use review, including 66 cited arXiv Works. Of those 66, 61 lack the retained pair for this profile, two have retained metadata discrepancies, and three have a newer source revision."
+    },
+    {
+      "at": "2026-11-27T04:15:29+00:00",
+      "task": "lh-248-interchange",
+      "status": "compact_jsonld_roundtrip_candidate_verified",
+      "repository": "pH34r-pH/long-haul",
+      "pull_request": 316,
+      "baseline_commit": "64c81d31fc8193cd2ff9e96a8df1751f86f8a21c",
+      "checked_head": "741e16af6ca9d0bdac1edea5a164733a0342b190",
+      "ci_checkout": "723e7e1806c8eca4704fb7424c4cb5b2bd67b033",
+      "checked_tree": "53f0a2c8f4c446456da44cac4fa67876be76808a",
+      "archive_sha256": "0e9e798222d240a93ce78888d7584167c7a3181ab015fd9f606e7e22600806e7",
+      "pull_request_ci": "https://github.com/pH34r-pH/long-haul/actions/runs/45938564983/job/140307332458",
+      "structural_checks": "https://github.com/pH34r-pH/long-haul/actions/runs/45938564922",
+      "evidence": "Exact combined Linux source passed 603 tests with 43 skipped. JSON-LD round-trip keeps the policy digest, nested scope, duty order, provenance and controlled evaluator receipts. SHACL validates the compact record structure. Hosted unit and structural checks passed. Full Windows had preexisting platform-related failures and intermittent worker file-inspection errors on both base and head.",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7209642137",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7209644441",
+      "remaining": "Pull request review and runtime qualification. Native ODRL enforcement for independent consumers, authenticated policy context and Croissant/SPDX exports remain open. Verified trace reader #310 is now an upstream source for the separate Compiler trajectory profile."
     }
   ]
 }
