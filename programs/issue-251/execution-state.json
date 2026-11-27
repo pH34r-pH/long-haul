@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T13:13:19+00:00",
+    "updated_at": "2026-11-27T05:23:28-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1260,6 +1260,43 @@
               "live_intake": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/46003531187",
               "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7219043252"
             }
+          },
+          "audited_claim_rebinding": {
+            "pull_request": 61,
+            "baseline_commit": "49f0d32fb3da98773e7b8a1e0875036dce6e47b5",
+            "checked_head": "0e1033469d6b1cec0d3e25835d149f2c40d18b10",
+            "checked_tree": "4e25b4f805e32840111cdb8d4e549c7d811c0d2b",
+            "merge_commit": "14b99c7ad9824e45f04f1f494079a75cc3d7d9f8",
+            "initial_structural_failure": "https://github.com/pH34r-pH/knowledge/actions/runs/46005711048",
+            "pull_request_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/46006152748",
+            "structural_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/46006152582",
+            "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/46006279253",
+            "default_branch_governance": "https://github.com/pH34r-pH/knowledge/actions/runs/46006279257",
+            "default_branch_documentation": "https://github.com/pH34r-pH/knowledge/actions/runs/46006279250",
+            "report": "https://github.com/pH34r-pH/knowledge/actions/runs/46006279253/artifacts/15201616933",
+            "report_expires_at": "2026-12-11T13:21:26Z",
+            "report_sha256": "7dec6ea5a4ac19b219f2ed7247f36a7e4be7fb10a4ca18870c20fa1d45cfa8b0",
+            "registry_sha256": "c8e8d400b8f7fd91020773e630c06f94ff81906642261480c9fe357f51d287ff",
+            "active_work": "KWRK-000345",
+            "superseded_claim": "KCLM-000002",
+            "accepted_claim": "KCLM-000027",
+            "superseded_evidence": "KEVD-000002",
+            "accepted_evidence": "KEVD-000027",
+            "author_copy": "https://georgejpappas.org/papers/J14.pdf",
+            "author_copy_sha256": "03e18730ad320191b92b03a58bc241e7aed4845774dfbf0391783658ef08ac93",
+            "author_copy_bytes": 338738,
+            "original_claim_prefix_sha256": "376faf391ddbe227e6c52c7dcb6ec98249050de14bf9925b79428792c2614442",
+            "original_evidence_prefix_sha256": "8109d52759db87f6a72846f9e6a63329dd60e0a5ab2d4f540d8e8b20522516ad",
+            "offline_tests": 62,
+            "final_pr_checks": 6,
+            "verified_approved_metadata": 198,
+            "works_requiring_review": 143,
+            "active_citation_identities": 104,
+            "verified_pinned_arxiv_revisions": 35,
+            "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7219401228",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7219405522",
+            "evidence": "Historical records remain byte-identical. The identical author PDF supports carrying forward the proposition, excerpt, and original independent audit. Tests preserve the old review obligation while a successor is pending and move it to the corrected Work upon acceptance. The merge tree matches the exact tested head.",
+            "remaining": "143 Works still need review. Broader use scopes remain tied to the Compiler and Long-Haul policy contracts."
           }
         },
         {
@@ -1530,7 +1567,18 @@
           "depends_on": [
             "fleet-1612"
           ],
-          "acceptance": "Disposable RSVP E2E, retention/deletion, and calendar/timezone behavior are reproducible without production data."
+          "acceptance": "Disposable RSVP E2E, retention/deletion, and calendar/timezone behavior are reproducible without production data.",
+          "disposable_rsvp_qualification": {
+            "status": "verified_with_disposable_data",
+            "site_merge_commit": "997f7d71d8a7d307bf1551d96e33dd7536c639f6",
+            "fleet_rsvp_merge_commit": "afb19341158b63a1d490a108787c410c2e431431",
+            "evidence": "https://github.com/pH34r-pH/jam-day/issues/25#issuecomment-7207207478",
+            "site_ci": "https://github.com/pH34r-pH/jam-day/actions/runs/45921958005",
+            "fleet_qualification": "https://github.com/pH34r-pH/long-haul-fleet/issues/244",
+            "reconciled_at": "2026-11-27T05:23:28-08:00",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7219405522",
+            "remaining": "Use the existing RSVP, confirmation, calendar, and private organizer flows. Fleet still lacks the organizer-selected signup and deletion configuration. Protected qualification must verify real organizer access and approved handling of any production copies."
+          }
         },
         {
           "id": "wardriver-548",
@@ -6112,6 +6160,19 @@
       "issue_evidence": "https://github.com/pH34r-pH/discursive-affective-epistemology/issues/37#issuecomment-7219195980",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7219198830",
       "remaining": "Governed real-source admission, an independently frozen blinded holdout, qualified human raters, and separate runtime and empirical evidence remain open."
+    },
+    {
+      "at": "2026-11-27T05:23:28-08:00",
+      "task": "knowledge-42",
+      "status": "audited_claim_rebound_and_verified_on_main",
+      "repository": "pH34r-pH/knowledge",
+      "issue": 42,
+      "issue_state": "open",
+      "pull_request": 61,
+      "merge_commit": "14b99c7ad9824e45f04f1f494079a75cc3d7d9f8",
+      "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7219401228",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7219405522",
+      "remaining": "143 Works still need review. Broader use scopes remain tied to the Compiler and Long-Haul policy contracts."
     }
   ]
 }
