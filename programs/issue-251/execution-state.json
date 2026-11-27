@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T06:44:40-08:00",
+    "updated_at": "2026-11-27T06:50:33-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1013,6 +1013,37 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7215445716",
             "evidence": "All 18 offline tests and both hosted checks passed. The exact workflow shell ran against a local bare Git remote with a stand-in for the attestation and release commands. Mismatched archive or package identities, unavailable provenance, and tag conflicts stopped before release creation. Valid and retry cases tagged the same verified commit.",
             "remaining": "Required PR review, a signed producer candidate and protected publication qualification, and the source-owned data-use summary."
+          },
+          "archive_immutability": {
+            "observed_at": "2026-11-27T06:50:33-08:00",
+            "issue": "https://github.com/pH34r-pH/compiled-experiments/issues/9",
+            "status": "ci_passed_review_required",
+            "pull_request": "https://github.com/pH34r-pH/compiled-experiments/pull/13",
+            "baseline_commit": "9815b62ba7fddb28caf4fc1d33abe885d5b686cd",
+            "checked_head": "754aadfb209fbf22dfe6becdcf0c0f8f99f86204",
+            "ci_checkout": "52204ca0e5812ae8eb8f9990411d719ac42beb9b",
+            "checked_tree": "0721bdc31b98566b7f28266fac047859a1ca25d6",
+            "source_archive_sha256": "a51172959f55ed844b97a6aba802b06fe3668d8dd6f209f215004ac49588abcb",
+            "offline_tests": 18,
+            "archive_verification_run": "https://github.com/pH34r-pH/compiled-experiments/actions/runs/46019264857",
+            "governance_run": "https://github.com/pH34r-pH/compiled-experiments/actions/runs/46019264849",
+            "hosted_checks": 2,
+            "combined_checks": {
+              "11": {
+                "head": "42fcc4f84f233c53e1f3b3910d6d91f9806c63c7",
+                "tree": "32fe55422c3f2e5c00dcd066eeee03a9e356a539",
+                "passed": 21
+              },
+              "12": {
+                "head": "e47584e9987a029269014013013b195c2c76d93f",
+                "tree": "825b2de7d648a8ac2b62fada92ce36ac03e95d3f",
+                "passed": 24
+              }
+            },
+            "historical_release_tag_commit": "a406be61e711dda31679fc716bd9cf480f531166",
+            "scope": "Read-only archive CI protects existing Git file identity and mode in materialized directories. New versions remain addable. A dated verification receipt may be added and described in its archive overview. CODEOWNERS lists the repository owner for the experiment tree.",
+            "issue_evidence": "https://github.com/pH34r-pH/compiled-experiments/issues/9#issuecomment-7221283609",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221286312"
           }
         }
       ]
@@ -6581,6 +6612,17 @@
       "merge_commit": "136abd6f4e2fdf9ae5016767461f46f5d3c341cc",
       "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7221158555",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221161673"
+    },
+    {
+      "at": "2026-11-27T06:50:33-08:00",
+      "task": "compiled-7",
+      "status": "archive_immutability_ci_passed_review_required",
+      "repository": "pH34r-pH/compiled-experiments",
+      "issue": 9,
+      "issue_state": "open",
+      "checked_head": "754aadfb209fbf22dfe6becdcf0c0f8f99f86204",
+      "issue_evidence": "https://github.com/pH34r-pH/compiled-experiments/issues/9#issuecomment-7221283609",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221286312"
     }
   ]
 }
