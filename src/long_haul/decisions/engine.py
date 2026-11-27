@@ -18,6 +18,15 @@ def _positions_for(record: DecisionRecord) -> tuple[DecisionPosition, ...]:
     return (*record.initial_positions, *record.final_positions)
 
 
+def _validate_objection_bindings(positions: Sequence[DecisionPosition]) -> None:
+    positions_by_objection: dict[str, DecisionPosition] = {}
+    for position in positions:
+        if position.objection_id is not None:
+            prior = positions_by_objection.setdefault(position.objection_id, position)
+            if prior != position:
+                raise ValueError("objection identity cannot bind a different position")
+
+
 def _validate_position_participants(
     positions: Sequence[DecisionPosition], participants: frozenset[str]
 ) -> None:
@@ -101,6 +110,7 @@ class DecisionRecord(BaseModel):
         for positions in (self.initial_positions, self.final_positions):
             _validate_position_participants(positions, self.participants)
         positions = _positions_for(self)
+        _validate_objection_bindings(positions)
         unresolved_blocks = _unresolved_blocks(positions, frozenset(self.resolved_objection_ids))
         if unresolved_blocks and self.resolution not in (None, "experiment", "escalation"):
             raise ValueError("an unresolved initial block cannot be bypassed")
@@ -228,13 +238,9 @@ def replay_decisions(events: Sequence[Event]) -> dict[str, DecisionRecord]:
 
 
 def _validate_position_objection_links(record: DecisionRecord, projection: ObjectionProjection) -> None:
-    positions_by_objection: dict[str, DecisionPosition] = {}
     for position in _positions_for(record):
         if position.objection_id is None:
             continue
-        prior = positions_by_objection.setdefault(position.objection_id, position)
-        if prior != position:
-            raise ValueError("objection identity cannot bind a different position")
         try:
             objection = projection.get(position.objection_id)
         except KeyError as exc:

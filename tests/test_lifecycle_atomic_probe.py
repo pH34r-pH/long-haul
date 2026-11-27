@@ -30,6 +30,22 @@ def test_legacy_snapshot_cannot_claim_objection_dispositions():
         replay_decisions([event])
 
 
+def test_conflicting_objection_binding_is_rejected_before_event_append(tmp_path):
+    store = EventStore(tmp_path / "events.jsonl")
+    lifecycle = DecisionLifecycle.create(
+        store, DecisionRecord(id="capture", proposal="test", participants={"ENG"}, authority_scopes={"ENG": {"test"}}),
+        actor="ENG", source="test",
+    )
+    original = DecisionPosition(participant="ENG", position=Position.BLOCK, category="safety", rationale="hazard one",
+                                objection_id="o", authority_scope="test", applicability_scope="test",
+                                applicability_revision=1)
+    lifecycle.capture_initial(original, actor="ENG", source="test")
+    with pytest.raises(ValueError, match="objection identity.*different position"):
+        lifecycle.capture_final(original.model_copy(update={"rationale": "hazard two"}), actor="ENG", source="test")
+    assert len(store.events()) == 2
+    assert lifecycle.record.final_positions == ()
+
+
 def test_validated_append_rejects_duplicate_event_identity(tmp_path):
     store = EventStore(tmp_path / "events.jsonl")
     first = Event(id="duplicate", event_type="observation", payload={"value": "first"})
