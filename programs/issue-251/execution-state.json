@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T10:48:01+00:00",
+    "updated_at": "2026-11-27T11:01:14+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1124,6 +1124,25 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7212681299",
             "evidence": "All 294 tests passed locally and on exact main. The network-disabled focused suite passed 61 tests. Generated runs preserve frozen inputs, stable order, and explanation, while explicit ordered impressions link to subsequent interactions. The fenced snapshot restore retained provenance. The existing bounded mutation report records 134 killed and 40 surviving mutants.",
             "remaining": "Source-use admission, interaction-to-preference replay, counterfactual evaluation, and immutable learned policy candidates with operator promotion remain in issue 92. Hosted presentation remains outside the qualified local path."
+          },
+          "frozen_feedback_replay": {
+            "pull_request": 105,
+            "baseline_commit": "e8e794e3e753f9f7e7cef8c48d8a1602fbb165f4",
+            "checked_head": "eb4626c875f8f5658e9b193acbfe73b4018008c8",
+            "ci_checkout": "f08355a26f9b8c232b11aed6768354bec502f432",
+            "checked_tree": "4b457897216122d81abf910aa3a4b91825a5fbd7",
+            "merge_commit": "2cfe3af090278618a78d30b468fb38f159867fc9",
+            "pull_request_ci": "https://github.com/pH34r-pH/the-personal-algorithm/actions/runs/45986339822",
+            "default_branch_ci": "https://github.com/pH34r-pH/the-personal-algorithm/actions/runs/45986676914",
+            "main_archive_sha256": "c4dac38a4358edc054b90aefa811120edd90f700956352052dd68608b5f09928",
+            "synthetic_checkpoint_sha256": "f1649a0037ae249b36c6d6ace6c4962b1e8705136cbc76075835f9b0af9fbe17",
+            "synthetic_candidate_sha256": "5f5c4f8a1566bb1edf964872f38f6f5605ef6f5a56f9d9c696236bdf3bfa3589",
+            "offline_tests": 310,
+            "focused_tests": 16,
+            "issue_evidence": "https://github.com/pH34r-pH/the-personal-algorithm/issues/92#issuecomment-7216572476",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216572836",
+            "evidence": "The local replay deduplicates producer event IDs, uses UTC time and stable identity order, validates checkpoint prefixes and publishes exclusive immutable candidate files. The exact network-disabled suite and both CLI paths passed. Ranking evidence reproduced through a fresh SQLite store. All five PR and three main workflows passed.",
+            "remaining": "Per-source trust and use admission, authorized history coverage, outcome calibration and regret evaluation, and operator-approved promotion and rollback evidence remain."
           }
         },
         {
@@ -5524,6 +5543,19 @@
       "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7216309891",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216310281",
       "remaining": "The actual candidate needs owner-reviewed per-source rights and consent, current retention and withdrawal evidence, approved ancestry, and independent holdout and exposure review."
+    },
+    {
+      "at": "2026-11-27T11:01:14+00:00",
+      "task": "personal-92",
+      "status": "frozen_feedback_replay_verified_on_main",
+      "repository": "pH34r-pH/the-personal-algorithm",
+      "issue": 92,
+      "issue_state": "open",
+      "pull_request": 105,
+      "merge_commit": "2cfe3af090278618a78d30b468fb38f159867fc9",
+      "issue_evidence": "https://github.com/pH34r-pH/the-personal-algorithm/issues/92#issuecomment-7216572476",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216572836",
+      "remaining": "Per-source trust and use admission, authorized history coverage, outcome calibration and regret evaluation, and operator-approved promotion and rollback evidence remain."
     }
   ]
 }
