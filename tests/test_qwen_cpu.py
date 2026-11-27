@@ -218,7 +218,7 @@ def test_timeout_kills_group_including_pipe_holding_descendant():
     while status.exists():
         try:
             state = status.read_text().split(") ", 1)[1]
-        except FileNotFoundError:
+        except (FileNotFoundError, ProcessLookupError):
             break
         if state.startswith("Z "):
             break
