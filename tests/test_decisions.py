@@ -102,17 +102,36 @@ def test_consequential_dispatch_gate_and_event_replay(tmp_path: Path) -> None:
     engine.capture_initial(rec, DecisionPosition(participant="ENG-01", position=Position.CONSENT))
 
     # Unresolved mandatory decision never invokes the execution adapter.
-    with pytest.raises(ValueError, match="unresolved"):
+    with pytest.raises(ValueError, match="not integrated"):
         engine.dispatch_consequential(rec, lambda r: executed.append(r.id))
     assert executed == []
 
-    # After resolution with EventStore provenance, dispatch succeeds and replays identically.
+    # A local resolution event is not yet an authorized runtime integration.
     engine.resolve(rec, "consensus", "ship", event_store=store)
-    result = engine.dispatch_consequential(rec, lambda r: executed.append(r.id) or "dispatched")
-    assert result == "dispatched"
-    assert executed == ["gate-1"]
+    with pytest.raises(ValueError, match="not integrated"):
+        engine.dispatch_consequential(rec, lambda r: executed.append(r.id))
+    assert executed == []
 
     replayed = replay_decisions(store.events())
     assert "gate-1" in replayed
     assert replayed["gate-1"].resolution == "consensus"
     assert len(replayed["gate-1"].initial_positions) == 2
+
+
+def test_mutated_or_forged_record_cannot_dispatch_consequential_action() -> None:
+    engine = DecisionEngine()
+    record = DecisionRecord(
+        id="forged", proposal="synthetic", participants={"A"},
+        initial_positions=[DecisionPosition(participant="A", position=Position.BLOCK,
+                                            category="safety", rationale="hazard")],
+    )
+    record.initial_positions[0].position = Position.SUPPORT
+    record.resolution = "consensus"
+    record.action = "synthetic"
+    executed: list[str] = []
+    with pytest.raises(ValueError, match="not integrated"):
+        engine.dispatch_consequential(record, lambda _: executed.append("invoked"))
+    record.consequential = False
+    with pytest.raises(ValueError, match="not integrated"):
+        engine.dispatch_consequential(record, lambda _: executed.append("invoked"))
+    assert executed == []

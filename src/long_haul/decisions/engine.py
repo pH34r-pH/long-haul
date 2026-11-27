@@ -154,16 +154,13 @@ class DecisionEngine:
         record: DecisionRecord,
         executor: Callable[[DecisionRecord], T],
     ) -> T:
-        """Gate consequential execution on a verified, non-blocked resolved decision."""
-        if not record.consequential:
-            return executor(record)
-        if record.resolution is None or not record.action:
-            raise ValueError("mandatory consequential decision is unresolved; refusing execution")
-        if not self._has_complete_initial_coverage(record) and not record.exception:
-            raise ValueError("mandatory consequential decision lacks complete independent capture")
-        if self.active_blocks(record) and record.resolution not in ("escalation", "experiment"):
-            raise ValueError("mandatory consequential decision has an active unresolved block")
-        return executor(record)
+        """Refuse consequential dispatch until an authoritative lifecycle is integrated.
+
+        A mutable record, even one with a resolution field, does not prove
+        independent capture or authorized, replayable objection transitions.
+        This helper is not a runtime authorization boundary.
+        """
+        raise ValueError("consequential decision dispatch is not integrated; refusing execution")
 
 
 def replay_decisions(events: list[Event]) -> dict[str, DecisionRecord]:
