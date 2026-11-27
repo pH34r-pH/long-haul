@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T02:09:04+00:00",
+    "updated_at": "2026-11-27T02:15:12+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3818,6 +3818,23 @@
       "issue_evidence": "https://github.com/pH34r-pH/home-bot/issues/2#issuecomment-7207867171",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7207869924",
       "remaining": "Cross-environment calibration, hardware-in-loop and independent physical safety acceptance. Long-Haul multimodal admission remains downstream of the repository benchmark gate."
+    },
+    {
+      "at": "2026-11-27T02:15:12+00:00",
+      "task": "blackbox-6",
+      "status": "one_way_automation_boundary_verified_on_main",
+      "repository": "pH34r-pH/blackbox",
+      "pull_request": 8,
+      "checked_head": "313e596e7aa7003913a24ff26006ae266e825376",
+      "ci_checkout": "98395e91401dec4d701dbc4bc980c65f6e2f2268",
+      "merge_commit": "ee84d89b0f8ab712a9f51c8c5e760389fee0f45d",
+      "default_branch_ci": "https://github.com/pH34r-pH/blackbox/actions/runs/45927125457/job/140270963905",
+      "default_branch_governance": "https://github.com/pH34r-pH/blackbox/actions/runs/45927125422",
+      "image_sha256": "4a68d3169325c47e1bafbb86425220f03fbdff6f079a419e8d39407183288217",
+      "evidence": "Identical checked and merged trees. Exact main verified workflow inventory, mirror policy and synthetic container isolation, then passed all 13 tests. The container receives only read-only tooling, workflow and policy mounts. Unreviewed automation, changed workflows and widened use decisions were rejected. An otherwise identical local container with networking enabled failed the isolation check.",
+      "issue_evidence": "https://github.com/pH34r-pH/blackbox/issues/6#owner-qualification",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7207958656",
+      "remaining": "Operator-selected actual recovery export and historical provenance review. Any restoration, derivative admission or external use still requires its own explicit decision."
     }
   ]
 }
