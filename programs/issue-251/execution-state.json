@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T08:27:45-08:00",
+    "updated_at": "2026-11-27T08:44:37-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1391,6 +1391,14 @@
             },
             "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7222694338",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7222697486"
+          },
+          "nacre_reference_handoff": {
+            "observed_at": "2026-11-27T08:44:37-08:00",
+            "pull_request": "https://github.com/pH34r-pH/long-haul/pull/326",
+            "head": "63b80190b613e71c8a598054427e0f72087de00a",
+            "status": "checks_passed_review_required",
+            "consumer_pull_request": "https://github.com/pH34r-pH/nacre-recall/pull/29",
+            "evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7223600821"
           }
         },
         {
@@ -2138,6 +2146,64 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216730635",
             "evidence": "Live reference admission and inventory setup enforce the same workspace and state separation before source reads. Four synthetic root configurations failed before the fix and passed afterward. Network-disabled Linux validation and both PR and main workflows passed.",
             "remaining": "Governed source admission and independent live recall and capture qualification depend on Compiler #150 and Long-Haul #64."
+          },
+          "reviewed_reference_manifest_pin": {
+            "observed_at": "2026-11-27T08:44:37-08:00",
+            "producer": {
+              "pull_request": "https://github.com/pH34r-pH/long-haul/pull/326",
+              "status": "checks_passed_review_required",
+              "base": "4d5ae441869d9459ed597294b1090fc3f19141c1",
+              "head": "63b80190b613e71c8a598054427e0f72087de00a",
+              "ci_checkout": "82d3ea7d8bcceccf1240498ba913026a485b6490",
+              "tree": "f0c4b75816d9249b6efe9fe7daf8623a418c3314",
+              "source_archive_sha256": "f2d59bf09de5e64f9baa8df8be9b11e98a70e2c2aee90fc42a551c6479b04b61",
+              "checks": {
+                "passed": 12,
+                "skipped": 4,
+                "ci": 46035214888,
+                "pi_qualification": 46035214858,
+                "structural": 46035214994,
+                "public_cpu": 46035214957
+              },
+              "offline_python_tests": {
+                "passed": 610,
+                "skipped": 43
+              },
+              "hosted_python_3_11_tests": {
+                "passed": 610,
+                "skipped": 43
+              },
+              "hosted_python_3_12_tests": {
+                "passed": 610,
+                "skipped": 43
+              },
+              "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7223600821"
+            },
+            "consumer": {
+              "pull_request": "https://github.com/pH34r-pH/nacre-recall/pull/29",
+              "status": "checks_passed_draft_waiting_for_producer",
+              "base": "c2d3482422ff424b4fdb309b204023567f2553a7",
+              "head": "1bddf56b7e55966572efeaedd7d5dc72fe1d095b",
+              "ci_checkout": "8828dfa35b1a8597108789306ffd24d20d7b2d4a",
+              "tree": "7c6ba3fc06a487602bf1c7017eb9c2055806a07a",
+              "source_archive_sha256": "e0d77065145ada889daeba5be32f6a9aa941bb69ff1c9916b620764f3eced043",
+              "checks": {
+                "passed": 4,
+                "ci": 46035252775,
+                "governance": 46035252779
+              },
+              "offline_python_tests": 75,
+              "pi_hook_tests": 2,
+              "hosted_scorecard": {
+                "treatments": 8,
+                "hard_failures": 0,
+                "digest": "sha256:258a78fa0e5b4c491f2485675d3d33399b8d7c936cbb87db01b75f33a3958860"
+              },
+              "issue_evidence": "https://github.com/pH34r-pH/nacre-recall/issues/24#issuecomment-7223532426"
+            },
+            "cross_repo_rehearsal": "The exact Long-Haul evaluator and owner-only projection writer fed the actual Pi extension and Nacre CLI in network-disabled Linux. The approved manifest rendered a synthetic reference, changed bytes removed it, restored bytes re-admitted it, and a missing pin withheld it. An unauthorised inventory refresh preserved the existing index.",
+            "remaining": "The Long-Haul producer awaits approving review. The consumer is staged as a draft for producer-first rollout. Live task contribution, broader governed source admission, independent capture qualification and shared upstream dependencies remain open.",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7223603873"
           }
         },
         {
@@ -7062,6 +7128,18 @@
       "merge_commit": "fa79b7c471bdc10cd8aa879249e1bdbb6e3f5b47",
       "issue_evidence": "https://github.com/pH34r-pH/the-personal-algorithm/issues/92#issuecomment-7223273529",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7223276664"
+    },
+    {
+      "at": "2026-11-27T08:44:37-08:00",
+      "task": "nacre-24",
+      "status": "reference_manifest_pin_handoff_verified_review_required",
+      "repository": "pH34r-pH/nacre-recall",
+      "issue": 24,
+      "issue_state": "open",
+      "pull_request": 29,
+      "producer_pull_request": 326,
+      "issue_evidence": "https://github.com/pH34r-pH/nacre-recall/issues/24#issuecomment-7223532426",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7223603873"
     }
   ]
 }
