@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T09:37:28+00:00",
+    "updated_at": "2026-11-27T09:55:08+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -512,6 +512,32 @@
               "x64_source_runner": "assigned_and_passed",
               "arm64_smoke": "passed"
             }
+          },
+          "workflow_write_permission_inventory": {
+            "status": "qualified_on_main",
+            "pull_request": "https://github.com/pH34r-pH/long-haul-fleet/pull/1744",
+            "baseline_commit": "18a97e1090927a2b853a23fa2f0422f89415d762",
+            "checked_head": "ecfa7947b098dcf62c998c9b024b6e0fc2cc2894",
+            "ci_checkout": "9f951f99c7ba07140cfa77bf4e05376effd68e24",
+            "checked_tree": "ae5ff9796eda0b43b9c48af1c632c28f43bb4ace",
+            "merge_commit": "b6cc3d01e3059935280ab8e71d8479955aece27d",
+            "pull_request_ci": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45976421797",
+            "default_branch_ci": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45976993365/job/140431318162",
+            "local_source_archive_sha256": "17120c13afe091adcbdbcf81ca6984697fc1c18479399013f06f9355c0413725",
+            "inventory_sha256": "f9a1989690886f7421bfedfaa4be7afd03297200265614ae5fc7dd623c04a82b",
+            "workflow_readback_sha256": "34e1b4ae9107f7d9b4e3effc52abb3a51954798f22e791caacea617725a385e6",
+            "environment_readback_sha256": "ff093164f4a539962b90cb74a4f52384e069afc324485094763702cd431d44a9",
+            "tracked_workflows": 144,
+            "workflow_files_with_inventoried_jobs": 117,
+            "inventoried_jobs": 194,
+            "tracked_workflows_manually_disabled": 7,
+            "literal_environments_present": 11,
+            "literal_environments_referenced": 13,
+            "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7215243315",
+            "surface_qualification": "https://github.com/pH34r-pH/long-haul-fleet/issues/324#issuecomment-7215238456",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7215242873",
+            "evidence": "All 48 exact Linux tests, six PR workflows, and six exact main workflows passed. An offline probe rejected a stale inventory. GitHub returned every tracked workflow path.",
+            "remaining": "The two missing GitHub environment records, protected promotion and recovery receipts, Azure grants, deployed surfaces, live probes, and rollback evidence remain open."
           }
         },
         {
@@ -5243,6 +5269,19 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7214888548",
       "evidence": "Eight Crossref deposits match the exact DOI, title, ordered authors, publication date, and registered journal citation components. The original registry rows retain their bytes. All 58 exact Linux tests, six hosted PR checks, and three exact main workflows passed. The expiry replay removed every new use scope. Fleet qualified the exact merged commit.",
       "remaining": "The wider source-use queue contains 155 Works, including 43 DOI records with incomplete, differing, updated, or separately registered metadata."
+    },
+    {
+      "at": "2026-11-27T09:55:08+00:00",
+      "task": "fleet-1612",
+      "status": "workflow_source_inventory_qualified_on_main",
+      "repository": "pH34r-pH/long-haul-fleet",
+      "issue": 1612,
+      "issue_state": "open",
+      "pull_request": 1744,
+      "merge_commit": "b6cc3d01e3059935280ab8e71d8479955aece27d",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7215243315",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7215242873",
+      "remaining": "The two missing GitHub environment records, protected promotion and recovery receipts, Azure grants, deployed surfaces, live probes, and rollback evidence remain open."
     }
   ]
 }
