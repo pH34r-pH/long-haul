@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T10:37:27-08:00",
+    "updated_at": "2026-11-27T10:44:50-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -2141,6 +2141,30 @@
             "remaining": "Actual owner-approved sources, reviewed episodes and annotations, author-feedback lineage, a private pilot coverage report and frozen manifests, plus blinded author evaluation.",
             "issue_evidence": "https://github.com/pH34r-pH/tone/issues/21#issuecomment-7225676456",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225679064"
+          },
+          "pilot_episode_coverage": {
+            "observed_at": "2026-11-27T10:44:50-08:00",
+            "status": "merged_and_verified_with_synthetic_sources",
+            "related_issue": "https://github.com/pH34r-pH/tone/issues/21",
+            "pull_request": "https://github.com/pH34r-pH/tone/pull/33",
+            "base_commit": "3892d2ba446663b93cfb71979c4f907595f01d9e",
+            "verified_head": "9690fef9ba35101297a6b50345bb92c840757a5d",
+            "ci_checkout": "abad563473a0be231ad7bfddea8e022862c2840c",
+            "verified_tree": "174050e16c32045aea800322237381fcc44c23fa",
+            "merge_commit": "9e4e8440db8a4a2be963f7abc45f818d4cf8da6c",
+            "pull_request_ci": "https://github.com/pH34r-pH/tone/actions/runs/46051419139",
+            "default_branch_ci": "https://github.com/pH34r-pH/tone/actions/runs/46051539043",
+            "default_branch_ci_attempt": 1,
+            "synthetic_corpus_tests": 67,
+            "private_runner_routing_tests": 11,
+            "private_ci_artifact_uploads": 0,
+            "synthetic_episode_count": 6,
+            "synthetic_exchange_group_count": 3,
+            "synthetic_coverage_report_sha256": "4fe2225639a3c14cd191ef0ed233bc2c6cc7a73961a9ce906099c1427bafd8ed",
+            "scope": "The report binds both task packets to one chronological release and a reviewed catalog. It counts independent exchange groups across task mode, register, era, completeness or brief origin, and assessment target availability. Repeated execution produced identical bytes. Known split lineage and assessment partition overlap failed before output.",
+            "remaining": "Actual owner-approved sources, reviewed catalog and state annotations, author-feedback lineage, private data card and frozen evaluation packet, plus blinded author evaluation.",
+            "issue_evidence": "https://github.com/pH34r-pH/tone/issues/21#issuecomment-7225812881",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225815242"
           }
         },
         {
@@ -7640,6 +7664,19 @@
       "merge_commit": "3892d2ba446663b93cfb71979c4f907595f01d9e",
       "issue_evidence": "https://github.com/pH34r-pH/tone/issues/21#issuecomment-7225676456",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225679064"
+    },
+    {
+      "at": "2026-11-27T10:44:50-08:00",
+      "task": "tone-18",
+      "status": "pilot_episode_coverage_verified_on_main",
+      "repository": "pH34r-pH/tone",
+      "issue": 18,
+      "issue_state": "open",
+      "related_issue": 21,
+      "pull_request": 33,
+      "merge_commit": "9e4e8440db8a4a2be963f7abc45f818d4cf8da6c",
+      "issue_evidence": "https://github.com/pH34r-pH/tone/issues/21#issuecomment-7225812881",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225815242"
     }
   ]
 }
