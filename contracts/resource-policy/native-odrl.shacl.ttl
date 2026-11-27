@@ -1,0 +1,73 @@
+@prefix lh: <https://ph34r.dev/ns/long-haul/odrl/v1/> .
+@prefix odrl: <http://www.w3.org/ns/odrl/2/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+lh:PolicyShape a sh:NodeShape ;
+    sh:targetClass odrl:Set ;
+    sh:or (
+        [ sh:property [ sh:path odrl:permission ; sh:minCount 1 ] ]
+        [ sh:property [ sh:path odrl:prohibition ; sh:minCount 1 ] ]
+    ) ;
+    sh:property [ sh:path odrl:profile ; sh:hasValue <https://ph34r.dev/ns/long-haul/odrl/v1> ; sh:maxCount 1 ] ;
+    sh:property [ sh:path odrl:conflict ; sh:hasValue odrl:invalid ; sh:maxCount 1 ] ;
+    sh:property [ sh:path lh:sourceFingerprint ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path odrl:permission ; sh:class odrl:Permission ] ;
+    sh:property [ sh:path odrl:prohibition ; sh:class odrl:Prohibition ] ;
+    sh:sparql [
+        sh:message "Each permission must use the policy's exact source fingerprint as its admission operand." ;
+        sh:select """
+            PREFIX lh: <https://ph34r.dev/ns/long-haul/odrl/v1/>
+            PREFIX odrl: <http://www.w3.org/ns/odrl/2/>
+            SELECT $this ?permission
+            WHERE {
+                $this lh:sourceFingerprint ?pin ; odrl:permission ?permission .
+                FILTER NOT EXISTS {
+                    ?permission odrl:constraint [
+                        odrl:leftOperand lh:admittedPolicy ;
+                        odrl:operator odrl:eq ;
+                        odrl:rightOperand ?pin
+                    ] .
+                }
+            }
+        """
+    ] .
+
+lh:AtomicRuleShape a sh:NodeShape ;
+    sh:targetClass odrl:Permission, odrl:Prohibition ;
+    sh:property [ sh:path odrl:target ; sh:class odrl:Asset ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path odrl:action ; sh:class odrl:Action ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path odrl:assigner ; sh:class odrl:Party ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path odrl:assignee ; sh:class odrl:Party ; sh:maxCount 1 ] ;
+    sh:property [ sh:path lh:ruleId ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] .
+
+lh:PermissionAdmissionShape a sh:NodeShape ;
+    sh:targetClass odrl:Permission ;
+    sh:property [ sh:path odrl:duty ; sh:class odrl:Duty ] ;
+    sh:property [
+        sh:path odrl:constraint ;
+        sh:qualifiedMinCount 1 ;
+        sh:qualifiedMaxCount 1 ;
+        sh:qualifiedValueShape [
+            sh:class odrl:Constraint ;
+            sh:property [ sh:path odrl:leftOperand ; sh:hasValue lh:admittedPolicy ] ;
+            sh:property [ sh:path odrl:operator ; sh:hasValue odrl:eq ] ;
+            sh:property [ sh:path odrl:rightOperand ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ]
+        ]
+    ] .
+
+lh:ConstraintShape a sh:NodeShape ;
+    sh:targetClass odrl:Constraint ;
+    sh:property [ sh:path odrl:leftOperand ; sh:nodeKind sh:IRI ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path odrl:operator ; sh:in (odrl:eq odrl:gteq odrl:lteq) ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path odrl:rightOperand ; sh:nodeKind sh:Literal ; sh:minCount 1 ; sh:maxCount 1 ] .
+
+lh:LogicalConstraintShape a sh:NodeShape ;
+    sh:targetClass odrl:LogicalConstraint ;
+    sh:property [ sh:path odrl:or ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [
+        sh:path ( odrl:or [ sh:zeroOrMorePath rdf:rest ] rdf:first ) ;
+        sh:class odrl:Constraint ;
+        sh:minCount 2
+    ] .
