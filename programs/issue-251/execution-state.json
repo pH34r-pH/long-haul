@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T00:15:12+00:00",
+    "updated_at": "2026-11-27T00:25:49+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3639,6 +3639,23 @@
       "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1631#issuecomment-7206301973",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7206304777",
       "remaining": "Protected paired candidate and live compatibility evidence, private APK retrieval and physical browser-to-phone pilot, basemap handoff, legacy authority retirement, and original-backend decision."
+    },
+    {
+      "at": "2026-11-27T00:25:49+00:00",
+      "task": "wardriver-548",
+      "status": "society_archive_roundtrip_verified_on_held_draft",
+      "repository": "pH34r-pH/blue-swallow-wardriver",
+      "supporting_issue": "https://github.com/pH34r-pH/blue-swallow-wardriver/issues/217#implementation-checkpoint--2026-11-27-utc",
+      "pull_request": 851,
+      "checked_head": "576d88a71e0e756e57c2360371ecfa4efb875e89",
+      "ci_checkout": "1283306e8d15ffb3e38584463cae367b320f1009",
+      "default_branch_baseline": "7632eaaddbf6396f2b21d5cb15d89c3fdb91e03e",
+      "pr_ci": "https://github.com/pH34r-pH/blue-swallow-wardriver/actions/runs/45916319595/job/140236302670",
+      "historical_producer": "https://github.com/pH34r-pH/blue-swallow-wardriver/actions/runs/35827809463",
+      "historical_consumer": "https://github.com/pH34r-pH/blue-swallow-wardriver/actions/runs/35828030233",
+      "evidence": "Six paired rehearsal cases passed within 52 focused Linux tests. All five PR checks passed, including 233 Python tests in hosted fast CI. The writer and reader used real bundle and Blob command adapter logic with simulated external services. GitHub returned zero Actions artifacts and no exact legacy prerelease for the historical producer.",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7206453655",
+      "remaining": "A protected merge because the enabled Wardriver main trigger can publish. Confirm or re-establish protected historical Blob availability and run the exact archive reader with the protected producer record. Fleet Node 24 live promotion remains open."
     }
   ]
 }
