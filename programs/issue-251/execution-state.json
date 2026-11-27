@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T02:43:15+00:00",
+    "updated_at": "2026-11-27T02:56:47+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3889,6 +3889,24 @@
       "issue_evidence": "https://github.com/pH34r-pH/research-notes/issues/31#issuecomment-7208370302",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7208372344",
       "remaining": "Nine scholarly links embedded directly in articles 007, 010, and 011 remain outside the live gate. Editorial interpretation and downstream publication retain their separate review authority."
+    },
+    {
+      "at": "2026-11-27T02:56:47+00:00",
+      "task": "research-notes-31",
+      "status": "linked_sources_verified_and_issue_closed",
+      "repository": "pH34r-pH/research-notes",
+      "pull_request": 36,
+      "checked_head": "c7b17861afdc8d4a004e7b162298eccc859b30d8",
+      "ci_checkout": "55089aa608020037814e46c8cd1de40d8966784d",
+      "merge_commit": "3d056fe88088d15fce17a31f23245e3325be08d9",
+      "default_branch_ci": "https://github.com/pH34r-pH/research-notes/actions/runs/45931039337",
+      "default_branch_governance": "https://github.com/pH34r-pH/research-notes/actions/runs/45931039283",
+      "publication_source_digest": "f4afc389bb466bcee00deeb1e3e12c13888777c99ded40f4918457c609b279fd",
+      "readback_receipt_sha256": "8c4515ecbb131f347d92a9e48a8dc56d8d19717864dbd551f391902536c07d9b",
+      "closeout": "https://github.com/pH34r-pH/research-notes/issues/31#issuecomment-7208565120",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7208568337",
+      "evidence": "All four PR checks passed and the tested and merged trees match. Exact main validation ran 28 tests and built 18 pages. The identical live findings on PR and main cover 20 claim sources, three bibliography entries and 46 article and reference links. Fleet accepted the exact successful workflow with its receipt. An injected failed whole-workflow check rejected candidate intake. The isolated Portfolio export rendered the four-page Muon PDF with valid package, walkthrough and evaluator links. The issue closed as completed.",
+      "remaining": "The ten historical empirical records explicitly flag unavailable original run evidence. DOI resolver metadata and individual source sites establish the reported checks at verification time. Scientific review and protected publication remain separate downstream decisions."
     }
   ]
 }
