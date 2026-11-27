@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T07:24:15-08:00",
+    "updated_at": "2026-11-27T07:42:06-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -812,6 +812,48 @@
             "remaining": "Signed provenance verification and owner publication review, public release/tag creation, and README download link.",
             "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/5#issuecomment-7222000094",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7222003387"
+          },
+          "alpha_release_provenance_workflow": {
+            "observed_at": "2026-11-27T07:42:06-08:00",
+            "status": "workflow_verified_on_main_owner_dispatch_pending",
+            "pull_request": "https://github.com/pH34r-pH/experiment-compiler/pull/197",
+            "base_commit": "6c944e4555e356d11ef85b5444f84d11c1f8ca13",
+            "verified_head": "ce357b95c4ad869b2c2e42d235953fce4d0743aa",
+            "verified_tree": "54117f4ecd51fe76b25f25f636dd31f864c700ad",
+            "merge_commit": "36df2129855b8eea7b289b9a5a772649a277485d",
+            "pr_runs": {
+              "lifecycle": 46026033621,
+              "structural_audit": 46026033778,
+              "governance": 46026033634
+            },
+            "main_runs": {
+              "lifecycle": 46026686842,
+              "governance": 46026686866
+            },
+            "local_tests": {
+              "unit": 269,
+              "documentation_hygiene": 4,
+              "signature_verification": "Five assets and early failure exercised with a local verifier stand-in."
+            },
+            "main_python_3_12_artifact": {
+              "id": 15211248536,
+              "sha256": "6a209b915378a82f1efc276436132dbf7a9564ff8f869b5e1d3650d0ee66237d",
+              "staged_assets": 5,
+              "package_bytes": 15296,
+              "package_sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+              "wheel_sha256": "2693b111a9d87824ad45006df274d23a5355ff1967f995bcf9003fca6014f1c4",
+              "readback": "ZIP, checksum, and receipts matched the original draft. All 43 wheel members matched in content and differed in ZIP timestamps."
+            },
+            "existing_draft": {
+              "id": 460769652,
+              "target": "6c944e4555e356d11ef85b5444f84d11c1f8ca13",
+              "draft": true,
+              "published_at": null,
+              "remote_tag_present": false
+            },
+            "owner_checkpoint": "Dispatch alpha-provenance on the reviewed main commit, retain the verified same-run asset set and signatures, review draft source and attachments, and obtain the separate publication decision before publishing. Add the README download link after publication.",
+            "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/5#issuecomment-7222363209",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7222366869"
           }
         },
         {
@@ -6861,6 +6903,20 @@
       "draft_release_id": 460769652,
       "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/5#issuecomment-7222000094",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7222003387"
+    },
+    {
+      "at": "2026-11-27T07:42:06-08:00",
+      "task": "compiler-150",
+      "status": "alpha_provenance_workflow_verified_on_main",
+      "repository": "pH34r-pH/experiment-compiler",
+      "issue": 5,
+      "issue_state": "open",
+      "pull_request": 197,
+      "merge_commit": "36df2129855b8eea7b289b9a5a772649a277485d",
+      "main_lifecycle_run": 46026686842,
+      "draft_release_id": 460769652,
+      "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/5#issuecomment-7222363209",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7222366869"
     }
   ]
 }
