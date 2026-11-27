@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T08:55:05-08:00",
+    "updated_at": "2026-11-27T09:06:25-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -2106,6 +2106,26 @@
             "issue_evidence": "https://github.com/pH34r-pH/discursive-affective-epistemology/issues/37#issuecomment-7219195980",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7219198830",
             "remaining": "Governed real-source admission, an independently frozen blinded holdout, qualified human raters, and separate runtime and empirical evidence remain open."
+          },
+          "reviewed_holdout_handoff": {
+            "status": "reviewed_holdout_preparation_verified_on_main",
+            "pull_request": 40,
+            "baseline_commit": "0341dc0e178536b68da73dbe35d96b6c251402e1",
+            "checked_head": "002d31e0d7b921621c9be8f08b625c6e08a13807",
+            "checked_tree": "9c4b5dbe7486876acb1e61671c129b73d8cbbf9c",
+            "merge_commit": "52c99c9d228b24c085383c8648615d5bd77511ec",
+            "pull_request_ci": "https://github.com/pH34r-pH/discursive-affective-epistemology/actions/runs/46038732053",
+            "default_branch_ci": "https://github.com/pH34r-pH/discursive-affective-epistemology/actions/runs/46038884803",
+            "private_main_regression_tests": 32,
+            "network_disabled_linux_regression_tests": 32,
+            "resource_policy_source_commit": "4d5ae441869d9459ed597294b1090fc3f19141c1",
+            "tested_evaluator_implementation": "resource-policy-evaluator-v1:sha256:b36a29d6ad0607f500fef5b004cab2b927386807e270e76a1af29a0f2fa2a3d6",
+            "synthetic_receipt_sha256": "0665a3654eaf75825fc68454f1644f36286895ede6facc7b859773ecf90aa200",
+            "actions_artifacts": 0,
+            "scope": "Offline validation of an independently pinned plan, private source permissions, exact source byte spans, and a neutral holdout packet. Actual Long-Haul ALLOW and DENY decisions were exercised with invented source material.",
+            "issue_evidence": "https://github.com/pH34r-pH/discursive-affective-epistemology/issues/37#issuecomment-7224021596",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7224024289",
+            "remaining": "Owner review of actual source rights, privacy and revocation; an independently frozen real holdout; qualified human ratings; and empirical evaluation remain open."
           }
         }
       ]
@@ -7182,6 +7202,18 @@
       "merge_commit": "1b2a9a55b9987a2592adb4414cfaca61a83508fa",
       "issue_evidence": "https://github.com/pH34r-pH/agent-readable-calling-card/issues/17#issuecomment-7223804482",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7223807728"
+    },
+    {
+      "at": "2026-11-27T09:06:25-08:00",
+      "task": "dae-37",
+      "status": "reviewed_holdout_preparation_verified_on_main",
+      "repository": "pH34r-pH/discursive-affective-epistemology",
+      "issue": 37,
+      "issue_state": "open",
+      "pull_request": 40,
+      "merge_commit": "52c99c9d228b24c085383c8648615d5bd77511ec",
+      "issue_evidence": "https://github.com/pH34r-pH/discursive-affective-epistemology/issues/37#issuecomment-7224021596",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7224024289"
     }
   ]
 }
