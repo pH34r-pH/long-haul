@@ -1,6 +1,7 @@
 """Runtime-agnostic plan selection over normalized evidence."""
 from __future__ import annotations
 
+import itertools
 import json
 import math
 from collections.abc import Iterable
@@ -43,8 +44,13 @@ class MissionRequirements:
 class CandidateResult:
     plan: ExecutionPlan; eligible: bool; reasons: list[str]
     evidence: BenchmarkObservation | None = None
-    preemption_preference: int = 0
-    rank: tuple[int, int, int, int, int, int, float] | None = None
+    preemption_penalty: int = 0
+    rank: tuple[int, int, int, float] | None = None
+
+    @property
+    def preemption_preference(self) -> int:
+        """Backward-compatible alias for ``preemption_penalty`` (1 = penalized)."""
+        return self.preemption_penalty
 
 class Scheduler:
     def __init__(self, vessels: Iterable[Vessel], links: Iterable[Link] = (), benchmarks: Iterable[BenchmarkObservation] = (), validations: Iterable[ProfileValidation] = (), current_runtimes: Iterable[RuntimeIdentity] = (), *, now: datetime | None = None):
@@ -60,13 +66,32 @@ class Scheduler:
             runtime_groups.setdefault(runtime.runtime_id, []).append(runtime)
         self.current_runtimes = {key: group[0] for key, group in runtime_groups.items()
                                  if all(runtime == group[0] for runtime in group)}
+    def _derived_vessels(self, profile: InferenceProfile) -> tuple[list[str], list[str]]:
+        resources = profile.participating_resources
+        unknown = [r for r in resources if r not in self.resources]
+        vessels = sorted({v.id for v in self.vessels if any(r.id in resources for r in v.resources)})
+        return vessels, unknown
+
     def generate(self, profiles: Iterable[InferenceProfile]) -> list[ExecutionPlan]:
-        output = []
+        output: list[ExecutionPlan] = []
         for profile in profiles:
-            resources = profile.participating_resources
-            vessels = sorted({v.id for v in self.vessels if any(r.id in resources for r in v.resources)})
-            for mode in ExecutionMode:
-                output.append(ExecutionPlan(plan_id=f"{mode.value.lower()}:{profile.id}",mode=mode,vessels=vessels,resources=resources,inference_profile_id=profile.id))
+            vessels, _ = self._derived_vessels(profile)
+            if len(vessels) <= 1:
+                modes: tuple[ExecutionMode, ...] = tuple(ExecutionMode)
+            elif profile.synchronous_cross_node is True:
+                modes = (ExecutionMode.PIPELINE,)
+            else:
+                modes = (ExecutionMode.POOL, ExecutionMode.PIPELINE, ExecutionMode.COMPOSE)
+            for mode in modes:
+                output.append(
+                    ExecutionPlan(
+                        plan_id=f"{mode.value.lower()}:{profile.id}",
+                        mode=mode,
+                        vessels=vessels,
+                        resources=profile.participating_resources,
+                        inference_profile_id=profile.id,
+                    )
+                )
         return output
     def _validation(self, profile: InferenceProfile) -> ProfileValidation | None:
         runtime = self.current_runtimes.get(profile.runtime_id)
@@ -130,27 +155,51 @@ class Scheduler:
             and self.vessels_by_id[vessel_id].lease.preemptible
             for vessel_id in plan.vessels
         )
-        preemption_preference = int(mission.preemption_policy == "prefer" and not uses_preemptible)
+        preemption_penalty = int(mission.preemption_policy == "prefer" and not uses_preemptible)
         return CandidateResult(
             plan,
             not reasons or reasons == ["no comparable benchmark evidence; uncertainty retained"],
             reasons,
             evidence,
-            preemption_preference,
+            preemption_penalty,
         )
+
+    def _vessel_and_resource_reasons(
+        self,
+        mission: MissionRequirements,
+        plan: ExecutionPlan,
+        profile: InferenceProfile,
+        actual_vessels: list[str],
+        unknown_resources: list[str],
+    ) -> list[str]:
+        reasons: list[str] = []
+        if not mission.required_resources <= set(plan.resources):
+            reasons.append("required resource placement missing")
+        if set(profile.participating_resources) != set(plan.resources):
+            reasons.append("plan/profile resource pairing mismatch")
+        if unknown_resources:
+            reasons.append("unknown participating resource: " + ", ".join(sorted(set(unknown_resources))))
+        if set(plan.vessels) != set(actual_vessels):
+            reasons.append("plan/profile vessel ownership mismatch")
+        if plan.mode is ExecutionMode.LOCAL and len(actual_vessels) != 1:
+            reasons.append("LOCAL mode requires exactly one vessel")
+        return reasons
+
     def _placement_reasons(self, mission: MissionRequirements, plan: ExecutionPlan, profile: InferenceProfile) -> list[str]:
         reasons: list[str] = []
         if not mission.safety_ok: reasons.append("hard safety constraint failed")
         if not mission.cooperation_ok: reasons.append("hard cooperation-integrity constraint failed")
         if plan.mode not in mission.allow_modes: reasons.append("mode is outside mission constraints")
-        if not mission.required_resources <= set(plan.resources): reasons.append("required resource placement missing")
-        if set(profile.participating_resources) != set(plan.resources): reasons.append("plan/profile resource pairing mismatch")
+        actual_vessels, unknown_resources = self._derived_vessels(profile)
+        reasons.extend(self._vessel_and_resource_reasons(mission, plan, profile, actual_vessels, unknown_resources))
         reasons.extend(self._lease_reasons(mission, plan))
         memory_issue = self._memory_issue(mission, plan, profile)
         if memory_issue is not None:
             reasons.append(memory_issue)
-        if self._unacceptable_pipeline_link(mission, plan):
-            reasons.append("synchronous PIPELINE requires acceptable direct Tailscale path")
+        missing_edges = self._missing_synchronous_links(mission, plan, profile, actual_vessels)
+        if missing_edges:
+            edge_text = ", ".join(f"{u}<->{v}" for u, v in missing_edges)
+            reasons.append(f"synchronous cross-node execution requires measured acceptable direct Tailscale path ({edge_text})")
         return reasons
 
     def _lease_reasons(self, mission: MissionRequirements, plan: ExecutionPlan) -> list[str]:
@@ -168,11 +217,42 @@ class Scheduler:
                 reasons.append(f"preemptible resource is forbidden for vessel {vessel_id}")
         return reasons
 
-    def _unacceptable_pipeline_link(self, mission: MissionRequirements, plan: ExecutionPlan) -> bool:
-        if plan.mode is not ExecutionMode.PIPELINE or len(plan.vessels) <= 1 or not mission.requires_synchronous_cross_node:
+    @staticmethod
+    def _requires_synchronous_cross_node(
+        mission: MissionRequirements,
+        plan: ExecutionPlan,
+        profile: InferenceProfile,
+        vessels: list[str],
+    ) -> bool:
+        if len(vessels) <= 1:
             return False
-        matching = [link for link in self.links if {link.source, link.target} == set(plan.vessels)]
-        return not any(link.kind == "tailscale" and link.direct and link.path == "direct" for link in matching)
+        return (
+            plan.mode is ExecutionMode.PIPELINE
+            or mission.requires_synchronous_cross_node
+            or profile.synchronous_cross_node is True
+        )
+
+    def _missing_synchronous_links(
+        self,
+        mission: MissionRequirements,
+        plan: ExecutionPlan,
+        profile: InferenceProfile,
+        vessels: list[str],
+    ) -> list[tuple[str, str]]:
+        if not self._requires_synchronous_cross_node(mission, plan, profile, vessels):
+            return []
+        missing: list[tuple[str, str]] = []
+        for u, v in itertools.combinations(sorted(set(vessels)), 2):
+            matching = [link for link in self.links if {link.source, link.target} == {u, v}]
+            if not any(
+                link.kind == "tailscale"
+                and link.direct is True
+                and link.path == "direct"
+                and link.measured is True
+                for link in matching
+            ):
+                missing.append((u, v))
+        return missing
 
     def _memory_issue(self, mission: MissionRequirements, plan: ExecutionPlan, profile: InferenceProfile) -> str | None:
         # Do not sum RAM/VRAM: a profile names participating resources and the
@@ -191,17 +271,32 @@ class Scheduler:
         return "profile requirements exceed named resource capacity" if max(known) < required else None
 
     def rank(self, candidates: Iterable[CandidateResult]) -> list[CandidateResult]:
-        for result in candidates:
-            if not result.eligible: continue
-            # Feasibility is checked first; measured performance breaks eligible ties.
+        """Deterministically rank candidates in a single pass.
+
+        Eligible candidates are ordered by ``(-measured, preemption_penalty,
+        -continuity, -throughput)`` with deterministic lexical ``plan_id``
+        tie-breaking. Ineligible candidates always sort after eligible ones.
+        """
+        items = list(candidates)
+        for result in items:
+            if not result.eligible:
+                result.rank = None
+                continue
             measured = int(result.evidence is not None and result.evidence.provenance == "measured")
-            # Measurement establishes performance provenance, never output correctness.
             continuity = int(result.plan.mode is not ExecutionMode.PIPELINE)
             evidence = result.evidence
-            throughput = (evidence.prefill_tps if evidence.workload.prompt_tokens and not evidence.workload.output_tokens else evidence.decode_tps) if evidence else None
+            throughput = (
+                evidence.prefill_tps
+                if evidence.workload.prompt_tokens and not evidence.workload.output_tokens
+                else evidence.decode_tps
+            ) if evidence else None
             efficiency = -(throughput or 0.0)
-            result.rank = (0, 0, 0, -measured, result.preemption_preference, -continuity, efficiency)
-        return sorted(candidates, key=lambda c: (not c.eligible, c.rank or (99,)*6, c.plan.plan_id))
+            result.rank = (-measured, result.preemption_penalty, -continuity, efficiency)
+        ineligible_rank = (1, 1, 1, float("inf"))
+        return sorted(
+            items,
+            key=lambda c: (not c.eligible, c.rank if c.eligible and c.rank is not None else ineligible_rank, c.plan.plan_id),
+        )
     def select(self, mission: MissionRequirements, profiles: Iterable[InferenceProfile]) -> CandidateResult:
         profiles_by_id = {p.id:p for p in profiles}
         candidates = [self.evaluate(mission, plan, profiles_by_id[plan.inference_profile_id]) for plan in self.generate(profiles_by_id.values())]
