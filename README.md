@@ -29,23 +29,36 @@ The first experiment asks whether a dissent-preserving, competence-scoped two-me
 
 The experiment preserves independent initial judgments, measures coordination cost, and evaluates plan feasibility, task success, performance, calibration, disagreement, and regret. See [the experiment plan](docs/experiments.md).
 
+## Design philosophy and overarching goals
+
+Long Haul is built around four core design principles:
+
+1. **Institutional identity outlives model embodiments:** Crew members keep stable roles, authority scopes, competence records, and continuity across model swaps, vessel changes, and session restarts.
+2. **Measured topology over uniform-pool assumptions:** Execution modes (`LOCAL`, `POOL`, `PIPELINE`, `COMPOSE`) and validated inference profiles are checked against measured hardware and link evidence; aggregate RAM/VRAM is never summed and cross-node synchronous splits require verified direct links.
+3. **Append-only, hash-chained provenance as source of truth:** Material transitions live in an append-only JSONL `EventStore` with exclusive write locking, `fsync`, SHA-256 hash chaining, streaming replay recovery, and schema quarantine. Checkpoints, digests, and model sessions are disposable rebuildable views.
+4. **Dissent and external verification are protocol states:** Independent initial positions, typed objections, and read-only external acceptance evaluators prevent silent self-approval.
+
 ## Architecture
 
-```text
-discovery + benchmarks -> normalized topology -> candidate plans
-                                                |
-                              independent crew positions
-                                                |
-                                         decision protocol
-                                                |
-                                           execution
-                                                |
-                                outcome + evidence + events
+```mermaid
+flowchart TB
+  DISC["Discovery & Benchmarks<br/>vessels · typed capacities · measured links"]
+  SCHED["Topology-Aware Scheduler<br/>validated profiles · pairwise direct-link checks · single-pass rank"]
+  DEC["Decision Protocol<br/>immutable snapshots · independent capture · dissent & objections"]
+  EXEC["Execution Adapters<br/>LOCAL · POOL · PIPELINE · COMPOSE"]
+  EVAL["Independent Read-Only Evaluator<br/>WorkContract predicates · EvidencePacket"]
+  EV[["Authoritative JSONL EventStore<br/>exclusive lock · fsync · SHA-256 hash chain · streaming replay"]]
+  CP["Materialized Views<br/>FleetState · WorkCheckpoint · TaskDigest"]
+
+  DISC --> SCHED --> DEC --> EXEC --> EVAL --> EV
+  DEC --> EV
+  EV --> CP
+  CP -.-> SCHED
 ```
 
 Execution modes are `LOCAL`, `POOL`, `PIPELINE`, and `COMPOSE`. Runtime strategies such as resident, offloaded, split, or streaming execution are described by validated inference profiles rather than overloaded into those modes.
 
-Read [Architecture](docs/architecture.md), the detailed [North-Star Architecture](docs/north-star.md), the [repository map](docs/repository-map.md), or the [Wiki](https://github.com/pH34r-pH/long-haul/wiki).
+Read [MVP Architecture & Current Plan](docs/architecture.md), the detailed [North-Star Architecture](docs/north-star.md), the [repository map](docs/repository-map.md), or the [Wiki](https://github.com/pH34r-pH/long-haul/wiki).
 
 ## Public runtime, private Fleet
 
