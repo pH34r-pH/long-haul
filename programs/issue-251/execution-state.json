@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T09:07:58+00:00",
+    "updated_at": "2026-11-27T09:22:46+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -759,6 +759,43 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7214304387",
             "evidence": "HTML and ar5iv links are included in release reporting. Ten missing Work identities now have current primary metadata review and explicit bibliographic index and search scopes through December 27 UTC. All 57 exact Linux tests and applicable workflows passed for both PRs. The final hosted readback matches the PR except for observation time and Fleet qualified the exact main commit.",
             "remaining": "Reconcile three older pinned citations with the current revisions under the corpus review procedure. The wider 166-Work backlog and separately governed uses remain open."
+          },
+          "current_pinned_citation_reconciliation": {
+            "repository": "pH34r-pH/knowledge",
+            "issue": 42,
+            "issue_state": "open",
+            "pull_request": 56,
+            "baseline_commit": "75cadf4ad3c194a2d6c1cd40a081de989d0a8d0c",
+            "checked_head": "265e51bf0abca22958633e540d5d236cea49d677",
+            "ci_checkout": "140e391a8bd775b7d3d054488727d96192dea5ab",
+            "checked_tree": "cd1f8f8ece9cb4e98119726023f4056910a32379",
+            "merge_commit": "3f698a49e06708417398ba9e9d770fe69a5a382f",
+            "pull_request_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45972813728",
+            "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45972936492",
+            "main_readback": "https://github.com/pH34r-pH/knowledge/actions/runs/45972936492/artifacts/15185023569",
+            "main_readback_sha256": "147a30d6f937cc5e109bfb322902fcd81410bba3743b838be7da2304c26fc854",
+            "local_source_archive_sha256": "a6df93dc0732362183fb02aba5d41cba87d644e8a5a6858536d511bdbafb2f97",
+            "registry_sha256": "b61606b0523b88fc6a3e24c5ce084ac6dd033aca2dbeaf207330db54d90eecb3",
+            "reconciled_revisions": [
+              "2501.12948v2",
+              "2604.14862v3",
+              "2605.10123v3"
+            ],
+            "articles_updated": 4,
+            "active_base_citation_identities": 104,
+            "pinned_arxiv_revisions": 35,
+            "verified_revision_scopes": 35,
+            "documents_for_exact_revision_review": 0,
+            "live_verified_metadata_sources": 178,
+            "works_awaiting_use_review": 163,
+            "superseded_work_records": 3,
+            "fleet_verifier_commit": "18a97e1090927a2b853a23fa2f0422f89415d762",
+            "fleet_receipt_sha256": "18abb7cd72e85756d904bc261c947476fea24a3499297467f423c932197acb56",
+            "citation_ledger": "https://github.com/pH34r-pH/knowledge/blob/3f698a49e06708417398ba9e9d770fe69a5a382f/corpus/LEDGER.md#2026-11-27--reconcile-three-pinned-arxiv-revisions",
+            "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7214595493",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7214598994",
+            "evidence": "A factored reviewer confirmed the benchmark figures and limitations. The prior Work rows and review rows remain byte-identical, and the ledger retains the historical results. The expiry replay reflags all four affected articles. All 57 exact Linux tests, six hosted PR checks, and three exact main workflows passed. Fleet accepted the exact main commit.",
+            "remaining": "The wider 163-Work backlog and separately governed uses remain open. Superseded Work-level rows retain base-identity backlinks while current exact revisions all verify."
           }
         },
         {
@@ -5081,6 +5118,46 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7214304387",
       "evidence": "HTML and ar5iv links are included in release reporting. Ten missing Work identities now have current primary metadata review and explicit bibliographic index and search scopes through December 27 UTC. All 57 exact Linux tests and applicable workflows passed for both PRs. The final hosted readback matches the PR except for observation time and Fleet qualified the exact main commit.",
       "remaining": "Reconcile three older pinned citations with the current revisions under the corpus review procedure. The wider 166-Work backlog and separately governed uses remain open."
+    },
+    {
+      "at": "2026-11-27T09:22:46+00:00",
+      "task": "knowledge-42",
+      "status": "current_pinned_corpus_citations_reconciled_on_main",
+      "repository": "pH34r-pH/knowledge",
+      "issue": 42,
+      "issue_state": "open",
+      "pull_request": 56,
+      "baseline_commit": "75cadf4ad3c194a2d6c1cd40a081de989d0a8d0c",
+      "checked_head": "265e51bf0abca22958633e540d5d236cea49d677",
+      "ci_checkout": "140e391a8bd775b7d3d054488727d96192dea5ab",
+      "checked_tree": "cd1f8f8ece9cb4e98119726023f4056910a32379",
+      "merge_commit": "3f698a49e06708417398ba9e9d770fe69a5a382f",
+      "pull_request_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45972813728",
+      "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45972936492",
+      "main_readback": "https://github.com/pH34r-pH/knowledge/actions/runs/45972936492/artifacts/15185023569",
+      "main_readback_sha256": "147a30d6f937cc5e109bfb322902fcd81410bba3743b838be7da2304c26fc854",
+      "local_source_archive_sha256": "a6df93dc0732362183fb02aba5d41cba87d644e8a5a6858536d511bdbafb2f97",
+      "registry_sha256": "b61606b0523b88fc6a3e24c5ce084ac6dd033aca2dbeaf207330db54d90eecb3",
+      "reconciled_revisions": [
+        "2501.12948v2",
+        "2604.14862v3",
+        "2605.10123v3"
+      ],
+      "articles_updated": 4,
+      "active_base_citation_identities": 104,
+      "pinned_arxiv_revisions": 35,
+      "verified_revision_scopes": 35,
+      "documents_for_exact_revision_review": 0,
+      "live_verified_metadata_sources": 178,
+      "works_awaiting_use_review": 163,
+      "superseded_work_records": 3,
+      "fleet_verifier_commit": "18a97e1090927a2b853a23fa2f0422f89415d762",
+      "fleet_receipt_sha256": "18abb7cd72e85756d904bc261c947476fea24a3499297467f423c932197acb56",
+      "citation_ledger": "https://github.com/pH34r-pH/knowledge/blob/3f698a49e06708417398ba9e9d770fe69a5a382f/corpus/LEDGER.md#2026-11-27--reconcile-three-pinned-arxiv-revisions",
+      "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7214595493",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7214598994",
+      "evidence": "A factored reviewer confirmed the benchmark figures and limitations. The prior Work rows and review rows remain byte-identical, and the ledger retains the historical results. The expiry replay reflags all four affected articles. All 57 exact Linux tests, six hosted PR checks, and three exact main workflows passed. Fleet accepted the exact main commit.",
+      "remaining": "The wider 163-Work backlog and separately governed uses remain open. Superseded Work-level rows retain base-identity backlinks while current exact revisions all verify."
     }
   ]
 }
