@@ -111,6 +111,7 @@ class InferenceProfile(BaseModel):
     id: str; runtime_id: str; strategy: str; artifact: ModelArtifact
     participating_resources: list[str] = Field(min_length=1); requirements: list[Capacity] = Field(default_factory=list)
     options: dict[str, Any] = Field(default_factory=dict); schema_version: int = SCHEMA_VERSION
+    synchronous_cross_node: bool | None = None
 
     @property
     def identity(self) -> str:
