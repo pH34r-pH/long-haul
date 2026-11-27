@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T01:39:21+00:00",
+    "updated_at": "2026-11-27T01:47:42+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3766,6 +3766,22 @@
       "issue_evidence": "https://github.com/pH34r-pH/family-tree/issues/44#issuecomment-7207463309",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7207465703",
       "remaining": "Actual private owner decision review, reversible merges, and policy-filtered book and site formats."
+    },
+    {
+      "at": "2026-11-27T01:47:42+00:00",
+      "task": "family-44",
+      "status": "private_reversible_identity_merge_workflow_merged",
+      "repository": "pH34r-pH/family-tree",
+      "pull_request": 51,
+      "checked_head": "799a09e75971af10b6c7aff7749e9c8dcacf48bd",
+      "ci_checkout": "799a09e75971af10b6c7aff7749e9c8dcacf48bd",
+      "merge_commit": "8deb979f8fccb1adb1a2daaf6d81ed8e435ef81b",
+      "default_branch_ci": "https://github.com/pH34r-pH/family-tree/actions/runs/45924481520/job/140262526876",
+      "default_branch_governance": "https://github.com/pH34r-pH/family-tree/actions/runs/45924481572",
+      "evidence": "The checked and merged trees match. The exact main private archive ran four native reversible merge fixtures, four native export fixtures, seven policy tests, and full Atlas and pinned GLX validation. The synthetic merge changed only the intended person and references, preserved source statements, and restored exact original GLX and vocabulary bytes using an independent bundle hash. Existing relationships, living status conflict, unrelated pairs, tampering, and overwrites were rejected.",
+      "issue_evidence": "https://github.com/pH34r-pH/family-tree/issues/44#merged-privacy-export-and-identity-workflow",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7207578781",
+      "remaining": "Actual owner record decisions, reviewed Git application of any real person merge, and policy-filtered book and site exports."
     }
   ]
 }
