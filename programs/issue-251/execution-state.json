@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T12:01:49+00:00",
+    "updated_at": "2026-11-27T12:08:10+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1179,7 +1179,41 @@
           "depends_on": [
             "dsl-842"
           ],
-          "acceptance": "Each theorem links to exact claims and applicability evidence; clean proof builds and adversarial proof evidence are retained."
+          "acceptance": "Each theorem links to exact claims and applicability evidence; clean proof builds and adversarial proof evidence are retained.",
+          "current_proof_retention": {
+            "status": "current_proof_candidate_attested_and_verified",
+            "source_commit": "0d8b81f81d5fd75fecdd8bd125288e55b8b992c8",
+            "source_tree": "9c4202ae27f7fbfe49834bd57f5160e7c0363ae7",
+            "source_pull_request": 31,
+            "lean_toolchain": "leanprover/lean4:v4.34.0-rc2",
+            "lean_compiler_commit": "6a10ac8c22beadecabdbb0919c2b50214762f91d",
+            "mathlib_commit": "58e016c6f6c829b5f25b1a87a88f495f40e70aa7",
+            "default_branch_ci": "https://github.com/pH34r-pH/theorem-library/actions/runs/45908386348",
+            "retention_run": "https://github.com/pH34r-pH/theorem-library/actions/runs/45995407205",
+            "retention_attempt": 1,
+            "formal_job": 140493454475,
+            "attestation_job": 140494752313,
+            "artifact": "https://github.com/pH34r-pH/theorem-library/actions/runs/45995407205/artifacts/15196230408",
+            "artifact_expires_at": "2027-02-25T12:03:06Z",
+            "github_artifact_sha256": "6926ee48e544a3e106f63feeb152e63ac4f4df244858ab7b7f2fc8ee5ff6d7bc",
+            "proof_archive_sha256": "a901068f6b05aeae20ed24b7c7e5529838e67d8d3f8006db5f36d23b24cb6c26",
+            "proof_archive_bytes": 727902,
+            "proof_receipt_sha256": "b37494ae028acdd396f8722b42bcc57a320d0f50273481d640b36ce01a0aa933",
+            "python_tests": 26,
+            "attestations_verified": 1,
+            "member_digests_verified": 43,
+            "source_git_blobs_verified": 33,
+            "public_modules": 9,
+            "applicability_records": 12,
+            "declarations": 67,
+            "compiled_proof_objects_matching_previous_candidate": 10,
+            "comparison_source_commit": "61b17eed011b504270b12f33cbd5312dc1870568",
+            "mutation_tool_checked_commit": "5e44f519ead624549e7c108c5c312b42f1c21030",
+            "issue_evidence": "https://github.com/pH34r-pH/theorem-library/issues/20#issuecomment-7217866412",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7217869956",
+            "evidence": "A fresh main build ran Lean, independent leanchecker, the adversarial support fixtures, and exact public declaration coverage. The artifact signature verifies for the source, ref and signer. The retained source matches Git byte for byte. All ten compiled proof objects match the preceding candidate with identical proof inputs.",
+            "remaining": "Public release review, durable release retention beyond the CI artifact expiry, the upstream mutation tool use-rights decision, and source-owned downstream study evidence remain."
+          }
         },
         {
           "id": "notes-31",
@@ -5779,6 +5813,19 @@
       "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/164#issuecomment-7217740649",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7217744557",
       "remaining": "Governed corpus admission, guarded evaluator disclosure, and protected publication verification remain under Compiler #150."
+    },
+    {
+      "at": "2026-11-27T12:08:10+00:00",
+      "task": "theorem-20",
+      "status": "current_proof_candidate_attested_and_verified",
+      "repository": "pH34r-pH/theorem-library",
+      "issue": 20,
+      "issue_state": "open",
+      "source_commit": "0d8b81f81d5fd75fecdd8bd125288e55b8b992c8",
+      "retention_run": "https://github.com/pH34r-pH/theorem-library/actions/runs/45995407205",
+      "issue_evidence": "https://github.com/pH34r-pH/theorem-library/issues/20#issuecomment-7217866412",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7217869956",
+      "remaining": "Public release review, durable release retention beyond the CI artifact expiry, the upstream mutation tool use-rights decision, and source-owned downstream study evidence remain."
     }
   ]
 }
