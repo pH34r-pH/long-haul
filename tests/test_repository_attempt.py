@@ -337,7 +337,10 @@ def test_hermetic_repository_attempt_keeps_independent_sealed_result(
         == evaluation
     )
     assert "[-5, 2]" not in history.export_jsonl()
+    _reject_mismatched_evidence(work, profile, retained, restored, pins)
 
+
+def _reject_mismatched_evidence(work, profile, retained, restored, pins):
     unrelated = retained.model_copy(
         update={
             "attempt": retained.attempt.model_copy(
