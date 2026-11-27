@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T09:21:24-08:00",
+    "updated_at": "2026-11-27T09:34:43-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -2566,7 +2566,63 @@
             "fleet-1612"
           ],
           "external_gate": "hardware_in_loop_and_physical_safety",
-          "acceptance": "Exact simulation receipts, replay, simulation-to-real evidence, and independent safety interlocks are demonstrated."
+          "acceptance": "Exact simulation receipts, replay, simulation-to-real evidence, and independent safety interlocks are demonstrated.",
+          "verified_pilot_comparison": {
+            "status": "verified_pilot_comparison_on_main",
+            "pull_request": 5,
+            "baseline_commit": "9e87ffc292c8123ffa9ffd40b3af570b82068db1",
+            "checked_head": "452a59f5fe61149206fcbb98451bed5971760187",
+            "ci_checkout": "e9a370a8b92d314c366520ee5b70f1a230f8dcfe",
+            "checked_tree": "690a68cf6b412fb398ceb89215968cc6cb422b03",
+            "merge_commit": "f888dd23cdd7b3d324a553dd3a3537e3d2850e5a",
+            "main_ci": {
+              "core": "https://github.com/pH34r-pH/home-bot/actions/runs/46042706611",
+              "governance": "https://github.com/pH34r-pH/home-bot/actions/runs/46042706751",
+              "tests_per_python_version": 31,
+              "python_versions": [
+                "3.11",
+                "3.12",
+                "3.13"
+              ]
+            },
+            "retained_comparison": {
+              "sha256": "608c6a3149fe063ea6faa252ef107ea35d9f621a3095782e735afe4a8180b5af",
+              "replay_platforms": [
+                "Windows Python 3.12.10",
+                "network-disabled Linux Python 3.12.15"
+              ],
+              "mission_outcomes": [
+                true,
+                false
+              ],
+              "alignment": "different script, applied controls, and evaluator sample times",
+              "pose_deltas": null
+            },
+            "fresh_simulation": {
+              "webots_version": "R2025a",
+              "comparison_sha256": "83285eb09550a2b6e69f2b828c70a209a7b288d4262f513058bcedbbafd905ff",
+              "receipt_sha256": "526026c7a4ae32630e8e30159eec44ce1e1e477f0d9f5a1efe84a8907bb4aeab",
+              "archive_sha256": "b80dfa25d23dc881fd88a7894719b18259fefda6a16e7eabce9ee569e339dc38",
+              "archive_name": "webots-pilot-comparison-452a59f.tar",
+              "capture_files_verified": 14,
+              "controller_steps": 242,
+              "camera_sensor_pairs": 3,
+              "above_floor_contacts": 0,
+              "mission_achieved": false,
+              "alignment": "same requested actions, different applied controls and sample times",
+              "pose_deltas": null,
+              "offline_readback": "byte-identical"
+            },
+            "retained_readiness_timeout": {
+              "receipt_sha256": "9afe85c4aefc560944b889ff10fcdb00e6a89efecee2b9dc2e2ce97b54b310fa",
+              "archive_sha256": "b9208eb3cd7a5967a9861efe9fe79b833b8fcb5ac2f35f42c2e8a1cd60e632b1",
+              "archive_name": "webots-pilot-readiness-timeout-452a59f.tar"
+            },
+            "remaining": "Aligned captures from distinct simulator environments, hardware-in-loop, and independent physical safety qualification remain open.",
+            "issue_evidence": "https://github.com/pH34r-pH/home-bot/issues/2#issuecomment-7224544623",
+            "multimodal_handoff": "https://github.com/pH34r-pH/long-haul/issues/247#issuecomment-7224546877",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7224549203"
+          }
         }
       ]
     },
@@ -2610,7 +2666,16 @@
             "wardriver-548",
             "homebot-2"
           ],
-          "acceptance": "Browser, Android, simulator, media, privacy, and model-assisted evidence retain exact identity and do not substitute for unavailable physical evidence."
+          "acceptance": "Browser, Android, simulator, media, privacy, and model-assisted evidence retain exact identity and do not substitute for unavailable physical evidence.",
+          "home_bot_simulation_evidence": {
+            "status": "producer_simulation_comparison_verified",
+            "repository": "pH34r-pH/home-bot",
+            "merge_commit": "f888dd23cdd7b3d324a553dd3a3537e3d2850e5a",
+            "retained_comparison_sha256": "608c6a3149fe063ea6faa252ef107ea35d9f621a3095782e735afe4a8180b5af",
+            "fresh_comparison_sha256": "83285eb09550a2b6e69f2b828c70a209a7b288d4262f513058bcedbbafd905ff",
+            "scope": "Exact simulation identity, distinct pilot and evaluator inventories, negative results and nonaligned control/sample detection.",
+            "evidence": "https://github.com/pH34r-pH/long-haul/issues/247#issuecomment-7224546877"
+          }
         },
         {
           "id": "lh-241-parent",
@@ -7267,6 +7332,19 @@
       "producer_pull_request": 321,
       "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7224301774",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7224304317"
+    },
+    {
+      "at": "2026-11-27T09:34:43-08:00",
+      "task": "homebot-2",
+      "status": "verified_pilot_comparison_on_main",
+      "repository": "pH34r-pH/home-bot",
+      "issue": 2,
+      "issue_state": "open",
+      "pull_request": 5,
+      "merge_commit": "f888dd23cdd7b3d324a553dd3a3537e3d2850e5a",
+      "issue_evidence": "https://github.com/pH34r-pH/home-bot/issues/2#issuecomment-7224544623",
+      "multimodal_handoff": "https://github.com/pH34r-pH/long-haul/issues/247#issuecomment-7224546877",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7224549203"
     }
   ]
 }
