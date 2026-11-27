@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T04:56:44+00:00",
+    "updated_at": "2026-11-27T05:10:40+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -472,8 +472,8 @@
             "compiler-150"
           ],
           "acceptance": "Every admitted source has exact trust/use/freshness metadata and prompt-injection-safe ingestion with stale-source invalidation.",
-          "implementation_pr": 50,
-          "merge_commit": "951b6f7ffdd472e2ee053b9261a470e527e70c9c",
+          "implementation_pr": 51,
+          "merge_commit": "e929dd1b11d6ec49f9e06461df07d79007f9cf36",
           "evidence": [
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7208699800",
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7208842903",
@@ -481,7 +481,8 @@
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209024144",
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209178670",
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209317818",
-            "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209426682"
+            "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209426682",
+            "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7210402977"
           ],
           "default_branch_checks": "passed"
         },
@@ -4236,6 +4237,28 @@
       "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/64#issuecomment-7210161129",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7210215096",
       "remaining": "GitHub requires one approving review. Admitted Pi P1, independent runtime qualification, and scored benchmark comparison remain open."
+    },
+    {
+      "at": "2026-11-27T05:10:40+00:00",
+      "task": "knowledge-42",
+      "status": "arxiv_bibliographic_reviews_verified_on_main",
+      "repository": "pH34r-pH/knowledge",
+      "pull_request": 51,
+      "baseline_commit": "951b6f7ffdd472e2ee053b9261a470e527e70c9c",
+      "checked_head": "29ed273315b1bfa50f242a2888281d9ddd2bb70c",
+      "ci_checkout": "89fdff59433e7a22844be8c75c8c6e27fa35bb43",
+      "checked_tree": "2d648df7b114df4eba798b3346127a10888c7470",
+      "merge_commit": "e929dd1b11d6ec49f9e06461df07d79007f9cf36",
+      "pull_request_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45943911175",
+      "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45944023027",
+      "default_branch_governance": "https://github.com/pH34r-pH/knowledge/actions/runs/45944023103",
+      "fleet_consumed_freshness": "https://github.com/pH34r-pH/knowledge/actions/runs/45944023027/job/140324588922",
+      "registry_sha256": "b86131626d3a91c05d3f2b3308d8c5f0e185156b683f8039cee9d4c18062ca1a",
+      "readback_receipt_sha256": "d6e316c7a5d541fb522d41085e8788d395e4f9cabbd85298f988b8e3ab25670b",
+      "evidence": "Publisher Atom readback verified exact Work and revision matches for 59 cited sources. Their bibliographic index and search approvals run through December 27 UTC. All six PR checks and three main workflows passed on equal trees. PR and main reports agree apart from observation time. The exact report verifies 87 reviews and 94 active citation matches. Expiry replay identified the dependent articles, and the current Fleet verifier accepted the exact main revision.",
+      "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7210402977",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7210405181",
+      "remaining": "244 Works require use review, including seven cited arXiv Works with metadata or revision discrepancies. Wider citation formats and separate use decisions remain open."
     }
   ]
 }
