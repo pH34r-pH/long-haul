@@ -228,6 +228,20 @@ class LlamaServerAdapter:
         return prompt
 
     def execute(self, request: ExecutionRequest) -> ExecutionResult:
+        return self._execute(request, None, tokenize=True)
+
+    def execute_tokens(self, request: ExecutionRequest, token_ids: list[int]) -> ExecutionResult:
+        """Submit caller-owned IDs without tokenization, BOS insertion or templating.
+
+        The same owned profile, resource admission and response checks apply as
+        for ``execute``. The request prompt is retained caller context only;
+        ``observe`` retains the native response and its generated IDs. The owner
+        must retain the submitted IDs and reconcile cancellation of server work.
+        """
+        return self._execute(request, token_ids)
+
+    def _execute(self, request: ExecutionRequest, token_ids: list[int] | None,
+                 *, tokenize: bool = False) -> ExecutionResult:
         started = time.monotonic()
         runtime = self.identity()
         failure = None
@@ -238,7 +252,8 @@ class LlamaServerAdapter:
         try:
             context = _prepared_context(request)
             deadline = started + request.timeout_seconds
-            tokens = self.tokenize(request.prompt, deadline=deadline)
+            tokens = (self.tokenize(request.prompt, deadline=deadline)
+                      if tokenize else _tokens(token_ids))
             if not tokens or len(tokens) + request.max_tokens > context:
                 raise ValueError("native input plus output allowance exceeds context")
             reply = self._post('/completion', _completion_payload(request, tokens), deadline)

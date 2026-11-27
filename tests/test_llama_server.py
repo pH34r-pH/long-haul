@@ -241,3 +241,35 @@ def test_oversized_response_is_rejected_and_not_retained():
 def test_port_cannot_be_an_arbitrary_network_destination(port):
     with pytest.raises(ValueError):
         setup(port)
+
+
+def test_explicit_token_ids_bypass_tokenizer_and_template():
+    with server_fixture() as (port, calls):
+        adapter, req = setup(port)
+        submitted = [151644, 872, 198, 1]
+        result = adapter.execute_tokens(req, submitted)
+    assert result.success and result.timings.prompt_tokens == len(submitted)
+    assert [path for path, _ in calls] == ['/completion']
+    assert calls[0][1]['prompt'] == submitted
+    assert submitted == [151644, 872, 198, 1]
+
+
+@pytest.mark.parametrize('tokens', [None, [], [True], [-1], ['1'], [1] * 65])
+def test_invalid_explicit_tokens_make_no_native_request(tokens):
+    with server_fixture() as (port, calls):
+        adapter, req = setup(port)
+        result = adapter.execute_tokens(req, tokens)
+    assert not result.success and not calls
+    assert result.error_class is FailureClass.EXECUTION
+
+
+def test_explicit_token_path_keeps_profile_binding_and_native_accounting_checks():
+    with server_fixture(lambda path, reply: reply | {'tokens_evaluated': 99}) as (port, _):
+        adapter, req = setup(port)
+        result = adapter.execute_tokens(req, [1, 2, 3])
+    assert not result.success and result.error_class is FailureClass.EXECUTION
+    with server_fixture() as (port, calls):
+        adapter, req = setup(port)
+        req.profile.id = 'different-owned-profile'
+        assert not adapter.execute_tokens(req, [1, 2, 3]).success
+        assert not calls
