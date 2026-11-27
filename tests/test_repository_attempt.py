@@ -10,11 +10,13 @@ from repository_evaluator_fixture import (
     PROGRAM,
     README,
     contract,
+    evaluation_input_admission,
     git,
     profile,
     reference,
 )
 from test_repository_context import NOW, admission, selection
+from test_repository_evaluator import public_evidence_admission
 
 from long_haul.adapters.fixture_harness import FixtureCodingHarness
 from long_haul.adapters.harness_trace import (
@@ -308,12 +310,19 @@ def test_hermetic_repository_attempt_keeps_independent_sealed_result(
     assert retained.terminal == "settled" and retained.acceptance == "not_evaluated"
     assert [event.phase for event in events] == ["start", "end", "lifecycle"]
     sandbox = ArithmeticFixture(profile.environment)
-    packet, evaluation = RepositoryEvaluationRunner(sandbox).evaluate(
+    runner = RepositoryEvaluationRunner(sandbox)
+    attempt_id = retained.attempt.attempt_id
+    with pytest.raises(PermissionError, match="candidate input admission is required"):
+        runner.evaluate(work, snapshot, profile, attempt_id=attempt_id, packet_id="fixture-evaluation")
+    assert sandbox.outputs == []
+    input_admission = evaluation_input_admission(work, snapshot, profile, attempt_id)
+    packet, evaluation = runner.evaluate(
         work,
         snapshot,
         profile,
-        attempt_id=retained.attempt.attempt_id,
+        attempt_id=attempt_id,
         packet_id="fixture-evaluation",
+        candidate_admission=input_admission,
     )
     assert [
         check.state.value for check in packet.checks if check.classification == "PUBLIC"
@@ -324,7 +333,13 @@ def test_hermetic_repository_attempt_keeps_independent_sealed_result(
     history = EventStore(tmp_path / "events.jsonl")
     for event in events:
         history.append(event.event())
-    history.append(repository_evidence_event(packet))
+    history.append(repository_evidence_event(
+        packet,
+        contract=work,
+        candidate=snapshot.candidate,
+        profile=profile,
+        admission=public_evidence_admission(work, profile, packet),
+    ))
     restored = RepositoryEvidencePacketV1.model_validate(
         history.events()[-1].payload["repository_evidence"]
     )
