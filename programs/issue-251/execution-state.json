@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T01:12:06+00:00",
+    "updated_at": "2026-11-27T01:20:55+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -3715,6 +3715,25 @@
       "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/630#issuecomment-7207089187",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7207091366",
       "remaining": "Approved shared recovery location, protected publisher and authorized Azure restore evidence, physical pilot, and old-authority retirement."
+    },
+    {
+      "at": "2026-11-27T01:20:55+00:00",
+      "task": "jam-25",
+      "status": "paired_disposable_rsvp_and_retention_verified",
+      "repository": "pH34r-pH/jam-day",
+      "pull_request": 28,
+      "checked_head": "a8023309366e5417e281f94756d138a1bcc20d63",
+      "ci_checkout": "1cc072b77fbd4cb7e9f6b1d608fe863ff9b86132",
+      "merge_commit": "997f7d71d8a7d307bf1551d96e33dd7536c639f6",
+      "default_branch_ci": "https://github.com/pH34r-pH/jam-day/actions/runs/45921958005",
+      "default_branch_governance": "https://github.com/pH34r-pH/jam-day/actions/runs/45921958026",
+      "fleet_source": "520c8e62de7e740d4233fcffcf9e1f048218418f",
+      "rehearsal_file": "jam-day-rsvp-rehearsal.zip",
+      "rehearsal_sha256": "40294cad461badca5b73633a422d5b7a064065779cb1b82482f45c2713b3e3a7",
+      "evidence": "Checked and merged trees match. All five PR checks and all three main workflows passed. A confirmation-only time change failed the new assertion. Chrome and the actual Fleet handler with the pinned Azure Tables SDK and local Azurite passed signup, retry, duplicate suppression, schedule parity, synthetic organizer authorization, withdrawal, expiry, and hidden-then-cleared restored data. The run substituted fixture values for the production host, identity, deadlines, and data.",
+      "issue_evidence": "https://github.com/pH34r-pH/jam-day/issues/25#issuecomment-7207207478",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7207209951",
+      "remaining": "Organizer-selected retention dates, approved handling for any real copies, and protected production qualification. The Fleet repository and Jam Day production environment had neither retention variable name."
     }
   ]
 }
