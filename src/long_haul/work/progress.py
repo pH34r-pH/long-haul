@@ -74,6 +74,13 @@ class ProgressMonitor:
         self.state = ProgressState()
 
     def observe(self, step: AttemptStep) -> ProgressIntervention | None:
+        if step.progress is ProgressKind.VERIFICATION and step.outcome is StepOutcome.SUCCESS:
+            # A successful recheck clears the consecutive action streak without counting as a loop.
+            self.state.no_progress_steps = 0
+            self.state.last_signature = None
+            self.state.consecutive_count = 0
+            return None
+
         signature = stable_signature(step.action, step.arguments)
         recent = self.state.signatures[-self.policy.recent_window :]
         recent_count = recent.count(signature) + 1
@@ -85,9 +92,6 @@ class ProgressMonitor:
         self.state.consecutive_count = consecutive
 
         if step.progress in {ProgressKind.STATE_CHANGE, ProgressKind.RECOVERY}:
-            self.state.no_progress_steps = 0
-        elif step.progress is ProgressKind.VERIFICATION and step.outcome is StepOutcome.SUCCESS:
-            # Re-verification is legitimate evidence and should not be treated as an idle loop.
             self.state.no_progress_steps = 0
         else:
             self.state.no_progress_steps += 1

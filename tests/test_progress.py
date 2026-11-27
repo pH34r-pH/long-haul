@@ -50,11 +50,16 @@ def test_repeated_failure_pair_triggers_before_generic_loop():
 
 
 def test_legitimate_repeated_verification_does_not_trigger_or_accumulate_no_progress():
-    monitor = ProgressMonitor(ProgressPolicy(consecutive_limit=9, repeated_call_limit=2, max_no_progress_steps=2))
+    monitor = ProgressMonitor(ProgressPolicy(consecutive_limit=2, repeated_call_limit=2, max_no_progress_steps=2))
     verify = {"action": "pytest", "progress": ProgressKind.VERIFICATION, "outcome": StepOutcome.SUCCESS}
-    assert monitor.observe(step("1", **verify)) is None
-    assert monitor.observe(step("2", **verify)) is None
+    for step_id in ("1", "2", "3"):
+        assert monitor.observe(step(step_id, **verify)) is None
     assert monitor.state.no_progress_steps == 0
+    assert monitor.state.interventions == 0
+
+    failure = {**verify, "outcome": StepOutcome.FAILURE, "result": "validation-error"}
+    assert monitor.observe(step("4", **failure)) is None
+    assert monitor.observe(step("5", **failure)).reason == "repeated_failure_pair"
 
 
 def test_real_progress_resets_no_progress_budget():
