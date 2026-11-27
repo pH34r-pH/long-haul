@@ -1,0 +1,54 @@
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+@prefix lh: <https://ph34r.dev/ns/long-haul/> .
+@prefix odrl: <http://www.w3.org/ns/odrl/2/> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix spdx: <http://spdx.org/rdf/terms#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+lh:PublishedDatasetShape
+    a sh:NodeShape ;
+    sh:targetClass dcat:Dataset ;
+    sh:nodeKind sh:IRI ;
+    sh:property [
+        sh:path dct:conformsTo ;
+        sh:hasValue <https://www.w3.org/TR/2024/REC-vocab-dcat-3-20240822/>
+    ] ;
+    sh:property [ sh:path dcat:version ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path dcat:distribution ; sh:node lh:PublishedDistributionShape ; sh:minCount 1 ; sh:maxCount 1 ] .
+
+lh:PublishedDistributionShape
+    a sh:NodeShape ;
+    sh:targetClass dcat:Distribution ;
+    sh:nodeKind sh:IRI ;
+    sh:class dcat:Distribution ;
+    sh:property [ sh:path dct:title ; sh:datatype xsd:string ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path dct:issued ; sh:datatype xsd:dateTime ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [
+        sh:path dct:accessRights ;
+        sh:hasValue <http://publications.europa.eu/resource/authority/access-right/PUBLIC> ;
+        sh:maxCount 1
+    ] ;
+    sh:property [ sh:path dcat:downloadURL ; sh:nodeKind sh:IRI ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path dcat:mediaType ; sh:nodeKind sh:IRI ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path dcat:byteSize ; sh:datatype xsd:nonNegativeInteger ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path dct:references ; sh:nodeKind sh:IRI ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path dct:license ; sh:nodeKind sh:IRI ; sh:maxCount 1 ] ;
+    sh:property [ sh:path dct:rights ; sh:nodeKind sh:IRI ; sh:maxCount 1 ] ;
+    sh:property [ sh:path odrl:hasPolicy ; sh:nodeKind sh:IRI ; sh:maxCount 1 ] ;
+    sh:property [
+        sh:path spdx:checksum ;
+        sh:class spdx:Checksum ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node [
+            sh:property [ sh:path spdx:algorithm ; sh:hasValue spdx:checksumAlgorithm_sha256 ; sh:maxCount 1 ] ;
+            sh:property [
+                sh:path spdx:checksumValue ;
+                sh:datatype xsd:hexBinary ;
+                sh:pattern "^[0-9a-f]{64}$" ;
+                sh:minCount 1 ;
+                sh:maxCount 1
+            ]
+        ]
+    ] .
