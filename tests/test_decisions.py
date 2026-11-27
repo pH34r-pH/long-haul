@@ -46,7 +46,7 @@ def test_late_block_prevents_consent_and_resolved_block_allows_action_preserving
     with pytest.raises(ValueError, match="explicit rationale"):
         engine.record_final(rec_late_block, DecisionPosition(participant="B", position=Position.SUPPORT, rationale="  "))
 
-    # Initial safety BLOCK resolved via final SUPPORT with rationale allows consent while retaining initial BLOCK.
+    # A later rationale alone cannot discharge an initial safety BLOCK.
     rec_resolved = DecisionRecord(id="d-resolved", proposal="deploy", participants={"A", "B"})
     rec_resolved = engine.capture_initial(rec_resolved, DecisionPosition(participant="A", position=Position.SUPPORT))
     rec_resolved = engine.capture_initial(
@@ -59,10 +59,10 @@ def test_late_block_prevents_consent_and_resolved_block_allows_action_preserving
         rec_resolved,
         DecisionPosition(participant="B", position=Position.SUPPORT, rationale="guard verified in staging"),
     )
-    resolved = engine.resolve(rec_resolved, "consent", "proceed")
-    assert resolved.resolution == "consent"
-    assert any(p.participant == "B" and p.position is Position.BLOCK for p in resolved.initial_positions)
-    assert engine.effective_positions(resolved)["B"].position is Position.SUPPORT
+    with pytest.raises(ValueError, match="unresolved"):
+        engine.resolve(rec_resolved, "consent", "proceed")
+    assert any(p.participant == "B" and p.position is Position.BLOCK for p in rec_resolved.initial_positions)
+    assert rec_resolved.final_positions[0].position is Position.SUPPORT
 
 
 def test_duplicate_unknown_and_mutated_positions_fail_closed() -> None:

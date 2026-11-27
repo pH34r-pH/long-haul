@@ -36,7 +36,7 @@ from .integrity import (
 )
 
 EventType = Literal[
-    "observation", "self_report", "inference", "unknown", "request", "decision",
+    "observation", "self_report", "inference", "unknown", "request", "decision", "decision_lifecycle", "objection_lifecycle",
     "embodiment_change", "competence_update", "rupture", "repair",
     "resource_admitted", "resource_lease_renewed", "resource_disappeared",
     "work_contract_created", "work_attempt_started", "work_attempt_completed",
@@ -61,6 +61,16 @@ class Event(BaseModel):
     seq: int | None = None
     prev_hash: str | None = None
     event_hash: str | None = None
+
+
+def _validate_append_history(path: Path, existing: ReplayResult, event: Event) -> None:
+    if existing.diagnostics:
+        raise ReplayError(existing.diagnostics[0])
+    if existing.quarantined:
+        item = existing.quarantined[0]
+        raise ReplayError(ReplayDiagnostic(str(path), item.line, item.offset, item.reason))
+    if any(item.id == event.id for item in existing.events):
+        raise ValueError("duplicate event identity")
 
 
 def _classify_parsed_record(
@@ -131,6 +141,17 @@ class EventStore:
         return result, parsed_records
 
     def append(self, event: Event) -> Event:
+        return self._append(event, None)
+
+    def append_validated(self, event: Event, validate: Callable[[list[Event], Event], None]) -> Event:
+        """Validate under the writer lock; the caller must provide trusted policy.
+
+        This serializes cooperative writers but does not authenticate a validator
+        or prevent raw writes, file modification, or a caller-supplied no-op.
+        """
+        return self._append(event, validate)
+
+    def _append(self, event: Event, validate: Callable[[list[Event], Event], None] | None) -> Event:
         if event.schema_version != SUPPORTED_SCHEMA_VERSION:
             raise ReplayError(
                 ReplayDiagnostic(str(self.path), 0, 0, f"cannot append unsupported schema_version {event.schema_version}", event.id)
@@ -140,6 +161,8 @@ class EventStore:
             existing, parsed_records = self._scan_unlocked()
             if existing.incomplete_tail is not None:
                 raise ReplayError(existing.incomplete_tail)
+            if validate is not None:
+                _validate_append_history(self.path, existing, event)
             record = event.model_copy(deep=True)
             if self.chain_integrity:
                 if existing.checkpoint is not None:
@@ -162,6 +185,11 @@ class EventStore:
                     record.event_hash = None
                     dumped = json.loads(record.model_dump_json())
                     record.event_hash = compute_event_hash(dumped)
+            if validate is not None:
+                validated_bytes = record.model_dump_json()
+                validate(existing.events, record)
+                if record.model_dump_json() != validated_bytes:
+                    raise ValueError("validator mutated candidate event")
             serialized = record.model_dump_json() + "\n"
             try:
                 with self.path.open("a", encoding="utf-8", newline="\n") as out:
