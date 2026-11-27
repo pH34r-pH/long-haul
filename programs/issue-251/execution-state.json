@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T12:54:43+00:00",
+    "updated_at": "2026-11-27T13:03:13+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1288,6 +1288,25 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216310281",
             "evidence": "Ordinary CLI freeze validated all four reviewed inputs and published one complete manifest to an exclusive local destination. A concurrent synthetic run produced the same manifest on Windows and network-disabled Linux. Existing verification, contamination, and withdrawal commands consumed it. Both private CI runs passed.",
             "remaining": "The actual candidate needs owner-reviewed per-source rights and consent, current retention and withdrawal evidence, approved ancestry, and independent holdout and exposure review."
+          },
+          "chronological_partition_audit": {
+            "pull_request": 26,
+            "baseline_commit": "a821b1ec989b34e83b15532006ab8e463002494f",
+            "checked_head": "1f2a8f1a7a767d3c7bbcd7bec2a9d7a2f04ca732",
+            "checked_tree": "cd319cded511aa2944240026f0cd277d938cf427",
+            "merge_commit": "d72db76696913de7d33f59620c8be286d4910060",
+            "pull_request_ci": "https://github.com/pH34r-pH/tone/actions/runs/46003214162",
+            "default_branch_ci": "https://github.com/pH34r-pH/tone/actions/runs/46003410656",
+            "private_runner_routing_tests": 11,
+            "synthetic_corpus_tests": 27,
+            "exhaustive_pair_comparison_cases": 500,
+            "synthetic_linux_source_archive_sha256": "59e6cb5d0c66a18d3d288fee39d12f85983437992769b44f4f1a7cda0a829348",
+            "synthetic_linux_image_sha256": "a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704",
+            "private_ci_artifact_uploads": 0,
+            "scope": "Strict ordered train/development/test timestamps from pinned dataset rows, with UTC comparison and row-only findings in the optional version 2 audit receipt.",
+            "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7218987571",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7218990190",
+            "remaining": "An actual candidate needs owner-reviewed rights and retention, current withdrawal and holdout exposure evidence, and episode-level context and target checks under Tone #21."
           }
         },
         {
@@ -6011,6 +6030,19 @@
       "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7218811635",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7218814510",
       "remaining": "143 Work records still need review. The old Work's claim and evidence require review after supersession. Broader resource scopes remain tied to the qualified Compiler and Long-Haul policy contracts."
+    },
+    {
+      "at": "2026-11-27T13:03:13+00:00",
+      "task": "tone-18",
+      "status": "chronological_partition_audit_verified_on_main",
+      "repository": "pH34r-pH/tone",
+      "issue": 18,
+      "issue_state": "open",
+      "pull_request": 26,
+      "merge_commit": "d72db76696913de7d33f59620c8be286d4910060",
+      "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7218987571",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7218990190",
+      "remaining": "An actual candidate needs owner-reviewed rights and retention, current withdrawal and holdout exposure evidence, and episode-level context and target checks under Tone #21."
     }
   ]
 }
