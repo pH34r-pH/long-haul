@@ -100,7 +100,8 @@ class ArithmeticFixture:
             b"",
             0,
             DigestReference(
-                reference="urn:fixture:execution", digest=receipt.fingerprint
+                reference="urn:long-haul:sandbox:" + receipt.container_id,
+                digest=receipt.fingerprint,
             ),
             receipt,
         )
