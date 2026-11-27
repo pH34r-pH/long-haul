@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T11:30:35-08:00",
+    "updated_at": "2026-11-27T11:46:01-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1942,6 +1942,47 @@
             },
             "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7221901070",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221904348"
+          },
+          "audited_journal_and_proceedings_citation_reviews": {
+            "observed_at": "2026-11-27T11:46:01-08:00",
+            "status": "merged_and_main_verified",
+            "pull_request": "https://github.com/pH34r-pH/knowledge/pull/65",
+            "baseline_commit": "a5b97156cd687a3b1a63f4ec2a49b8e2689e6a97",
+            "checked_head": "211dd10a48215accf297fc61d5d64dbe8bc90716",
+            "hosted_pr_checkout": "5c81a1c86ce1b3ef6e15ddac08b118b22ab96344",
+            "checked_tree": "42bbd58f4dd5a08e2579ed36f3dc3d978a9cdb49",
+            "merge_commit": "92ee3bd521c8a3f6c5124954963816db3c2e6957",
+            "pr_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/46058564955",
+            "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/46058703282",
+            "report": "https://github.com/pH34r-pH/knowledge/actions/runs/46058703282/artifacts/15228051131",
+            "report_expires_at": "2026-12-11T19:44:10Z",
+            "report_sha256": "4c2ef3bd78b8e41beaccc7b3563e9e674d3c405c702d236876108996d8c91105",
+            "registry_sha256": "cc69b7e9207074bd5d703de8d04f1972954530baee7f16a45fba8019843a2e5c",
+            "offline_tests": 68,
+            "final_pr_checks": 6,
+            "main_workflows_passed": 3,
+            "verified_approved_metadata": 213,
+            "verified_pinned_arxiv_revisions": 35,
+            "works_requiring_review": 130,
+            "active_citation_identities": 106,
+            "new_reviews": [
+              "KWRK-000353",
+              "KWRK-000354",
+              "KWRK-000355",
+              "KWRK-000356"
+            ],
+            "scope": "Four publisher metadata approvals for bibliographic indexing and search. Three original audit digests matched exact source PDFs. Original registry rows retain their Git bytes. Expiry replay withheld the approvals and flagged the three active audited claim and evidence pairs.",
+            "fleet_local_intake": {
+              "fleet_commit": "80e13b63fbe27e94a15469e32c128765c88dda55",
+              "knowledge_run": 46058703282,
+              "knowledge_run_attempt": 1,
+              "freshness": "current",
+              "archive_sha256": "95b70050c084a55c9aac6541e39fbfa95544bc45aee590da1fda6549f4fb086c",
+              "receipt_sha256": "4ef5b1f4668a859add342441d567e4c29dbf1f58308d8e6e9a697022393e1e81",
+              "protected_archival": "earlier_intake_pending"
+            },
+            "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7226839201",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7226841831"
           }
         },
         {
@@ -7867,6 +7908,18 @@
       "merge_commit": "3dcfc187421550b8a275da18c6e592ca94b50f76",
       "issue_evidence": "https://github.com/pH34r-pH/the-personal-algorithm/issues/92#issuecomment-7226584765",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7226587358"
+    },
+    {
+      "at": "2026-11-27T11:46:01-08:00",
+      "task": "knowledge-42",
+      "status": "four_publisher_metadata_reviews_verified_on_main",
+      "repository": "pH34r-pH/knowledge",
+      "issue": 42,
+      "issue_state": "open",
+      "pull_request": 65,
+      "merge_commit": "92ee3bd521c8a3f6c5124954963816db3c2e6957",
+      "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7226839201",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7226841831"
     }
   ]
 }
