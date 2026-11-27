@@ -148,6 +148,21 @@ class DecisionPosition(BaseModel):
     participant: str; position: Position
     category: Literal["factual", "safety", "resource", "value", "jurisdiction", "preference", "other"] | None = None
     rationale: str | None = None; evidence: tuple[str, ...] = Field(default_factory=tuple)
+    objection_id: str | None = None
+    authority_scope: str | None = None
+    applicability_scope: str | None = None
+    applicability_revision: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def validate_objection_link(self) -> DecisionPosition:
+        if self.position is Position.BLOCK and (not self.rationale or not self.rationale.strip() or self.category in (None, "preference")):
+            raise ValueError("a block needs non-preference typed rationale")
+        if self.objection_id is not None and (
+            self.position not in (Position.OBJECT, Position.BLOCK) or self.category is None
+            or not self.authority_scope or not self.applicability_scope or self.applicability_revision is None
+        ):
+            raise ValueError("an objection link needs a position, category, authority and applicability")
+        return self
 
 class Decision(BaseModel):
     decision_id: str; proposal: str; positions: list[DecisionPosition] = Field(default_factory=list)
