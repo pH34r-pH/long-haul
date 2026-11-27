@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T09:47:31-08:00",
+    "updated_at": "2026-11-27T10:02:42-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -2477,7 +2477,66 @@
             "compiler-150"
           ],
           "external_gate": "protected_publication",
-          "acceptance": "One publication contract governs source, provenance, accessibility, performance, browser evidence, and promotion."
+          "acceptance": "One publication contract governs source, provenance, accessibility, performance, browser evidence, and promotion.",
+          "browser_capture_receipt": {
+            "status": "exact_candidate_browser_capture_verified_review_required",
+            "pull_request": 147,
+            "baseline_commit": "1d80e2a43372dfa3c767edb31b160c4ead62606f",
+            "checked_head": "c807e8f7c23aa9f34deaf3f51aef693c83a3d9d1",
+            "ci_checkout": "c7f17f1e84227573ca53d53a3c57f093f94527ae",
+            "checked_tree": "a407a9ea6bc6087e5f2a1e9f71979eee68591bb7",
+            "pr_workflows": {
+              "ux": "https://github.com/pH34r-pH/Portfolio/actions/runs/46046280580",
+              "structural_audit": "https://github.com/pH34r-pH/Portfolio/actions/runs/46046280520",
+              "governance": "https://github.com/pH34r-pH/Portfolio/actions/runs/46046280448"
+            },
+            "producer_candidate": {
+              "source_commit": "1d80e2a43372dfa3c767edb31b160c4ead62606f",
+              "main_qualification": "https://github.com/pH34r-pH/Portfolio/actions/runs/45957689226",
+              "artifact_id": 15189407108,
+              "artifact_zip_sha256": "1c4f7977d54df7727ce4a34794f8246fa431ea31e74196f0109645598cbddb18",
+              "whole_tree_sha256": "806cf3be28d970008988d66cacd502c6cd7064825e1de12f307e39dcd13ac256",
+              "publication_manifest_sha256": "2d989c035f5afbb9e828b735156737b0c6f32e87541fcf1b4618ea44c19548da",
+              "files": 1506,
+              "tree_readback": "Windows and offline Linux match the producer digest"
+            },
+            "capture": {
+              "route": "/research/",
+              "browser": "Chromium 140.0.7339.16",
+              "playwright": "1.55.0",
+              "browser_executable_sha256": "3c9e320785466d7c22e466aa398f90a13b297bae250994620c8170952869d6ef",
+              "viewports": [
+                [
+                  360,
+                  780
+                ],
+                [
+                  1366,
+                  768
+                ]
+              ],
+              "themes": [
+                "light",
+                "dark"
+              ],
+              "passed": 4,
+              "verified_file_count": 12,
+              "page_request_failures": 0,
+              "accessibility_audit_only_stylesheet_404_events": 4,
+              "receipt_sha256": "0cf30ede4d42eb32bd9e983806267ed22898b2c567d8cac664571b2a35a2f672",
+              "negative_missing_stylesheet_failed_captures": 4,
+              "negative_receipt_sha256": "7907013e715967abe6ce370365eda29c81f4c3a2aa19e0e4f01a0d4564c861cd"
+            },
+            "local_evidence": {
+              "directory": "portfolio-browser-evidence-1d80e2a",
+              "capture_manifest_sha256": "2cffdb9ab8c9dee86f6cc2ef29f9886fa5a5e02248e7c1740559a0adb39281e2",
+              "retained_candidate_archive_sha256": "d5fe7cfffbe4fabd6273049964a685593b78c7ff5692a83e0e861406bd226ae1"
+            },
+            "remaining": "Ordinary PR CI and required review, canonical publication contract across all surfaces, downstream multimodal admission, and protected publication.",
+            "issue_evidence": "https://github.com/pH34r-pH/Portfolio/issues/141#issuecomment-7225042907",
+            "multimodal_handoff": "https://github.com/pH34r-pH/long-haul/issues/247#issuecomment-7225045652",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225048061"
+          }
         },
         {
           "id": "book-5",
@@ -2740,6 +2799,15 @@
             "verified_receipt_sha256": "b92eeef2a7f5ba454e91ab7b3a202ce9a54e89eee56ad4454921fe4f621a6982",
             "scope": "Disposable API 36 emulator with exact app and instrumentation identities, staged permissions, offline runtime, test logs, paired dashboard image and UI hierarchy, and no observed app crash.",
             "evidence": "https://github.com/pH34r-pH/long-haul/issues/247#issuecomment-7224777390"
+          },
+          "portfolio_browser_evidence": {
+            "status": "producer_browser_candidate_evidence_verified",
+            "repository": "pH34r-pH/Portfolio",
+            "candidate_source_commit": "1d80e2a43372dfa3c767edb31b160c4ead62606f",
+            "capture_tool_checked_head": "c807e8f7c23aa9f34deaf3f51aef693c83a3d9d1",
+            "receipt_sha256": "0cf30ede4d42eb32bd9e983806267ed22898b2c567d8cac664571b2a35a2f672",
+            "scope": "Four local browser observations of the exact publication candidate with paired screenshots and ARIA trees, executable and runtime settings, keyboard and layout predicates, and separate page and audit diagnostics.",
+            "evidence": "https://github.com/pH34r-pH/long-haul/issues/247#issuecomment-7225045652"
           }
         },
         {
@@ -7422,6 +7490,18 @@
       "issue_evidence": "https://github.com/pH34r-pH/blue-swallow-wardriver/issues/548",
       "multimodal_handoff": "https://github.com/pH34r-pH/long-haul/issues/247#issuecomment-7224777390",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7224780217"
+    },
+    {
+      "at": "2026-11-27T10:02:42-08:00",
+      "task": "portfolio-141",
+      "status": "exact_candidate_browser_capture_verified_review_required",
+      "repository": "pH34r-pH/Portfolio",
+      "issue": 141,
+      "issue_state": "open",
+      "pull_request": 147,
+      "issue_evidence": "https://github.com/pH34r-pH/Portfolio/issues/141#issuecomment-7225042907",
+      "multimodal_handoff": "https://github.com/pH34r-pH/long-haul/issues/247#issuecomment-7225045652",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225048061"
     }
   ]
 }
