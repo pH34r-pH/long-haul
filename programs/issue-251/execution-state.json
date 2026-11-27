@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T06:03:40+00:00",
+    "updated_at": "2026-11-27T06:23:18+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -161,7 +161,7 @@
             "main_runtime_receipt_sha256": "4bc264ad666aad9b9a32f33a614bf81a588eed4b2a58f744f2193b7ad368ecf5",
             "provider": "synthetic_loopback_not_a_model",
             "model_competence": false,
-            "issue_244": "open_for_qualified_downstream_consumption"
+            "issue_244": "open_for_successful_reverification_fix_and_acceptance_reconciliation"
           },
           "checked_head": "dabdf17c447116fbca06464c23e696dd8f667ee4",
           "merge_commit": "6de4e4be835c92e5bdad35e284b81e9f51f92662",
@@ -170,13 +170,17 @@
             "pull_request": "https://github.com/pH34r-pH/experiment-compiler/pull/180",
             "merge_commit": "07832f26583205f76951642d12c334b81eb18ae1",
             "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/244#issuecomment-7209846067",
-            "remaining": "#118/#64 consumer qualification."
+            "remaining": "Synthetic #118/#64 consumer replay is verified. Successful re-verification repair and final #244 reconciliation await #324. Independent scored qualification remains with #118/#64."
           },
           "replay_consumer": {
             "pull_request": 317,
             "checked_head": "ca56fc7cdf1c79c9cb38983b954232fda1282ebb",
-            "status": "review_required",
-            "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/244#issuecomment-7209982974"
+            "status": "merged_and_qualified_on_combined_main",
+            "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/244#issuecomment-7209982974",
+            "merge_commit": "f9dabe8cb1f2cfef6777ed7b264d6dc63afc5d23",
+            "qualified_main": "4d5ae441869d9459ed597294b1090fc3f19141c1",
+            "default_branch_ci": "https://github.com/pH34r-pH/long-haul/actions/runs/45949905126",
+            "merged_evidence": "https://github.com/pH34r-pH/long-haul/issues/244#issuecomment-7211438371"
           }
         },
         {
@@ -217,7 +221,7 @@
           "id": "lh-64-pilot",
           "repository": "pH34r-pH/long-haul",
           "issue": 64,
-          "status": "queued",
+          "status": "in_progress",
           "depends_on": [
             "lh-243-evaluator",
             "lh-244-pi-trace",
@@ -235,26 +239,45 @@
           "replay_preparation": {
             "pull_request": 317,
             "checked_head": "ca56fc7cdf1c79c9cb38983b954232fda1282ebb",
-            "status": "review_required",
+            "status": "merged_and_qualified_on_combined_main",
             "checks": {
               "passed": 12,
               "skipped": 4,
               "url": "https://github.com/pH34r-pH/long-haul/pull/317/checks"
             },
             "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/64#issuecomment-7209975796",
-            "scope": "Offline replay of an exact retained fixture. P0 task/evaluator and P1 real Pi qualification remain open."
+            "scope": "Exact retained synthetic fixture replay. P1 real Pi qualification is tracked separately.",
+            "merge_commit": "f9dabe8cb1f2cfef6777ed7b264d6dc63afc5d23",
+            "qualified_main": "4d5ae441869d9459ed597294b1090fc3f19141c1",
+            "default_branch_ci": "https://github.com/pH34r-pH/long-haul/actions/runs/45949905126"
           },
           "hermetic_p0": {
             "pull_request": 318,
             "checked_head": "9b124e542951d35559827ed4036b6b1b7a73c57d",
-            "status": "review_required",
+            "status": "merged_and_qualified_on_combined_main",
             "checks": {
               "passed": 12,
               "skipped": 4,
               "url": "https://github.com/pH34r-pH/long-haul/pull/318/checks"
             },
             "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/64#issuecomment-7210161129",
-            "scope": "Linux frozen toy task, scripted harness, independent synthetic sealed evaluation, retained readback, and Compiler integration."
+            "scope": "Linux frozen toy task, scripted harness, independent synthetic sealed evaluation, retained readback, and Compiler integration.",
+            "merge_commit": "4d5ae441869d9459ed597294b1090fc3f19141c1",
+            "default_branch_ci": "https://github.com/pH34r-pH/long-haul/actions/runs/45949905126",
+            "merged_evidence": "https://github.com/pH34r-pH/long-haul/issues/64#issuecomment-7211438065"
+          },
+          "successful_reverification_pr": {
+            "pull_request": 324,
+            "checked_head": "8b3132a17be17bbfc18cfbc4fb0603b317528421",
+            "ci_checkout": "81a775d7cd512df2be808be17b4c0bc2475b954e",
+            "tree": "bdc82469a74832003e6c7b0c8bbfeaa185abbdd3",
+            "status": "checks_passed_review_required",
+            "checks": {
+              "passed": 12,
+              "skipped": 4,
+              "checks_url": "https://github.com/pH34r-pH/long-haul/pull/324/checks"
+            },
+            "evidence": "https://github.com/pH34r-pH/long-haul/issues/244#issuecomment-7211438371"
           }
         },
         {
@@ -447,13 +470,17 @@
           "current_pr": {
             "pull_request": 316,
             "head": "741e16af6ca9d0bdac1edea5a164733a0342b190",
-            "status": "review_required",
+            "status": "merged_and_qualified_on_combined_main",
             "evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7209642137",
             "checks": {
               "passed": 12,
               "skipped": 4,
               "checks_url": "https://github.com/pH34r-pH/long-haul/pull/316/checks"
-            }
+            },
+            "merge_commit": "7211a93be3f50310fcf7d70519077c914d7a2bc2",
+            "qualified_main": "4d5ae441869d9459ed597294b1090fc3f19141c1",
+            "default_branch_ci": "https://github.com/pH34r-pH/long-haul/actions/runs/45949905126",
+            "merged_evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7211437807"
           },
           "croissant_pr": {
             "pull_request": 321,
@@ -476,6 +503,19 @@
               "skipped": 4,
               "checks_url": "https://github.com/pH34r-pH/long-haul/pull/322/checks"
             }
+          },
+          "native_odrl_pr": {
+            "pull_request": 323,
+            "head": "4ec058a8ab648a57d55696701fc5ae7622758bb1",
+            "ci_checkout": "d42aa1d59e912ad82b327cf5cad43d60a5faa15b",
+            "tree": "c8126fdace46786acfbe5afcfcfb112eec0f9f6c",
+            "status": "checks_passed_review_required",
+            "checks": {
+              "passed": 12,
+              "skipped": 4,
+              "checks_url": "https://github.com/pH34r-pH/long-haul/pull/323/checks"
+            },
+            "evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7211437807"
           }
         },
         {
@@ -4400,6 +4440,66 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7211173320",
       "evidence": "Independently checked all 150 previously unreviewed arXiv Works and added 78 reviews with exact publisher revision and bibliographic metadata. Four previously pending cited Works now have a reviewed publisher version. The exact branch passed 55 tests. PR and main receipts agree on 165 current approvals and 94 citation identifiers with one active Work each. Expiry replay withheld all approvals and reported the affected articles. Fleet accepted this exact main revision.",
       "remaining": "166 Works require use review. Of these, 72 registered arXiv Works have metadata or revision discrepancies, including three cited Works. Other source types and use decisions remain pending."
+    },
+    {
+      "at": "2026-11-27T06:23:18+00:00",
+      "task": "lh-64-pilot",
+      "status": "phase_1_merges_verified_on_combined_main",
+      "repository": "pH34r-pH/long-haul",
+      "merge_commits": {
+        "316": "7211a93be3f50310fcf7d70519077c914d7a2bc2",
+        "317": "f9dabe8cb1f2cfef6777ed7b264d6dc63afc5d23",
+        "318": "4d5ae441869d9459ed597294b1090fc3f19141c1"
+      },
+      "checked_tree": "3130fe2e0facf902b39aca0dca9c14208cbabb14",
+      "default_branch_ci": "https://github.com/pH34r-pH/long-haul/actions/runs/45949905126",
+      "default_branch_pi": "https://github.com/pH34r-pH/long-haul/actions/runs/45949905154",
+      "default_branch_evaluator": "https://github.com/pH34r-pH/long-haul/actions/runs/45949905196",
+      "local_synthetic_replay_result": "sha256:3d3ad647c82cf3f62b554ecd476a4655c44acdbd4cdd90d0a3150927049bfe56",
+      "local_synthetic_replay_trace": "sha256:bffe95026b8713295b70c4872cbd53293b2ad51205c413b1c8b304666fd44795",
+      "issue_evidence": [
+        "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7211437807",
+        "https://github.com/pH34r-pH/long-haul/issues/244#issuecomment-7211438371",
+        "https://github.com/pH34r-pH/long-haul/issues/64#issuecomment-7211438065"
+      ],
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7211468360",
+      "evidence": "All six push workflows passed on combined main, following canceled intermediate CI runs. Each Python target had 608 passed and 43 skipped, and native CPU parity passed. The pinned Pi run used a synthetic provider. Fresh CLI replay retained all three failures and located alternate-policy hypothetical termination at event four.",
+      "remaining": "Admitted P1 real Pi task after the #245 worker-security prerequisite, independently scored comparisons, and controlled corpus qualification."
+    },
+    {
+      "at": "2026-11-27T06:23:18+00:00",
+      "task": "lh-248-interchange",
+      "status": "native_odrl_checks_passed_review_required",
+      "repository": "pH34r-pH/long-haul",
+      "baseline_commit": "4d5ae441869d9459ed597294b1090fc3f19141c1",
+      "checked_head": "4ec058a8ab648a57d55696701fc5ae7622758bb1",
+      "ci_checkout": "d42aa1d59e912ad82b327cf5cad43d60a5faa15b",
+      "checked_tree": "c8126fdace46786acfbe5afcfcfb112eec0f9f6c",
+      "pull_request": 323,
+      "archive_sha256": "56ecc137f3986757c5c1b4a80271b4c6d260057ac60e60d4f0bb20822d48ea24",
+      "odrl_metadata_sha256": "a862d6798f1a58b785be16226c69151772986a31d5228d65152f46b44ec2c427",
+      "pull_request_ci": "https://github.com/pH34r-pH/long-haul/actions/runs/45950387213",
+      "structural_checks": "https://github.com/pH34r-pH/long-haul/actions/runs/45950387365",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/248#issuecomment-7211437807",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7211468360",
+      "evidence": "Exact Linux source passed Ruff and 614 tests with 43 skips. RDFLib and pySHACL validated the 432-triple fixture offline and rejected missing or mismatched admitted-policy guards. All 12 applicable hosted checks passed.",
+      "remaining": "Approval for #321, #322 and #323, independent ODRL enforcement of authenticated runtime context, and governed corpus qualification."
+    },
+    {
+      "at": "2026-11-27T06:23:18+00:00",
+      "task": "lh-244-pi-trace",
+      "status": "successful_reverification_repair_checks_passed_review_required",
+      "repository": "pH34r-pH/long-haul",
+      "baseline_commit": "4d5ae441869d9459ed597294b1090fc3f19141c1",
+      "checked_head": "8b3132a17be17bbfc18cfbc4fb0603b317528421",
+      "ci_checkout": "81a775d7cd512df2be808be17b4c0bc2475b954e",
+      "checked_tree": "bdc82469a74832003e6c7b0c8bbfeaa185abbdd3",
+      "pull_request": 324,
+      "pull_request_ci": "https://github.com/pH34r-pH/long-haul/actions/runs/45950804806",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/244#issuecomment-7211438371",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7211468360",
+      "evidence": "Combined main reproduced a consecutive-action warning after two successful checks. The repair retains repeated failure signals. It passed 61 focused tests, all 12 applicable hosted checks, and 608 tests with 43 skips on each hosted Python target.",
+      "remaining": "Required review and merge of #324, then final #244 acceptance reconciliation."
     }
   ]
 }
