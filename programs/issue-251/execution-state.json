@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T06:25:48-08:00",
+    "updated_at": "2026-11-27T06:37:12-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1528,6 +1528,56 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7220107212",
             "evidence": "Five append-only Work replacements use the publisher publication date and exact citation. Nine approved metadata reviews pin the exact displayed publication and PDF digest without retaining the downloaded PDFs. The original reviewed bytes carry the unchanged UAI proposition, excerpt and independent audit forward. All old rows are byte-identical and expiry replay follows the corrected claim and evidence.",
             "remaining": "134 Works, including two PMLR records whose display names omit printed initials, still require review. Broader use scopes depend on the Compiler and Long-Haul contracts."
+          },
+          "acl_anthology_citation_impact": {
+            "observed_at": "2026-11-27T06:37:12-08:00",
+            "pull_request": "https://github.com/pH34r-pH/knowledge/pull/63",
+            "baseline_commit": "b9a756c2987a1291a1d523e27eee75150be98339",
+            "checked_head": "47f3399e05201b5f8ad8ee8270a0c7cb57558c5f",
+            "checked_tree": "8b789a5d8f6999ea9620fc7ddb741bf12fe38082",
+            "merge_commit": "d369d69137b899499bae3c3a56bb67ae7f39504b",
+            "pull_request_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/46016802514/attempts/2",
+            "first_pr_attempt": {
+              "run": "https://github.com/pH34r-pH/knowledge/actions/runs/46016802514/attempts/1",
+              "finding": "One existing arXiv Atom batch was unavailable. The freshness gate withheld 64 existing metadata reviews, while both new Anthology records verified. A fresh read returned all 64 entries and the second hosted attempt confirmed freshness."
+            },
+            "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/46017222225",
+            "default_branch_governance": "https://github.com/pH34r-pH/knowledge/actions/runs/46017222268",
+            "default_branch_documentation": "https://github.com/pH34r-pH/knowledge/actions/runs/46017222171",
+            "report": "https://github.com/pH34r-pH/knowledge/actions/runs/46017222225/artifacts/15205674925",
+            "report_expires_at": "2026-12-11T14:35:26Z",
+            "report_sha256": "99440ef7114c3c18b9f8e5762b7932744ea7fb727e4e5036ffdbe4c558c04bd0",
+            "registry_sha256": "28f7f071cb86effecc372165ebc70c0719fb68287a6e578f8be0e6d921f9ac23",
+            "newly_reviewed_works": [
+              "KWRK-000351",
+              "KWRK-000352"
+            ],
+            "new_reviews_expire_on": "2026-12-27",
+            "expiry_replay": {
+              "as_of": "2026-12-28",
+              "report_sha256": "f03b2450d66eb98bd78b0c642b25517cb52ad12bd765a986c86251a129a889cc",
+              "documents_for_review": [
+                "corpus/ml-techniques/rag-retrieval-architectures.md",
+                "corpus/ml-techniques/reasoning-models.md"
+              ],
+              "result": "Both metadata permissions were withheld and both citing articles were flagged."
+            },
+            "offline_tests": 65,
+            "final_pr_checks": 6,
+            "verified_approved_metadata": 209,
+            "works_requiring_review": 134,
+            "active_citation_identities": 106,
+            "verified_pinned_arxiv_revisions": 35,
+            "fleet_local_intake": {
+              "fleet_commit": "d0a49b0cee19a97eb3dfbab348fa49bd5925c34f",
+              "knowledge_run": 46017222225,
+              "knowledge_run_attempt": 1,
+              "freshness": "current",
+              "receipt_sha256": "b8d842427b77d5d4e05c57c4f28a7d8768c570ad848da8030911b8698e95b3b8",
+              "protected_archival": "earlier_intake_pending"
+            },
+            "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7220993321",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221000462"
           }
         },
         {
@@ -6487,6 +6537,19 @@
       "archive_job_state": "queued",
       "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7220759197",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7220762300"
+    },
+    {
+      "at": "2026-11-27T06:37:12-08:00",
+      "task": "knowledge-42",
+      "status": "acl_anthology_citation_impact_verified_on_main",
+      "repository": "pH34r-pH/knowledge",
+      "issue": 42,
+      "issue_state": "open",
+      "merge_commit": "d369d69137b899499bae3c3a56bb67ae7f39504b",
+      "verified_approved_metadata": 209,
+      "active_citation_identities": 106,
+      "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7220993321",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221000462"
     }
   ]
 }
