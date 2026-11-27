@@ -7,7 +7,7 @@ import math
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .ephemeral import ResourceLease, VesselLifecycle
 
@@ -144,9 +144,10 @@ class Claim(BaseModel):
     content: str; confidence: float | None = Field(default=None, ge=0, le=1); evidence: list[str] = Field(default_factory=list)
 
 class DecisionPosition(BaseModel):
+    model_config = ConfigDict(frozen=True, revalidate_instances="always")
     participant: str; position: Position
     category: Literal["factual", "safety", "resource", "value", "jurisdiction", "preference", "other"] | None = None
-    rationale: str | None = None; evidence: list[str] = Field(default_factory=list)
+    rationale: str | None = None; evidence: tuple[str, ...] = Field(default_factory=tuple)
 
 class Decision(BaseModel):
     decision_id: str; proposal: str; positions: list[DecisionPosition] = Field(default_factory=list)

@@ -1,3 +1,3 @@
-from .engine import DecisionEngine, DecisionRecord
+from .engine import DecisionEngine, DecisionRecord, replay_decisions
 
-__all__ = ["DecisionEngine", "DecisionRecord"]
+__all__ = ["DecisionEngine", "DecisionRecord", "replay_decisions"]

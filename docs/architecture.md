@@ -66,6 +66,19 @@ The MVP experiment compares this two-role consent/dissent architecture against s
 8. Record outcome, performance, calibration, dissent, and repair data.
 9. Update competence/trust statistics from observed results rather than rhetoric.
 
+### Decision snapshot boundary
+
+The decision prototype returns a new immutable snapshot from each capture,
+final-position update, and resolution; callers must retain that returned value.
+Positions and their evidence collections are immutable as well. A local
+snapshot or resolution event does not prove independent input contexts or an
+authorized objection disposition. The standalone consequential-dispatch helper
+therefore refuses execution until the event-backed lifecycle and actual runtime
+authorization are integrated. Direct access to a snapshot is not an isolation
+boundary, and an unchecked model copy is not trusted authorization evidence.
+The prototype does not accept early-capture exceptions until those exceptions
+have an authenticated, bounded and replayable authority path.
+
 ## Work-contract boundary
 
 Long Haul owns task objective, scope, authority, budgets, success/failure predicates, provenance, and final disposition. A coding harness such as Pi is an execution adapter: it may render model-specific guidance and recover from provider-specific failures, but it does not redefine contract success. Work-contract events link creation, attempts, evidence, and disposition so later checkpointing and independent evaluation can reconstruct the history.
