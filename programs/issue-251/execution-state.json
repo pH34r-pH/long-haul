@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T10:39:02+00:00",
+    "updated_at": "2026-11-27T10:48:01+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1020,6 +1020,24 @@
             "pull_request_ci": "https://github.com/pH34r-pH/tone/actions/runs/45957417759",
             "default_branch_ci": "https://github.com/pH34r-pH/tone/actions/runs/45957564347/job/140367477107",
             "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7212369940"
+          },
+          "reviewed_release_manifest_freeze": {
+            "pull_request": 25,
+            "baseline_commit": "e3b7ee27134d3f0b3ebd2a2fd6cf756e0a802ec5",
+            "checked_head": "f1afbec5a045d5fe46bb01cef709561d622a11bd",
+            "ci_checkout": "5d2d01cd4adde38cbb4cc93f050ed2a6ef57476e",
+            "checked_tree": "b2ca83690e9121e10fa1bbf95af623db7ef7d291",
+            "merge_commit": "a821b1ec989b34e83b15532006ab8e463002494f",
+            "pull_request_ci": "https://github.com/pH34r-pH/tone/actions/runs/45984708253",
+            "default_branch_ci": "https://github.com/pH34r-pH/tone/actions/runs/45984873653",
+            "main_scoped_source_sha256": "fc126fdf6d47db88e9572157409ee2ecd36c112c3531070f95d583c75f674f92",
+            "synthetic_manifest_sha256": "d372cf76ec9cd23a6e82d9d710f73dc0ee418b8c17b6e99137baa6bdd0af1548",
+            "corpus_fixture_tests": 23,
+            "runner_routing_tests": 11,
+            "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7216309891",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216310281",
+            "evidence": "Ordinary CLI freeze validated all four reviewed inputs and published one complete manifest to an exclusive local destination. A concurrent synthetic run produced the same manifest on Windows and network-disabled Linux. Existing verification, contamination, and withdrawal commands consumed it. Both private CI runs passed.",
+            "remaining": "The actual candidate needs owner-reviewed per-source rights and consent, current retention and withdrawal evidence, approved ancestry, and independent holdout and exposure review."
           }
         },
         {
@@ -5493,6 +5511,19 @@
       "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/166#issuecomment-7216123615",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216130297",
       "remaining": "Governed corpus admission, guarded evaluator disclosure, and protected publication verification remain under Compiler #150."
+    },
+    {
+      "at": "2026-11-27T10:48:01+00:00",
+      "task": "tone-18",
+      "status": "reviewed_release_manifest_freeze_verified_on_main",
+      "repository": "pH34r-pH/tone",
+      "issue": 18,
+      "issue_state": "open",
+      "pull_request": 25,
+      "merge_commit": "a821b1ec989b34e83b15532006ab8e463002494f",
+      "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7216309891",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216310281",
+      "remaining": "The actual candidate needs owner-reviewed per-source rights and consent, current retention and withdrawal evidence, approved ancestry, and independent holdout and exposure review."
     }
   ]
 }
