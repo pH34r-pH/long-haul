@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T06:50:33-08:00",
+    "updated_at": "2026-11-27T07:00:08-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1044,6 +1044,40 @@
             "scope": "Read-only archive CI protects existing Git file identity and mode in materialized directories. New versions remain addable. A dated verification receipt may be added and described in its archive overview. CODEOWNERS lists the repository owner for the experiment tree.",
             "issue_evidence": "https://github.com/pH34r-pH/compiled-experiments/issues/9#issuecomment-7221283609",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221286312"
+          },
+          "parameterized_archive_materialization": {
+            "observed_at": "2026-11-27T07:00:08-08:00",
+            "status": "ci_passed_review_required",
+            "issue": "https://github.com/pH34r-pH/compiled-experiments/issues/10",
+            "pull_request": "https://github.com/pH34r-pH/compiled-experiments/pull/14",
+            "baseline_commit": "9815b62ba7fddb28caf4fc1d33abe885d5b686cd",
+            "checked_head": "06c4e2553b681355651af889a7958bd5ed07994c",
+            "ci_checkout": "bc5bd81ec99bdc57881700012c43d64ec00e475e",
+            "checked_tree": "78d074d3318c6b1ac12f342c4feb74a01f89e92c",
+            "compiler_commit": "6c944e4555e356d11ef85b5444f84d11c1f8ca13",
+            "source_archive_sha256": "094da22be3917e1d73b94933ee8b158a6ba2ab7b7d84b798d7a514dc680426ae",
+            "offline_tests": 16,
+            "hosted_checks": 2,
+            "archive_verification_run": "https://github.com/pH34r-pH/compiled-experiments/actions/runs/46020747193",
+            "governance_run": "https://github.com/pH34r-pH/compiled-experiments/actions/runs/46020747207",
+            "combined_checks": {
+              "11": {
+                "tree": "10b03ed1e49fd3c205c4f8d0684a2170fb7f756e",
+                "passed": 19
+              },
+              "12": {
+                "tree": "306bdf024fd626d750731007832a6ad127e62473",
+                "passed": 22
+              },
+              "13": {
+                "tree": "8774e4a87898f1838d965e5a2d25ddb75a55e7c5",
+                "passed": 22
+              }
+            },
+            "scope": "Owner-dispatched archive metadata staging binds a reviewed package and existing replay receipt, verifies package integrity with the pinned Compiler, and pushes five generated files to a run-specific staging branch. The normal CLI and exact push shell passed on a synthetic finalized package and disposable remote.",
+            "remaining": "Required review and merge, followed by owner dispatch when a real reviewed candidate is staged. Archive publication remains a separate owner action.",
+            "issue_evidence": "https://github.com/pH34r-pH/compiled-experiments/issues/10#issuecomment-7221486127",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221488850"
           }
         }
       ]
@@ -6623,6 +6657,17 @@
       "checked_head": "754aadfb209fbf22dfe6becdcf0c0f8f99f86204",
       "issue_evidence": "https://github.com/pH34r-pH/compiled-experiments/issues/9#issuecomment-7221283609",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221286312"
+    },
+    {
+      "at": "2026-11-27T07:00:08-08:00",
+      "task": "compiled-7",
+      "status": "archive_materialization_ci_passed_review_required",
+      "repository": "pH34r-pH/compiled-experiments",
+      "issue": 10,
+      "issue_state": "open",
+      "checked_head": "06c4e2553b681355651af889a7958bd5ed07994c",
+      "issue_evidence": "https://github.com/pH34r-pH/compiled-experiments/issues/10#issuecomment-7221486127",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221488850"
     }
   ]
 }
