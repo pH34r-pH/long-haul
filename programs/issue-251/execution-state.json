@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T10:14:28-08:00",
+    "updated_at": "2026-11-27T10:22:24-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -2078,6 +2078,27 @@
             "remaining": "Real pilot briefs and drafts require owner admission, current rights and retention decisions, reviewed state annotations, an independently frozen pilot packet, and controlled comparison and author evaluation.",
             "issue_evidence": "https://github.com/pH34r-pH/tone/issues/21#issuecomment-7225268153",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225270613"
+          },
+          "historical_context_withdrawal": {
+            "observed_at": "2026-11-27T10:22:24-08:00",
+            "status": "merged_and_verified_with_synthetic_sources",
+            "related_issue": "https://github.com/pH34r-pH/tone/issues/21",
+            "pull_request": "https://github.com/pH34r-pH/tone/pull/30",
+            "base_commit": "f9d5954e771c6a547238c811a3c3957de5ca5475",
+            "verified_head": "59aa062a142ee6a6efed1f28e48844ae7eaf8728",
+            "ci_checkout": "6f17079157efa7776b29e74ab8e632ba78bcf046",
+            "verified_tree": "0b392dea11df4074f4e1742c3ff9fd4b0cc7da65",
+            "merge_commit": "32b92d406621837f05e6763fe4271c7fee6d1727",
+            "pull_request_ci": "https://github.com/pH34r-pH/tone/actions/runs/46048551524",
+            "default_branch_ci": "https://github.com/pH34r-pH/tone/actions/runs/46048726894",
+            "default_branch_ci_attempt": 1,
+            "synthetic_corpus_tests": 57,
+            "private_runner_routing_tests": 11,
+            "private_ci_artifact_uploads": 0,
+            "scope": "Version 2 checks the inventoried historical episode packet's exact bytes and release parent. The end-to-end synthetic fixture built a prediction view, withdrew an external context source and blocked the packet and derived view by digest. A retention deadline, missing coverage, changed packet bytes and an incorrect parent also triggered the expected outcomes.",
+            "remaining": "Owner-approved real source and retention decisions, complete private inventory, verified retirement or deletion receipts, and lineage for separately supplied editing inputs, annotations and feedback.",
+            "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7225410891",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225413230"
           }
         },
         {
@@ -7538,6 +7559,19 @@
       "merge_commit": "f9d5954e771c6a547238c811a3c3957de5ca5475",
       "issue_evidence": "https://github.com/pH34r-pH/tone/issues/21#issuecomment-7225268153",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225270613"
+    },
+    {
+      "at": "2026-11-27T10:22:24-08:00",
+      "task": "tone-18",
+      "status": "historical_context_withdrawal_verified_on_main",
+      "repository": "pH34r-pH/tone",
+      "issue": 18,
+      "issue_state": "open",
+      "related_issue": 21,
+      "pull_request": 30,
+      "merge_commit": "32b92d406621837f05e6763fe4271c7fee6d1727",
+      "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7225410891",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225413230"
     }
   ]
 }
