@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T05:10:40+00:00",
+    "updated_at": "2026-11-27T05:16:06+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -21,12 +21,7 @@
       {
         "repository": "pH34r-pH/long-haul-fleet",
         "task": "fleet-1612",
-        "state": "reconciled_waiting_for_dependency_and_runner"
-      },
-      {
-        "repository": "pH34r-pH/book-development",
-        "task": "book-5",
-        "state": "source_and_local_evidence_approved_governance_queued"
+        "state": "source_ci_verified_waiting_for_platform_dependency"
       }
     ]
   },
@@ -332,7 +327,7 @@
           ],
           "acceptance": "Reusable privileged workflows and common candidate, deployment, probe, rollback, revocation, and cleanup receipts are implemented.",
           "execution_prerequisites": {
-            "ci_status": "blocked_unassigned_x64_runner",
+            "ci_status": "current_source_checks_pass",
             "baseline_commit": "b175250083f41c2bd39f2f2600b60986ba7ffed1",
             "preserve_policy": "Private CI remains on admitted Fleet-managed self-hosted workers; no hosted fallback",
             "known_checks": "Kestrel ARM64 smoke and hosted governance passed; x64 source jobs queued",
@@ -365,6 +360,14 @@
               "task_comparison_manifest_sha256": "a0fd83025d3c204b586d15705e7793572398e06e0c99ca0935b5e21fc0442df4",
               "task_comparison_bundle_sha256": "57f12487e284481f0288a3b68e4dd0f7d9cf3699d541f5478f1d2937eabdf78c",
               "recovery_owner": "https://github.com/pH34r-pH/long-haul-fleet/issues/1533#issuecomment-6805162809"
+            },
+            "current_default_branch_ci": {
+              "head": "18a97e1090927a2b853a23fa2f0422f89415d762",
+              "workflows_passed": 6,
+              "ci": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45942628693",
+              "docs": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45942628710",
+              "x64_source_runner": "assigned_and_passed",
+              "arm64_smoke": "passed"
             }
           }
         },
@@ -629,7 +632,7 @@
           "id": "book-5",
           "repository": "pH34r-pH/book-development",
           "issue": 5,
-          "status": "in_progress",
+          "status": "completed",
           "depends_on": [
             "specified-13"
           ],
@@ -641,9 +644,9 @@
             "safe_work": "local_fixture_validation_repeat_builds_and_visual_qualification"
           },
           "implementation_pr": 6,
-          "checked_head": "9d71ce9b8e2686cbe5e46db1c3e8590784f3ba54",
+          "checked_head": "0cee94c466c926fac2fcff8bc49ccb781363ad0e",
           "qualification": {
-            "status": "local_qualified_existing_governance_startup_failure",
+            "status": "local_and_exact_main_verified",
             "candidate_sha256": "707c751fa8d73938894e1c0a46961222cc72e871c492d3a45fc9fbf60374976f",
             "publication_tests_passed": 18,
             "offline_tests_passed": 16,
@@ -653,12 +656,19 @@
               "pdf",
               "epub"
             ],
-            "governance_run": 43096302292,
             "actual_browser_layout": "unavailable_alternate_engine_content_inspected",
             "publication_authorized": false,
-            "governance_updated_at": "2026-11-27T03:01:26Z",
-            "governance_job_count": 0
-          }
+            "historical_governance_failure_run": 43096302292,
+            "governance_run": 45942131345,
+            "checked_tree": "7920950f71bd12ceb961263c4bcb10852978f1ce",
+            "qualification_sha256": "428cb527f5876176fcd3e07c7c1cd37582d19db61499a9107b5d55f649990d31"
+          },
+          "merge_commit": "05286d6d17fe46a26cc34232d6aa3322bf9387d6",
+          "default_branch_checks": "passed",
+          "closed_at": "2026-11-27T04:49:06Z",
+          "evidence": [
+            "https://github.com/pH34r-pH/book-development/issues/5#issuecomment-7210478575"
+          ]
         },
         {
           "id": "socials-19",
@@ -4259,6 +4269,37 @@
       "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7210402977",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7210405181",
       "remaining": "244 Works require use review, including seven cited arXiv Works with metadata or revision discrepancies. Wider citation formats and separate use decisions remain open."
+    },
+    {
+      "at": "2026-11-27T05:16:06+00:00",
+      "task": "book-5",
+      "status": "local_publication_contract_completed",
+      "repository": "pH34r-pH/book-development",
+      "pull_request": 6,
+      "checked_head": "0cee94c466c926fac2fcff8bc49ccb781363ad0e",
+      "ci_checkout": "859328072a16632d2daf7856136ff884acee1580",
+      "checked_tree": "7920950f71bd12ceb961263c4bcb10852978f1ce",
+      "merge_commit": "05286d6d17fe46a26cc34232d6aa3322bf9387d6",
+      "pull_request_ci": "https://github.com/pH34r-pH/book-development/actions/runs/45942032684/job/140318273383",
+      "default_branch_governance": "https://github.com/pH34r-pH/book-development/actions/runs/45942131345",
+      "qualification_sha256": "428cb527f5876176fcd3e07c7c1cd37582d19db61499a9107b5d55f649990d31",
+      "evidence": "Exact merged Linux source passed 18 publication tests and 16 offline provenance tests. Verified 17 retained evidence and 8 builder hashes. Recorded real-tool HTML, DOCX, PDF and EPUB fixture rebuilds agree byte for byte. The eventual CI runner qualified the exact new tree.",
+      "issue_evidence": "https://github.com/pH34r-pH/book-development/issues/5#issuecomment-7210478575",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7210481816",
+      "remaining_external_gate": "Author review and approval for a future manuscript. The existing evidence does not verify browser layout. The fixture grants no submission authority."
+    },
+    {
+      "at": "2026-11-27T05:16:06+00:00",
+      "task": "fleet-1612",
+      "status": "exact_main_x64_source_ci_verified",
+      "repository": "pH34r-pH/long-haul-fleet",
+      "checked_default_branch_head": "18a97e1090927a2b853a23fa2f0422f89415d762",
+      "default_branch_ci": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45942628693",
+      "default_branch_docs": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/45942628710",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7210478813",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7210481816",
+      "evidence": "Self-hosted x64 scope reconciliation, repo smoke, and documentation completed. ARM64 smoke and all six push workflows passed.",
+      "remaining": "Long-Haul #245 platform dependency, common receipt/workflow implementation, and live surface qualification remain open."
     }
   ]
 }
