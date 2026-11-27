@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T03:51:19+00:00",
+    "updated_at": "2026-11-27T03:59:47+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -416,15 +416,16 @@
             "compiler-150"
           ],
           "acceptance": "Every admitted source has exact trust/use/freshness metadata and prompt-injection-safe ingestion with stale-source invalidation.",
-          "implementation_pr": 49,
-          "merge_commit": "3f60e4ebc8323e2c9567d25daad54d042910c23c",
+          "implementation_pr": 50,
+          "merge_commit": "951b6f7ffdd472e2ee053b9261a470e527e70c9c",
           "evidence": [
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7208699800",
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7208842903",
             "https://github.com/pH34r-pH/long-haul-fleet/issues/177#issuecomment-7208910169",
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209024144",
             "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209178670",
-            "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209317818"
+            "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209317818",
+            "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209426682"
           ],
           "default_branch_checks": "passed"
         },
@@ -4055,6 +4056,24 @@
       "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209317818",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7209319825",
       "remaining": "325 Works require use review. A read-only scan of the other 33 DOI-only records identified 25 bibliographic differences, 3 editorial notices, and 5 unconfirmed records. Broader review and coverage of other citation formats remain open."
+    },
+    {
+      "at": "2026-11-27T03:59:47+00:00",
+      "task": "knowledge-42",
+      "status": "cited_arxiv_source_reviews_verified_on_main",
+      "repository": "pH34r-pH/knowledge",
+      "pull_request": 50,
+      "checked_head": "e3675803f061e0618805d3e26954ea80f7f7e20d",
+      "ci_checkout": "9f2de5299f9130b1a23aededf3bc449c7ec629ed",
+      "merge_commit": "951b6f7ffdd472e2ee053b9261a470e527e70c9c",
+      "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/45937167112/job/140302931031",
+      "default_branch_governance": "https://github.com/pH34r-pH/knowledge/actions/runs/45937167136",
+      "registry_sha256": "1ad1437fecc40d04722c443c4adb483f00b286c71ffa131d0ef123340d4e5e30",
+      "readback_receipt_sha256": "31ec50f5ce0168795f8ce530a18c6b89c72002f0c67bec491196291eea3174fd",
+      "evidence": "Live arXiv exact-version, PDF-byte and bibliographic checks supported 22 new bibliographic index and search reviews through December 27, 2026 UTC. Expiry replay withheld both uses and identified eight dependent articles. The PR and main receipts agree on 28 current reviews. The current Fleet verifier accepted the exact new Knowledge main through the authenticated GitHub API.",
+      "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7209426682",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7209428723",
+      "remaining": "303 Works require use review, including 66 cited arXiv Works. Of those 66, 61 lack the retained pair for this profile, two have retained metadata discrepancies, and three have a newer source revision."
     }
   ]
 }
