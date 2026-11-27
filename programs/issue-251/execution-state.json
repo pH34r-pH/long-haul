@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T11:09:14+00:00",
+    "updated_at": "2026-11-27T11:20:41+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -524,6 +524,41 @@
             "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/166#issuecomment-7216123615",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216130297",
             "evidence": "Every direct remote commit was verified at its upstream repository. The baseline check found eleven mutable references. All 251 exact Linux tests, three PR workflows, three main push workflows, and two initial Dependabot runs passed. The main artifacts preserve the historical POC digest, and the first grouped dependency PR is open for review.",
+            "remaining": "Governed corpus admission, guarded evaluator disclosure, and protected publication verification remain under Compiler #150."
+          },
+          "first_party_quality_gates": {
+            "status": "first_party_quality_gates_verified_on_main",
+            "issue": 165,
+            "issue_state": "closed_completed",
+            "pull_request": 191,
+            "baseline_commit": "7a3a3cc6988bda80e16ef78e58405f1bf5ac312c",
+            "checked_head": "344e5f57f5b0dd40aaf58108b6a399c89e301bf9",
+            "ci_checkout": "4d57a51eecc22f6c5c82ebc49b96428331e810fc",
+            "checked_tree": "2508c8da7371bbc756555611f9a4c0bd85c50afb",
+            "merge_commit": "176281c991d0bf2e4cbf8c505dba4a8922631519",
+            "pull_request_quality": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45989002438",
+            "pull_request_lifecycle": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45989002560",
+            "default_branch_quality": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45989316102",
+            "default_branch_lifecycle": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45989287969",
+            "default_branch_governance": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45989288524",
+            "default_branch_audit_artifact": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45989316102/artifacts/15192462975",
+            "audit_report_sha256": "60e569fccce0391c4901c2a6d786217df3a675ced3811b78d7caed4a05973537",
+            "historical_poc_sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+            "ruff_version": "0.16.9",
+            "mypy_version": "2.4.1",
+            "pip_audit_version": "2.10.0",
+            "baseline_production_lint_findings": 1,
+            "baseline_b023_findings": 10,
+            "typed_modules": 4,
+            "audited_packages": 7,
+            "known_advisories": 0,
+            "skipped_audit_packages": 0,
+            "offline_tests": 251,
+            "main_python_artifacts": 4,
+            "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/165#issuecomment-7216949903",
+            "program_issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7216953706",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216954130",
+            "evidence": "The pinned gates pass locally, on the exact PR and on main. Isolated copies demonstrate that the same commands reject violations. The runner and repository closures resolve independently and are fully audited. The PR and main dependency reports match, and all four exact main Python builds reproduce the frozen ZIP.",
             "remaining": "Governed corpus admission, guarded evaluator disclosure, and protected publication verification remain under Compiler #150."
           }
         },
@@ -5591,6 +5626,20 @@
       "issue_evidence": "https://github.com/pH34r-pH/nacre-recall/issues/24#issuecomment-7216727314",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216730635",
       "remaining": "Governed source admission and independent live recall and capture qualification depend on Compiler #150 and Long-Haul #64."
+    },
+    {
+      "at": "2026-11-27T11:20:41+00:00",
+      "task": "compiler-150",
+      "status": "first_party_quality_gates_verified_on_main",
+      "repository": "pH34r-pH/experiment-compiler",
+      "issue": 150,
+      "issue_state": "open",
+      "closed_child": 165,
+      "pull_request": 191,
+      "merge_commit": "176281c991d0bf2e4cbf8c505dba4a8922631519",
+      "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/165#issuecomment-7216949903",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7216954130",
+      "remaining": "Governed corpus admission, guarded evaluator disclosure, and protected publication verification remain under Compiler #150."
     }
   ]
 }
