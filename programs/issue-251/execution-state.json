@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T12:14:08+00:00",
+    "updated_at": "2026-11-27T12:34:05+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -582,6 +582,45 @@
             "program_issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7217744165",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7217744557",
             "evidence": "Opt-in stderr diagnostics report approved controller phases, available source and attempt identities, and exception class. Tests capture admission, execution, terminal persistence, recovery and mocked native verifier failures. Canonical stdout, retained receipts, exception behavior and historical bytes passed verification.",
+            "remaining": "Governed corpus admission, guarded evaluator disclosure, and protected publication verification remain under Compiler #150."
+          },
+          "admission_mutation_qualification": {
+            "closed_child": 167,
+            "pull_request": 193,
+            "baseline_commit": "37bf6edbedb72b8c1c4c61e8045614d0d25eb2d1",
+            "checked_head": "804366b6a574228f594a1d9cf4d38f8a38cc5fb8",
+            "checked_tree": "56a1cd17266ba91a9bea04a27d8211fb7524322d",
+            "merge_commit": "8c6143723fa7404b5b8f7f44ef200f3aa949c00a",
+            "initial_no_coverage_run": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45997477165",
+            "first_exercised_run": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45997968142",
+            "pull_request_lifecycle": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45998518129",
+            "pull_request_quality": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45998518183",
+            "default_branch_lifecycle": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45999044316",
+            "default_branch_governance": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45999044361",
+            "mutation_reports": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45999044316/artifacts/15197497178",
+            "report_expires_at": "2026-12-04T12:32:30Z",
+            "admission_report_sha256": "ee2b929be14db6d617f5f867c78dcb42963865459008374971da5b29229ddb55",
+            "resource_mutations_caught": 42,
+            "admission_mutations": {
+              "caught": 304,
+              "survived": 85,
+              "uncovered": 23,
+              "timed_out": 6
+            },
+            "additional_mutations_caught_after_test_changes": 19,
+            "archive_policy_mutations_exercised": 59,
+            "worker_admission_mutations_exercised": 330,
+            "admission_pass_seconds": 80.7,
+            "linux_pytest": {
+              "passed": 249,
+              "skipped": 6,
+              "subtests_passed": 455
+            },
+            "main_python_artifacts": 4,
+            "historical_poc_sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+            "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/167#issuecomment-7218381430",
+            "program_issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7218387357",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7218386856",
             "remaining": "Governed corpus admission, guarded evaluator disclosure, and protected publication verification remain under Compiler #150."
           }
         },
@@ -5851,6 +5890,20 @@
       "issue_evidence": "https://github.com/pH34r-pH/agent-readable-calling-card/issues/17#issuecomment-7217989394",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7217992044",
       "remaining": "Approved signed-release workflow, live release and interoperability evidence, and remaining adversarial fixture coverage."
+    },
+    {
+      "at": "2026-11-27T12:34:05+00:00",
+      "task": "compiler-150",
+      "status": "bounded_admission_mutation_verified_on_main",
+      "repository": "pH34r-pH/experiment-compiler",
+      "issue": 150,
+      "issue_state": "open",
+      "closed_child": 167,
+      "pull_request": 193,
+      "merge_commit": "8c6143723fa7404b5b8f7f44ef200f3aa949c00a",
+      "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/167#issuecomment-7218381430",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7218386856",
+      "remaining": "Governed corpus admission, guarded evaluator disclosure, and protected publication verification remain under Compiler #150."
     }
   ]
 }
