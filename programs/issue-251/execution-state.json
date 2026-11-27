@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T05:39:52-08:00",
+    "updated_at": "2026-11-27T05:56:10-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -852,6 +852,29 @@
             "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7219755587",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7219758820",
             "remaining": "Existing protected intake archive job is live and queued. The independent route diagnostic is archived and did not qualify the host route. Protected route and host reconciliation remains in Fleet #1533."
+          },
+          "current_queue_route_source_comparison": {
+            "status": "current_route_candidate_endpoint_and_blob_verified_in_memory",
+            "checked_at": "2026-11-27T05:56:10-08:00",
+            "diagnostic_run": "https://github.com/pH34r-pH/long-haul-fleet/actions/runs/46008323680",
+            "diagnostic_result": "queue-route-main-pin",
+            "fleet_revision": "00fd6f1988f1fee6dd5c7dc1ca63eef35369a175",
+            "published_dsl_pin": "20b76890c510ee26a81bf913d3672255f0b571dc",
+            "inspected_dsl_main": "d1fcbff91557cf9d817db3bdbc6b83d8f660452e",
+            "workflow_id": 395950519,
+            "workflow_blob": "02541fc3e8930d3cd0402d8278507ca35e394634",
+            "previous_inventory_files": 21,
+            "previous_inventory_sha256": "baca461e0a31f58a00fcfb1f57808602db6ae8e76b24aed263101b6f087370d0",
+            "current_inventory_files": 22,
+            "current_inventory_bytes": 345086,
+            "current_inventory_sha256": "dc0aa3e3adf0d42bb9fbaae964a6496c1dcbd17ba5774ee262a53ef59dadc0c0",
+            "only_added_workflow": ".github/workflows/repository-governance.yml",
+            "added_workflow_blob": "9578434d58c3fb40d37b08bbb185f89b8e4738fb",
+            "added_workflow_runner": "ubuntu-latest",
+            "installed_pin_changed": false,
+            "route_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1533#issuecomment-7220075886",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7220107212",
+            "remaining": "Protected review of the source pin and host runtime reconciliation are pending. The live intake archive job is still queued."
           }
         },
         {
@@ -1352,6 +1375,78 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7219405522",
             "evidence": "Historical records remain byte-identical. The identical author PDF supports carrying forward the proposition, excerpt, and original independent audit. Tests preserve the old review obligation while a successor is pending and move it to the corrected Work upon acceptance. The merge tree matches the exact tested head.",
             "remaining": "143 Works still need review. Broader use scopes remain tied to the Compiler and Long-Haul policy contracts."
+          },
+          "pmlr_proceedings_metadata": {
+            "pull_request": 62,
+            "baseline_commit": "14b99c7ad9824e45f04f1f494079a75cc3d7d9f8",
+            "checked_head": "256ca7fb696849ad353e91a6328079a24ef54fb4",
+            "checked_tree": "a2a54069e5a823ebdf1ad03516f97df5e291fb99",
+            "merge_commit": "b9a756c2987a1291a1d523e27eee75150be98339",
+            "pull_request_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/46010885151",
+            "structural_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/46010885246",
+            "default_branch_ci": "https://github.com/pH34r-pH/knowledge/actions/runs/46011016343",
+            "default_branch_governance": "https://github.com/pH34r-pH/knowledge/actions/runs/46011016230",
+            "default_branch_documentation": "https://github.com/pH34r-pH/knowledge/actions/runs/46011016468",
+            "report": "https://github.com/pH34r-pH/knowledge/actions/runs/46011016343/artifacts/15204177009",
+            "report_expires_at": "2026-12-11T13:53:57Z",
+            "report_sha256": "0943ba0f91552b192c38d351f609cfe4846fa9408d517f2b83e1517a90ed65cb",
+            "registry_sha256": "79946f5c59dcd869a947b2f3b09b557af7d43c04f538e1deb9158060e0ced68c",
+            "original_work_prefix_sha256": "af73977d048313bbf6a099264605463010278f563108884dde2a8a7a774d0c46",
+            "original_claim_prefix_sha256": "b98031cacb470ae21694ffb42d7e2ce492eca9395bdb6131207fd637f2fc5e0f",
+            "original_evidence_prefix_sha256": "0b97156bac9df7548826a462097bbc927ee140e7878120bf40ace4c511b437ad",
+            "original_review_prefix_sha256": "beed0140e67499be187f23c4882e61ea61a6771ae40ecd30e4a6b0b1d1308b8b",
+            "newly_reviewed_works": [
+              "KWRK-000026",
+              "KWRK-000123",
+              "KWRK-000214",
+              "KWRK-000238",
+              "KWRK-000346",
+              "KWRK-000347",
+              "KWRK-000348",
+              "KWRK-000349",
+              "KWRK-000350"
+            ],
+            "publication_date_corrections": {
+              "KWRK-000023": {
+                "replacement": "KWRK-000346",
+                "publication_date": "2026-08-06"
+              },
+              "KWRK-000179": {
+                "replacement": "KWRK-000347",
+                "publication_date": "2026-09-29"
+              },
+              "KWRK-000186": {
+                "replacement": "KWRK-000348",
+                "publication_date": "2020-08-16"
+              },
+              "KWRK-000195": {
+                "replacement": "KWRK-000349",
+                "publication_date": "2019-05-24"
+              },
+              "KWRK-000199": {
+                "replacement": "KWRK-000350",
+                "publication_date": "2026-09-29"
+              }
+            },
+            "retained_publisher_pdf_sha256": "cd2e16594b835426ad0824a4c2553cef91d3cbe6d0e3e629ff37230aa2f092c3",
+            "superseded_claim": "KCLM-000024",
+            "accepted_claim": "KCLM-000028",
+            "superseded_evidence": "KEVD-000024",
+            "accepted_evidence": "KEVD-000028",
+            "pending_author_initials": [
+              "KWRK-000185",
+              "KWRK-000194"
+            ],
+            "offline_tests": 64,
+            "final_pr_checks": 6,
+            "verified_approved_metadata": 207,
+            "works_requiring_review": 134,
+            "active_citation_identities": 104,
+            "verified_pinned_arxiv_revisions": 35,
+            "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7220103509",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7220107212",
+            "evidence": "Five append-only Work replacements use the publisher publication date and exact citation. Nine approved metadata reviews pin the exact displayed publication and PDF digest without retaining the downloaded PDFs. The original reviewed bytes carry the unchanged UAI proposition, excerpt and independent audit forward. All old rows are byte-identical and expiry replay follows the corrected claim and evidence.",
+            "remaining": "134 Works, including two PMLR records whose display names omit printed initials, still require review. Broader use scopes depend on the Compiler and Long-Haul contracts."
           }
         },
         {
@@ -6252,6 +6347,29 @@
       "archive_job_state": "queued",
       "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1612#issuecomment-7219755587",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7219758820"
+    },
+    {
+      "at": "2026-11-27T05:56:10-08:00",
+      "task": "knowledge-42",
+      "status": "pmlr_proceedings_metadata_verified_on_main",
+      "repository": "pH34r-pH/knowledge",
+      "issue": 42,
+      "issue_state": "open",
+      "pull_request": 62,
+      "merge_commit": "b9a756c2987a1291a1d523e27eee75150be98339",
+      "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7220103509",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7220107212"
+    },
+    {
+      "at": "2026-11-27T05:56:10-08:00",
+      "task": "fleet-1612",
+      "status": "queue_route_pin_drift_reproduced",
+      "repository": "pH34r-pH/long-haul-fleet",
+      "issue": 1533,
+      "issue_state": "open",
+      "source_commit": "d1fcbff91557cf9d817db3bdbc6b83d8f660452e",
+      "issue_evidence": "https://github.com/pH34r-pH/long-haul-fleet/issues/1533#issuecomment-7220075886",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7220107212"
     }
   ]
 }
