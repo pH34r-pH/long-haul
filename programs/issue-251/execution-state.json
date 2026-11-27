@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T09:06:25-08:00",
+    "updated_at": "2026-11-27T09:21:24-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -854,6 +854,47 @@
             "owner_checkpoint": "Dispatch alpha-provenance on the reviewed main commit, retain the verified same-run asset set and signatures, review draft source and attachments, and obtain the separate publication decision before publishing. Add the README download link after publication.",
             "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/5#issuecomment-7222363209",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7222366869"
+          },
+          "croissant_file_readback": {
+            "status": "croissant_file_readback_verified_producer_review_required",
+            "pull_request": 198,
+            "pull_request_state": "draft",
+            "base_commit": "36df2129855b8eea7b289b9a5a772649a277485d",
+            "checked_head": "de9f75cac773c9b2ac077f0db0f72ebc45f57aaf",
+            "ci_checkout": "d41c321fa5e237899c3962fa04c48e1cb49760f0",
+            "checked_tree": "512c36433f3a1562f418b325c27e628304050933",
+            "producer_pull_request": "https://github.com/pH34r-pH/long-haul/pull/321",
+            "producer_checked_head": "71f75bca00aacebf75c73155e3fca1d007ffd501",
+            "pr_runs": {
+              "lifecycle": 46040503143,
+              "structural_audit": 46040503166,
+              "governance": 46040503221
+            },
+            "hosted_checks": {
+              "passed": 10,
+              "skipped": 2
+            },
+            "offline_linux_tests": {
+              "passed": 274,
+              "skipped": 1,
+              "documentation_hygiene": 4
+            },
+            "synthetic_handoff": {
+              "files": 2,
+              "metadata_sha256": "c685581c4bbb019361ea32159256fb8bd511f70c5e2e4b8266ad246523440fa1",
+              "package_sha256": "4a526defd1c6e2d77009c5c21bde25bf6f73fb5ef56e67e0639628a211cb5ade",
+              "verified_receipt_sha256": "cb195b1957270f06d9fe16b388f3e359a7bb97c95a1382e4e9c1c25c7d816d1d",
+              "substituted_file": "rejected_without_receipt"
+            },
+            "historical_poc": {
+              "size_bytes": 15296,
+              "sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+              "hosted_artifacts_verified": 4
+            },
+            "scope": "Private package binding to exact retained Croissant metadata and the complete local direct-file snapshot. File integrity readback grants no corpus use.",
+            "remaining": "Approve and merge Long-Haul #321, verify its merged exporter, repin the Compiler and rerun before marking ready. Real corpus use requires current rights, partition and contamination evidence, and independently qualified evaluator evidence.",
+            "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7224301774",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7224304317"
           }
         },
         {
@@ -7214,6 +7255,18 @@
       "merge_commit": "52c99c9d228b24c085383c8648615d5bd77511ec",
       "issue_evidence": "https://github.com/pH34r-pH/discursive-affective-epistemology/issues/37#issuecomment-7224021596",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7224024289"
+    },
+    {
+      "at": "2026-11-27T09:21:24-08:00",
+      "task": "compiler-150",
+      "status": "croissant_file_readback_verified_producer_review_required",
+      "repository": "pH34r-pH/experiment-compiler",
+      "issue": 150,
+      "issue_state": "open",
+      "pull_request": 198,
+      "producer_pull_request": 321,
+      "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7224301774",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7224304317"
     }
   ]
 }
