@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T04:18:14+00:00",
+    "updated_at": "2026-11-27T04:30:43+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -170,7 +170,13 @@
           },
           "checked_head": "dabdf17c447116fbca06464c23e696dd8f667ee4",
           "merge_commit": "6de4e4be835c92e5bdad35e284b81e9f51f92662",
-          "default_branch_checks": "passed"
+          "default_branch_checks": "passed",
+          "compiler_consumer": {
+            "pull_request": "https://github.com/pH34r-pH/experiment-compiler/pull/180",
+            "merge_commit": "07832f26583205f76951642d12c334b81eb18ae1",
+            "issue_evidence": "https://github.com/pH34r-pH/long-haul/issues/244#issuecomment-7209846067",
+            "remaining": "#118/#64 consumer qualification."
+          }
         },
         {
           "id": "lh-245-security",
@@ -263,7 +269,7 @@
           "id": "compiler-150",
           "repository": "pH34r-pH/experiment-compiler",
           "issue": 150,
-          "status": "queued",
+          "status": "in_progress",
           "depends_on": [
             "compiler-150-lifecycle-core",
             "lh-244-pi-trace",
@@ -273,8 +279,17 @@
           "acceptance": "Reusable lifecycle components and repository-task, evaluator, trajectory, and corpus profiles are implemented without changing evidence semantics.",
           "baseline_commit": "4b0816e6b10d7d92d8c69ae47f1910ff41a5bfdb",
           "upstream_contract_commit": "458bc2f1ec669392963b7fe29e4c252e2e70776c",
-          "remaining": "Implement actual upstream semantic-trajectory and governed-corpus profiles with guarded private-evaluator disclosure. Exact inert references alone do not satisfy #150.",
-          "core_merge_commit": "a471d390a81193324098abb1fc85324c7f0f894c"
+          "remaining": "Implement the governed corpus profile and guarded private-evaluator disclosure using qualified #248 and #245 contracts. Protected publication verification remains staged. The semantic trajectory readback is merged and verified.",
+          "core_merge_commit": "a471d390a81193324098abb1fc85324c7f0f894c",
+          "trajectory_qualification": {
+            "pull_request": 180,
+            "merge_commit": "07832f26583205f76951642d12c334b81eb18ae1",
+            "checked_head": "6de5d377c607cd770f44e35b42957348146a0931",
+            "long_haul_verifier_commit": "64c81d31fc8193cd2ff9e96a8df1751f86f8a21c",
+            "default_branch_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45940054728",
+            "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7209844314",
+            "scope": "Private repository-agent package and separately retained canonical result and trace. Synthetic successful and failed attempts verified."
+          }
         },
         {
           "id": "fleet-1612",
@@ -4118,6 +4133,27 @@
       },
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7209685337",
       "remaining": "GitHub requires one approving review. No merge or default-branch evidence for this change yet."
+    },
+    {
+      "at": "2026-11-27T04:30:43+00:00",
+      "task": "compiler-150",
+      "status": "verified_semantic_trajectory_profile_merged",
+      "repository": "pH34r-pH/experiment-compiler",
+      "pull_request": 180,
+      "baseline_commit": "d50cc45dbb840eea70d7a07af0defaf74f583d0b",
+      "checked_head": "6de5d377c607cd770f44e35b42957348146a0931",
+      "ci_checkout": "bc4bdc362bb5fe74c442ddf7ee7a26db67ae6484",
+      "checked_tree": "5e7cd2612fd184f8f6dc5373881edd6059a2dd09",
+      "merge_commit": "07832f26583205f76951642d12c334b81eb18ae1",
+      "long_haul_verifier_commit": "64c81d31fc8193cd2ff9e96a8df1751f86f8a21c",
+      "harness_source_sha256": "8f5ead47da8c4552928bbe061c174e43298c982039513db49e30656960d5cb0d",
+      "default_branch_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45940054728",
+      "default_branch_governance": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45940054700",
+      "evidence": "All 228 Linux tests and the historical #164 binary checksum passed locally and on main across Python 3.11, 3.13 and 3.14. Exact result and trace readback holds for a synthetic settled attempt and a provider failure with zero events. A different result with the same empty trace and mismatched scope, candidate or bytes are rejected. All 17 targeted Windows profile tests passed. The broad Windows suite has existing failures reproduced in the baseline. Pages deployment was skipped.",
+      "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7209844314",
+      "upstream_consumer_evidence": "https://github.com/pH34r-pH/long-haul/issues/244#issuecomment-7209846067",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7209848212",
+      "remaining": "Governed corpus, guarded private-evaluator disclosure, protected publication verification and Long-Haul #118/#64 consumer qualification."
     }
   ]
 }
