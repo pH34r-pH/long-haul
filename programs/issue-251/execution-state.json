@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T08:44:37-08:00",
+    "updated_at": "2026-11-27T08:55:05-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -2434,6 +2434,36 @@
             "issue_evidence": "https://github.com/pH34r-pH/agent-readable-calling-card/issues/17#issuecomment-7217989394",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7217992044",
             "remaining": "Approved signed-release workflow, live release and interoperability evidence, and remaining adversarial fixture coverage."
+          },
+          "reviewed_release_staging": {
+            "observed_at": "2026-11-27T08:55:05-08:00",
+            "status": "merged_and_verified_with_disposable_signer",
+            "pull_request": "https://github.com/pH34r-pH/agent-readable-calling-card/pull/21",
+            "base_commit": "ed1fcfdabef7c3e30ff2e114336812588f9bba23",
+            "verified_head": "4b01e00bae96787b49539453d262833a8781689c",
+            "ci_checkout": "acd3efbc1dcb802350b1393f2e6c53abcef1d990",
+            "verified_tree": "4c3063cde8f11b8a3f3e1452e7586b20f80119b0",
+            "merge_commit": "1b2a9a55b9987a2592adb4414cfaca61a83508fa",
+            "source_archive_sha256": "4a2a10fee1c2dc1f58031922ce479ced60434e675a589732a45cf2d0b5624d80",
+            "toolkit_pr_run": 46037268128,
+            "governance_pr_run": 46037268165,
+            "toolkit_main_run": 46037351135,
+            "governance_main_run": 46037351160,
+            "toolkit_tests": 39,
+            "checked_head_unsigned_staging_sha256": "b9e413f6107dedfb35ed20350fe8463c6b5d8bacd6e8649453ec0171c55d26c1",
+            "main_rehearsal": {
+              "reviewed_plan_sha256": "8bd2ef04aa71c7e0c5670a6322c81d3d838dd692cbe8bfcf8478ece535e36cc7",
+              "unsigned_manifest_sha256": "0d1c9d752962b6294fe54820600c06f0ca013a886d8a94026017cb8b9de0a9aa",
+              "render_manifest_sha256": "a5f687bd2fd1be7826e3e849e20b2012cd190d6c8a60864ee460a7849592498e",
+              "reference_png_sha256": "b7cf2feefe3af64886257f28cb05dabcf32ef193e65c637ff1f7c2d6a3080c1f",
+              "scope": "Tracked example configuration and recipe with synthetic review observations and a disposable Ed25519 signing key. Actual offline staging and verification commands produced layout byte equality and rejected a re-pinned nonmatching Git blob."
+            },
+            "pages_build_type": "workflow",
+            "deployments_for_merge": 0,
+            "published_releases": 0,
+            "remaining": "Protected signing and publication workflow, live release readback, interoperability qualification, and shared upstream gates.",
+            "issue_evidence": "https://github.com/pH34r-pH/agent-readable-calling-card/issues/17#issuecomment-7223804482",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7223807728"
           }
         },
         {
@@ -7140,6 +7170,18 @@
       "producer_pull_request": 326,
       "issue_evidence": "https://github.com/pH34r-pH/nacre-recall/issues/24#issuecomment-7223532426",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7223603873"
+    },
+    {
+      "at": "2026-11-27T08:55:05-08:00",
+      "task": "arcc-17",
+      "status": "reviewed_release_staging_verified_on_main",
+      "repository": "pH34r-pH/agent-readable-calling-card",
+      "issue": 17,
+      "issue_state": "open",
+      "pull_request": 21,
+      "merge_commit": "1b2a9a55b9987a2592adb4414cfaca61a83508fa",
+      "issue_evidence": "https://github.com/pH34r-pH/agent-readable-calling-card/issues/17#issuecomment-7223804482",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7223807728"
     }
   ]
 }
