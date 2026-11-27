@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T06:37:12-08:00",
+    "updated_at": "2026-11-27T06:44:40-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -1648,6 +1648,26 @@
             "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7218987571",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7218990190",
             "remaining": "An actual candidate needs owner-reviewed rights and retention, current withdrawal and holdout exposure evidence, and episode-level context and target checks under Tone #21."
+          },
+          "source_retention_impact": {
+            "observed_at": "2026-11-27T06:44:40-08:00",
+            "pull_request": "https://github.com/pH34r-pH/tone/pull/27",
+            "baseline_commit": "d72db76696913de7d33f59620c8be286d4910060",
+            "checked_head": "e9ddb32d2f60e3e724c22cd8ba6698dddd77468d",
+            "checked_tree": "07458fcb67f27ba81572bc82e98247d4b7cf52b1",
+            "merge_commit": "136abd6f4e2fdf9ae5016767461f46f5d3c341cc",
+            "pull_request_ci": "https://github.com/pH34r-pH/tone/actions/runs/46018214349",
+            "default_branch_ci": "https://github.com/pH34r-pH/tone/actions/runs/46018378036",
+            "default_branch_ci_attempt": 1,
+            "offline_fixture_source_sha256": "ab01a7a20896ec2376549d082a4b3c10cd991c6e80dfc106fede997fa8fdf624",
+            "synthetic_corpus_tests": 30,
+            "private_runner_routing_tests": 11,
+            "version_1_byte_identical_receipt_cases": 4,
+            "private_ci_artifact_uploads": 0,
+            "scope": "Reviewed UTC retention deadlines apply at their exact instant. The existing withdrawal audit rejects missing source coverage and propagates withdrawal or expiry through recorded derivatives. Receipts contain aggregate counts and artifact digests.",
+            "remaining": "Owner source rights and retention decisions, complete private inventory, actual retirement or deletion receipts, and private candidate qualification remain open.",
+            "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7221158555",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221161673"
           }
         },
         {
@@ -6550,6 +6570,17 @@
       "active_citation_identities": 106,
       "issue_evidence": "https://github.com/pH34r-pH/knowledge/issues/42#issuecomment-7220993321",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221000462"
+    },
+    {
+      "at": "2026-11-27T06:44:40-08:00",
+      "task": "tone-18",
+      "status": "source_retention_impact_verified_on_main",
+      "repository": "pH34r-pH/tone",
+      "issue": 18,
+      "issue_state": "open",
+      "merge_commit": "136abd6f4e2fdf9ae5016767461f46f5d3c341cc",
+      "issue_evidence": "https://github.com/pH34r-pH/tone/issues/18#issuecomment-7221158555",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7221161673"
     }
   ]
 }
