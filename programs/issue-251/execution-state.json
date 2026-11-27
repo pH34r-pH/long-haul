@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T11:26:15-08:00",
+    "updated_at": "2026-11-27T11:30:35-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -2515,6 +2515,42 @@
             "remaining": "Real reviewed outcomes and probability forecasts, current rights and withdrawal decisions, plus operator promotion and rollback.",
             "issue_evidence": "https://github.com/pH34r-pH/the-personal-algorithm/issues/92#issuecomment-7226297926",
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7226300416"
+          },
+          "reviewed_operator_policy_promotion": {
+            "observed_at": "2026-11-27T11:30:35-08:00",
+            "status": "merged_and_verified_in_disposable_instance",
+            "pull_request": "https://github.com/pH34r-pH/the-personal-algorithm/pull/108",
+            "base_commit": "fd1e7629b477bd33642880b4d2109bf98c957fff",
+            "verified_head": "147f6a737be906c52653656e3a0b60c639c623f9",
+            "ci_checkout": "8ce82e152a96ac389b82e308b772443149a88d8a",
+            "verified_tree": "4b0c62ce78ecf73de60b4dbc7d5fabc1f68cd6b8",
+            "merge_commit": "3dcfc187421550b8a275da18c6e592ca94b50f76",
+            "pull_request_ci": "https://github.com/pH34r-pH/the-personal-algorithm/actions/runs/46056586627",
+            "structural_ci": "https://github.com/pH34r-pH/the-personal-algorithm/actions/runs/46056586637",
+            "mutation_report": "https://github.com/pH34r-pH/the-personal-algorithm/actions/runs/46056586631/artifacts/15227136459",
+            "mutation_report_archive_sha256": "b0d121190a64e982874e8504766b59539b02ee4e1a7f2868568da92ed320a6fa",
+            "write_time_policy_guard_mutant": "personal_algorithm.ingest.x_ingest_ranking_run__irradiate_34",
+            "write_time_policy_guard_mutant_status": "Killed",
+            "default_branch_ci": "https://github.com/pH34r-pH/the-personal-algorithm/actions/runs/46056936173",
+            "default_branch_docs": "https://github.com/pH34r-pH/the-personal-algorithm/actions/runs/46056936139",
+            "default_branch_governance": "https://github.com/pH34r-pH/the-personal-algorithm/actions/runs/46056936143",
+            "offline_tests": 337,
+            "main_tests": 337,
+            "focused_policy_and_replay_tests": 50,
+            "cross_repo_rehearsal": {
+              "long_haul_commit": "4d5ae441869d9459ed597294b1090fc3f19141c1",
+              "evaluator_implementation": "resource-policy-evaluator-v1:sha256:6777cd9dd9e7e6dd8d5c0e2d9f73e1efaf698299bb39c72573fc3da07b5ef436",
+              "synthetic_activation_sources": 7,
+              "promotion_approval_sha256": "3b85bf5f65d809ccffde9ed777edf1cd8475bade8885863e4c225f717a960570",
+              "rollback_approval_sha256": "8b5d4c5f07af91746e75402f4ac8f7a5569dd85e9fdc5e87273946d590ed6248",
+              "deny_exit": 1,
+              "denied_database_created": false,
+              "retained_rankings": 2
+            },
+            "scope": "Explicit local approval binds configuration, active state, exact reproduced replay and comparison, and separately authorized private derivation. Normal local ingestion consumes the approved policy and rechecks its identity in the write transaction. SQLite retains immutable policy snapshots and transitions for rollback.",
+            "remaining": "Actual approved source rights and outcomes, a real owner activation and rollback decision, and hosted qualification.",
+            "issue_evidence": "https://github.com/pH34r-pH/the-personal-algorithm/issues/92#issuecomment-7226584765",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7226587358"
           }
         },
         {
@@ -7819,6 +7855,18 @@
       "pull_request": 147,
       "checked_head": "c807e8f7c23aa9f34deaf3f51aef693c83a3d9d1",
       "issue_evidence": "https://github.com/pH34r-pH/Portfolio/issues/141#issuecomment-7226498818"
+    },
+    {
+      "at": "2026-11-27T11:30:35-08:00",
+      "task": "personal-92",
+      "status": "reviewed_local_promotion_and_rollback_verified_on_main",
+      "repository": "pH34r-pH/the-personal-algorithm",
+      "issue": 92,
+      "issue_state": "open",
+      "pull_request": 108,
+      "merge_commit": "3dcfc187421550b8a275da18c6e592ca94b50f76",
+      "issue_evidence": "https://github.com/pH34r-pH/the-personal-algorithm/issues/92#issuecomment-7226584765",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7226587358"
     }
   ]
 }
