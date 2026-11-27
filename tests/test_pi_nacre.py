@@ -107,7 +107,7 @@ def policy_receipt():
     return receipt
 
 
-def launch_context():
+def launch_context(reference_manifest_sha256=None):
     return build_pi_nacre_context(
         session=session(),
         contract=contract(),
@@ -115,6 +115,7 @@ def launch_context():
             profile_id="crew-profile-1", evidence_ref="event:caller-admitted-1",
             scopes=[PiNacreScope(scope_type="crew", scope_id="crew-1")],
             repository_id="pH34r-pH/long-haul", policy_decisions=[policy_receipt()],
+            reference_manifest_sha256=reference_manifest_sha256,
             source_event_refs=["event:mission-admitted-1"], capture_proposals=True,
         ),
     )
@@ -138,6 +139,20 @@ def test_build_context_binds_authoritative_work_identity():
     assert json.loads(context.model_dump_json())["policy_decisions"][0]["request_fingerprint"] == (
         context.policy_decisions[0].request_fingerprint)
     assert context.capture_proposals is True
+
+
+def test_writes_reviewed_reference_manifest_digest(tmp_path):
+    target = tmp_path / "private" / "pi-nacre-context.json"
+    expected = "sha256:" + "a" * 64
+    write_pi_nacre_context(target, launch_context(expected))
+    assert json.loads(target.read_bytes())["reference_manifest_sha256"] == expected
+    write_pi_nacre_context(target, launch_context())
+    assert "reference_manifest_sha256" not in json.loads(target.read_bytes())
+
+
+def test_rejects_invalid_reference_manifest_digest():
+    with pytest.raises(ValueError, match="reference_manifest_sha256"):
+        launch_context("sha256:unreviewed")
 
 
 def test_policy_receipt_preserves_legacy_unversioned_serialization():

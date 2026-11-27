@@ -24,6 +24,7 @@ from ..work import WorkContract, WorkSession
 
 PI_NACRE_CONTEXT_SCHEMA_VERSION = 1
 PI_NACRE_CONTEXT_MODE = "long-haul-authenticated"
+_SHA256_REFERENCE = r"^sha256:[0-9a-f]{64}$"
 
 
 class PiNacreScope(BaseModel):
@@ -76,6 +77,7 @@ class PiNacreLaunchOptions(BaseModel):
     scopes: list[PiNacreScope] = Field(min_length=1)
     purpose: str = Field(default="mission-assistance", min_length=1)
     policy_decisions: list[PiNacrePolicyReceipt] = Field(default_factory=list)
+    reference_manifest_sha256: str | None = Field(default=None, pattern=_SHA256_REFERENCE)
     source_event_refs: list[str] = Field(default_factory=list)
     capture_proposals: bool = False
 
@@ -85,6 +87,7 @@ class PiNacreLaunchContext(BaseModel):
     scopes: list[PiNacreScope] = Field(min_length=1)
     purpose: str = Field(min_length=1)
     policy_decisions: list[PiNacrePolicyReceipt] = Field(default_factory=list)
+    reference_manifest_sha256: str | None = Field(default=None, pattern=_SHA256_REFERENCE)
     source_event_refs: list[str] = Field(default_factory=list)
     capture_proposals: bool = False
     schema_version: Literal[1] = PI_NACRE_CONTEXT_SCHEMA_VERSION
