@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T10:17:33+00:00",
+    "updated_at": "2026-11-27T10:28:12+00:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -457,6 +457,43 @@
             "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7213781800",
             "evidence": "All 242 tests passed on exact network-disabled Linux source. The four hosted Python jobs each ran the eight-case catalog matrix and passed 241 tests. The exact main preview matched the local six-record catalog byte for byte and all detail routes, package digests and byte sizes verified. The generated artifacts preserve the authoritative protocol, execution states, source-owned interpretation, PropertyValue fields, parent ZIPs and existing scientific scope.",
             "remaining": "The broader Compiler issue 150 still needs governed corpus packaging and restricted evaluator disclosure using qualified Long-Haul contracts. The publication workflow retains its manual dispatch."
+          },
+          "build_environment_determinism": {
+            "issue": "https://github.com/pH34r-pH/experiment-compiler/issues/169",
+            "issue_state": "closed_completed",
+            "pull_request": 188,
+            "baseline_commit": "87f5fefa1cb4bd057fcf4ed331771985aeef4766",
+            "checked_head": "2e64488425274e4bf62a8d87e59e506eeb02991d",
+            "ci_checkout": "c7b1e0585910af4089756aa9c0c748cbfc0d7b64",
+            "checked_tree": "7bf7a79f37d238b37805245ba9d1fbf285cbb540",
+            "merge_commit": "6fd7a23b080ef5af58965ac3393fde4f9a82b8ec",
+            "pull_request_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45981531662",
+            "default_branch_ci": "https://github.com/pH34r-pH/experiment-compiler/actions/runs/45981862098",
+            "main_source_archive_sha256": "13b8a05767f0c2a4da0bc8093263b08d1aaf2a88cc58274e5fb27505051a816e",
+            "historical_poc_sha256": "45ab246ccfd4ca636e1ad50e8edf068125a111b46b6bcb2b86ac1d811f523341",
+            "historical_poc_main_verification_sha256": "38aeb97d8e5753f877b1aa56ade4fe6e9e60fcfdc699f0f2a1d00c69b986eb93",
+            "local_linux_tests": 247,
+            "settings": [
+              "locale",
+              "timezone",
+              "Python hash seed",
+              "file mtime",
+              "readable file mode",
+              "child umask",
+              "source directory"
+            ],
+            "remaining": "Actual same-boundary Podman execution in #87 is gated by Fleet #678. Governed corpus admission and private evaluator disclosure remain open under Compiler #150.",
+            "reuse_plan": {
+              "issue": "https://github.com/pH34r-pH/experiment-compiler/issues/87#issuecomment-7215878292",
+              "sha256": "279caf239c6e27dcf78093c29c7dd54a5df9c1ff8c906f02c14a42f1b737dcec",
+              "parent_sha256": "ce2c5582c3d0ddf1b9d48041694a72360a7492436513914c85d985faa0744d20",
+              "verification_sha256": "99d6b8b0d0eae1be21e363e2a800c7746c46a5d23449b83ded5b5b4adb2b71fe",
+              "attempt_count": 0
+            },
+            "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/169#issuecomment-7215899922",
+            "program_issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/150#issuecomment-7215909455",
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7215908849",
+            "evidence": "The exact Linux rerun passed all tests after one existing native-controller timing error on the initial run. Windows passed locale, seed, relocation and mtime checks and skipped two POSIX capability cases. Main retained byte-identical historical artifacts from all four supported Python jobs."
           }
         },
         {
@@ -5397,6 +5434,20 @@
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7215695034",
       "evidence": "Eight official ACL paper pages matched the pinned Work identities and bibliographic metadata. The existing registries were preserved. All 60 exact Linux tests, six hosted PR checks, and three exact main workflows passed. Replay expired the new scopes and Fleet qualified the merged commit.",
       "remaining": "The review queue contains 147 Works, including three ACL records with a publisher-listed revision or metadata discrepancy."
+    },
+    {
+      "at": "2026-11-27T10:28:12+00:00",
+      "task": "compiler-150",
+      "status": "build_environment_determinism_verified_on_main",
+      "repository": "pH34r-pH/experiment-compiler",
+      "issue": 150,
+      "issue_state": "open",
+      "closed_child": 169,
+      "pull_request": 188,
+      "merge_commit": "6fd7a23b080ef5af58965ac3393fde4f9a82b8ec",
+      "issue_evidence": "https://github.com/pH34r-pH/experiment-compiler/issues/169#issuecomment-7215899922",
+      "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7215908849",
+      "remaining": "Actual same-boundary Podman execution in #87 is gated by Fleet #678. Governed corpus admission and private evaluator disclosure remain open under Compiler #150."
     }
   ]
 }
