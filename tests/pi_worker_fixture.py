@@ -23,6 +23,7 @@ from long_haul.adapters.pi_admission import (
     WorkerResourceAdmission,
 )
 from long_haul.adapters.pi_assets import PiRuntimeAssets
+from long_haul.adapters.pi_evaluator_admission import EvaluatorWorkerAdmission
 from long_haul.adapters.pi_rpc import pi_prompt
 from long_haul.adapters.pi_worker import (
     DockerGVisorPiWorker,
@@ -37,6 +38,7 @@ from long_haul.resource_policy import (
 )
 from long_haul.work import WorkSession
 from long_haul.work.harness import harness_attempt
+from long_haul.work.private_evaluator import PrivateEvaluatorProfile
 from long_haul.work.repository_candidate import freeze_repository_candidate
 from long_haul.work.repository_models import DigestReference, content_digest
 from long_haul.work.repository_sandbox import DockerGVisorSandbox
@@ -45,6 +47,21 @@ PLAN = {"mode": "success", "actions": [
     {"tool": "read", "args": {"path": "program.py"}},
     {"tool": "edit", "args": {"path": "program.py", "edits": [{"oldText": "a - b", "newText": "a + b"}]}},
 ]}
+
+
+def public_evaluator_admission(evaluator, work, attempt, now):
+    policy = ResourcePolicyProfile(
+        identity=ResourceIdentity(resource_id="urn:fixture:public-evaluator", resource_type="public-evaluator",
+                                  content_digest=evaluator.fingerprint),
+        authority_class="authoritative-control", lifecycle="active", policy_id="urn:fixture:evaluator-policy",
+        policy_assigner="urn:fixture:operator", permissions=[PolicyRule(rule_id="public-evaluator",
+            actions=["read", "ai-augment", "distribute"], purposes=["public-evaluator-fixture"],
+            principal_ids=[attempt.session_id], contract_ids=[work.contract_id])],
+    )
+    request = ResourceUseRequest(request_id="public-evaluator", resource_id=policy.identity.resource_id,
+        action="read", purpose="public-evaluator-fixture", caller_id=attempt.session_id, crew_id=attempt.crew_id,
+        mission_id=work.mission_id, contract_id=work.contract_id, repository_id=attempt.repository_id, now=now)
+    return EvaluatorWorkerAdmission(evaluator, policy, policy.fingerprint, request, request.fingerprint)
 
 
 def admit_prompt(normalizer, text, *, derive=True):
@@ -71,16 +88,21 @@ def installed_assets():
                            DigestReference(reference="artifact:pi-acquisition", digest=content_digest(receipt_path.read_bytes())))
 
 
-def worker_setup(tmp_path, plan, *, seconds=20):
+def worker_setup(tmp_path, plan, *, seconds=20, private=False, worker_type=DockerGVisorPiWorker):
     assets = installed_assets()
     inherited = environment().model_dump()
     for key in ("image", "candidate_access", "toolchain"):
         inherited.pop(key)
     inherited["limits"]["wall_seconds"] = seconds
     inherited["limits"]["max_output_bytes"] = 262144
-    worker = DockerGVisorPiWorker(PiWorkerEnvironment(**inherited), Path(os.environ["LONG_HAUL_RUNSC"]), assets)
+    worker = worker_type(PiWorkerEnvironment(**inherited), Path(os.environ["LONG_HAUL_RUNSC"]), assets)
     root, base = repository(tmp_path)
     evaluator = profile(DockerGVisorSandbox.implementation_reference())
+    if private:
+        evaluator = PrivateEvaluatorProfile.from_profile(evaluator, {
+            "sealed": b"synthetic-pi-only-test-key-256-bits", "scope": b"scope-only-synthetic-key-material-32",
+            "inspect": b"inspect-only-synthetic-key-material-32",
+        })
     work = contract(root, base, evaluator)
     work.budget.max_attempts = 2
     work.repository_work = work.repository_work.model_copy(update={
@@ -120,5 +142,7 @@ def worker_setup(tmp_path, plan, *, seconds=20):
     prompt = lambda current: pi_prompt(work, session=session, evaluation_time=current)
     template = DigestReference(reference="urn:long-haul:pi-prompt-renderer-v1",
                                digest=content_digest(Path("src/long_haul/adapters/pi_rpc.py").read_bytes()))
+    evaluator_admission = (EvaluatorWorkerAdmission(evaluator) if private
+                           else public_evaluator_admission(evaluator, work, attempt, now))
     return worker, PiWorkerRequest(root, snapshot, normalizer, registry, prompt, plan, template,
-                                   admit_prompt(normalizer, prompt(now))), evaluator
+                                   admit_prompt(normalizer, prompt(now)), evaluator_admission=evaluator_admission), evaluator

@@ -44,6 +44,12 @@ def test_budget_must_be_positive():
         WorkBudget(wall_seconds=0)
 
 
+@pytest.mark.parametrize("value", [float("inf"), float("-inf"), float("nan")])
+def test_budget_must_be_finite(value):
+    with pytest.raises(ValidationError):
+        WorkBudget(wall_seconds=value)
+
+
 def test_external_evidence_accepts_contract():
     item = contract()
     result = evaluate_work(item, [PredicateEvidence(predicate_id="tests", state=EvidenceState.PASS, source="pytest exit 0")])

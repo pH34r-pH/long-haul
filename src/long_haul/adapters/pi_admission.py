@@ -137,10 +137,28 @@ class PiToolAdmission:
                 or admission.context_manifest != self.attempt.context_manifest
                 or admission.task_digest != self.attempt.digest):
             raise TraceAdmissionDenied("exact prompt/context view lacks authenticated complete-source admission")
+        self._check_input_parents(admission.parents)
         receipts = tuple(self._policy(admission.parents, action, now, request_class="input")
                          for action in (ResourceAction.READ, ResourceAction.AI_AUGMENT))
         self._inputs.update({parent.profile.identity.resource_id: parent for parent in admission.parents})
         return receipts
+
+    def _check_input_parents(self, parents):
+        seen = {resource: parent.expected_policy_fingerprint for resource, parent in self._inputs.items()}
+        for parent in parents:
+            resource, fingerprint = parent.profile.identity.resource_id, parent.expected_policy_fingerprint
+            if resource in seen and seen[resource] != fingerprint:
+                raise TraceAdmissionDenied("conflicting parent identity")
+            seen[resource] = fingerprint
+
+    def remember_projected_inputs(self):
+        """Treat all projected bytes as exposed, even without a native read event."""
+        parents = tuple(parent for admission in self.registry.values()
+                        for binding in (admission.derived or admission,)
+                        if binding.content_digest is not None
+                        for parent in self._parents(binding))
+        self._check_input_parents(parents)
+        self._inputs.update({parent.profile.identity.resource_id: parent for parent in parents})
 
     def authorize(self, record: dict, root: Path, now: datetime) -> ToolAdmissionReceipt:
         self._exact_contract()
@@ -152,6 +170,8 @@ class PiToolAdmission:
             raise TraceArgumentsInvalid("native interlock does not match exact pending operation")
         path, binding = self._target(tool, args, root)
         parents = self._parents(binding)
+        if tool in {"read", "edit"}:
+            self._check_input_parents(parents)
         actions = (ResourceAction.DERIVE,) if tool == "write" else (ResourceAction.READ, ResourceAction.AI_AUGMENT)
         if tool == "edit":
             actions += (ResourceAction.DERIVE,)
@@ -178,6 +198,23 @@ class PiToolAdmission:
         if tool in {"read", "edit"}:
             self._inputs.update({parent.profile.identity.resource_id: parent for parent in parents})
         return receipt
+
+    def revalidate_confirmation(self, now: datetime) -> None:
+        """Recheck authority after the executor has released the workspace view."""
+        self._exact_contract()
+        self._check_roots()
+        self.normalizer.admission.authorize(self.attempt, now)
+        if self._pending is None or self._authorized is None:
+            raise TraceAdmissionDenied("confirmation lacks an admitted native operation")
+        tool = self._pending[1]
+        actions = (ResourceAction.DERIVE,) if tool == "write" else (ResourceAction.READ, ResourceAction.AI_AUGMENT)
+        if tool == "edit":
+            actions += (ResourceAction.DERIVE,)
+        policies = tuple(self._policy(self._operation_parents, action, now) for action in actions)
+        receipt = self._authorized.model_copy(update={"policies": policies})
+        if not self.receipts or self.receipts[-1] != self._authorized:
+            raise TraceAdmissionDenied("native confirmation receipt changed")
+        self.receipts[-1] = self._authorized = receipt
 
     @staticmethod
     def _identity(binding):

@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import time
+from contextlib import contextmanager
 from dataclasses import replace
 from datetime import timedelta
 from types import SimpleNamespace
@@ -91,8 +92,47 @@ def test_worker_projection_admits_current_read_and_model_policy(tmp_path):
     projected = tmp_path / "projected"
     projected.mkdir()
     base = SimpleNamespace(contents={"fixture/code.py": (root / "fixture/code.py").read_bytes()})
-    DockerGVisorPiWorker._project(projected, base, registry, normalizer, NOW)
+    admitted = DockerGVisorPiWorker._project(projected, base, registry, normalizer, NOW)
+    assert admitted == {"fixture/code.py": b"before\n"}
     assert (projected / "fixture/code.py").read_bytes() == b"before\n"
+
+
+def test_conflicting_projected_policies_deny_before_any_bytes_are_written(tmp_path):
+    _, _, normalizer, _, registry, _ = setup_guard(tmp_path)
+    first = registry["fixture/code.py"]
+    changed = first.profile.model_copy(deep=True)
+    changed.permissions[0].actions = [action for action in changed.permissions[0].actions if action != ResourceAction.DERIVE]
+    registry["fixture/second.py"] = replace(first, profile=changed, expected_policy_fingerprint=changed.fingerprint)
+    projected = tmp_path / "projected"
+    projected.mkdir()
+    base = SimpleNamespace(contents={"fixture/code.py": b"before\n", "fixture/second.py": b"before\n"})
+    with pytest.raises(TraceAdmissionDenied, match="conflicting parent identity"):
+        DockerGVisorPiWorker._project(projected, base, registry, normalizer, NOW)
+    assert list(projected.iterdir()) == []
+
+
+def test_worker_projection_rejects_oversized_file_before_copy(tmp_path):
+    content = b"x" * (1048576 + 1)
+    _, _, normalizer, _, registry, _ = setup_guard(tmp_path, content=content)
+    projected = tmp_path / "projected"
+    projected.mkdir()
+    with pytest.raises(ValueError, match="bounded file size"):
+        DockerGVisorPiWorker._project(projected, SimpleNamespace(contents={"fixture/code.py": content}),
+                                     registry, normalizer, NOW)
+    assert list(projected.iterdir()) == []
+
+
+def test_worker_projection_rejects_oversized_total_before_copy(tmp_path):
+    content = b"x" * 1048576
+    _, _, normalizer, _, registry, _ = setup_guard(tmp_path, content=content)
+    first = registry.pop("fixture/code.py")
+    registry.update({f"fixture/{index}.py": first for index in range(5)})
+    projected = tmp_path / "projected"
+    projected.mkdir()
+    with pytest.raises(ValueError, match="bounded total size"):
+        DockerGVisorPiWorker._project(projected, SimpleNamespace(contents={path: content for path in registry}),
+                                     registry, normalizer, NOW)
+    assert list(projected.iterdir()) == []
 
 
 def test_worker_projection_denies_unresolved_audience_prohibition(tmp_path):
@@ -142,7 +182,8 @@ def test_worker_projection_copies_the_exact_checked_bytes(tmp_path):
     base = SimpleNamespace(contents=ChangedAfterRead({"fixture/code.py": b"before\n"}))
     projected = tmp_path / "projected"
     projected.mkdir()
-    DockerGVisorPiWorker._project(projected, base, registry, normalizer, NOW)
+    admitted = DockerGVisorPiWorker._project(projected, base, registry, normalizer, NOW)
+    assert admitted == {"fixture/code.py": b"before\n"}
     assert (projected / "fixture/code.py").read_bytes() == b"before\n"
 
 
@@ -306,6 +347,129 @@ def test_real_adapter_refuses_forged_success_without_interlock_receipt(tmp_path)
     harness.poll(NOW, 1)
     harness.poll(NOW, 2)
     assert harness.projector.state.terminal == "policy_denied"
+
+
+@pytest.mark.skipif(os.name != "posix", reason="worker filesystem inspection requires POSIX metadata")
+def test_native_interlocks_use_executor_owned_workspace_views(tmp_path):
+    _, attempt, normalizer, root, registry, _ = setup_guard(tmp_path)
+    view = tmp_path / "trusted-snapshot"
+    (view / "fixture").mkdir(parents=True)
+    (view / "fixture/code.py").write_bytes(b"before\n")
+    (root / "fixture/code.py").write_bytes(b"untrusted-live-content")
+    lifecycle, sent = [], []
+
+    @contextmanager
+    def workspace_view():
+        lifecycle.append("enter")
+        try:
+            yield view
+        finally:
+            lifecycle.append("exit")
+
+    records = iter([start(), request(attempt), end()])
+    harness = PiCodingHarness(normalizer, registry, root, sent.append, lambda: next(records), lambda _: "task")
+    harness.clock = lambda: NOW
+    harness.workspace_view = workspace_view
+    harness.start(attempt)
+    harness._native_session = "synthetic"
+    harness._prompt_acknowledged = True
+    for tick in range(1, 4):
+        harness.poll(NOW, tick)
+    assert harness.projector.state.terminal is None
+    assert sent[-1]["confirmed"] is True
+    assert lifecycle == ["enter", "exit"] * 3
+
+
+def test_workspace_view_failure_denies_native_confirmation(tmp_path):
+    _, attempt, normalizer, root, registry, _ = setup_guard(tmp_path)
+    sent = []
+    harness = PiCodingHarness(normalizer, registry, root, sent.append, lambda: request(attempt), lambda _: "task")
+
+    @contextmanager
+    def failed_view():
+        raise ValueError("snapshot unavailable")
+        yield  # pragma: no cover
+
+    harness.workspace_view = failed_view
+    harness.start(attempt)
+    harness._native_session = "synthetic"
+    harness._prompt_acknowledged = True
+    harness.poll(NOW, 1)
+    assert harness.projector.state.terminal == "protocol_error"
+    assert not any(item.get("confirmed") is True for item in sent)
+
+
+@pytest.mark.parametrize("revoked", [False, True])
+def test_confirmation_rechecks_authority_after_view_release(revoked):
+    lifecycle, sent = [], []
+    harness = object.__new__(PiCodingHarness)
+
+    @contextmanager
+    def view():
+        lifecycle.append("enter")
+        yield object()
+        lifecycle.append("exit")
+
+    class Guard:
+        def authorize(self, record, worker, now):
+            lifecycle.append(("authorize", now))
+
+        def revalidate_confirmation(self, now):
+            lifecycle.append(("revalidate", now))
+            if revoked:
+                raise TraceAdmissionDenied("authority expired while reading workspace")
+
+    later = NOW + timedelta(seconds=10)
+    harness.guard, harness.workspace_view = Guard(), view
+    harness.send, harness.clock = sent.append, lambda: later
+    record = {"id": "fixture"}
+    if revoked:
+        with pytest.raises(TraceAdmissionDenied):
+            harness._confirm(record, NOW)
+    else:
+        harness._confirm(record, NOW)
+    assert lifecycle == ["enter", ("authorize", NOW), "exit", ("revalidate", later)]
+    assert sent == [{"type": "extension_ui_response", "id": "fixture", "confirmed": not revoked}]
+
+
+def test_expired_confirmation_deadline_is_denied():
+    harness = object.__new__(PiCodingHarness)
+    sent = []
+    @contextmanager
+    def view():
+        yield object()
+    def expired():
+        raise TraceAdmissionDenied("deadline expired")
+    harness.guard = SimpleNamespace(authorize=lambda *args: None, revalidate_confirmation=lambda _: None)
+    harness.workspace_view, harness.send, harness.clock = view, sent.append, expired
+    with pytest.raises(TraceAdmissionDenied):
+        harness._confirm({"id": "fixture"}, NOW)
+    assert sent == [{"type": "extension_ui_response", "id": "fixture", "confirmed": False}]
+
+
+@pytest.mark.skipif(os.name != "posix", reason="worker filesystem inspection requires POSIX metadata")
+def test_workspace_view_release_failure_prevents_positive_confirmation(tmp_path):
+    _, attempt, normalizer, root, registry, _ = setup_guard(tmp_path)
+    calls, sent = [], []
+
+    @contextmanager
+    def view():
+        calls.append(None)
+        yield root
+        if len(calls) == 2:
+            raise ValueError("snapshot release failed")
+
+    records = iter([start(), request(attempt)])
+    harness = PiCodingHarness(normalizer, registry, root, sent.append, lambda: next(records), lambda _: "task")
+    harness.workspace_view = view
+    harness.start(attempt)
+    harness._native_session = "synthetic"
+    harness._prompt_acknowledged = True
+    harness.poll(NOW, 1)
+    harness.poll(NOW, 2)
+    assert harness.projector.state.terminal == "protocol_error"
+    assert sent[-1]["confirmed"] is False
+    assert not any(item.get("confirmed") is True for item in sent)
 
 
 def test_nonreading_process_does_not_block_bounded_rpc_writes():

@@ -50,6 +50,30 @@ class SandboxAdapter(Protocol):
     def execute(self, candidate: Path, command: CandidateCommand) -> SandboxResult: ...
 
 
+EVALUATOR_CANDIDATE_PREFIX = "long-haul-evaluator-"
+
+
+class SandboxCleanupRequired(RuntimeError):
+    """Private recovery information; do not release the candidate or lease."""
+
+    def __init__(self, container_id: str | None, workspace: Path):
+        super().__init__("sandbox cleanup is unconfirmed; retain the workspace and lease")
+        self.container_id = container_id
+        self.workspace = workspace
+        self.lease_releasable = False
+        self.workspace_mode_restricted = None
+
+
+def confirm_container_absent(control, container_id):
+    """Require a point-in-time Docker census after acknowledged removal."""
+    if len(container_id) != 64 or any(char not in "0123456789abcdef" for char in container_id):
+        raise ValueError("invalid sandbox container identity")
+    output = control("container", "ls", "--all", "--no-trunc", "--filter", "id=" + container_id,
+                     "--format", "{{.ID}}")
+    if output.strip():
+        raise ValueError("sandbox container removal is unconfirmed")
+
+
 def _control_environment() -> dict[str, str]:
     # Do not forward credentials, caller environment, proxies, or Docker endpoints.
     return {"PATH": os.defpath, "LANG": "C.UTF-8"}
@@ -185,13 +209,14 @@ class DockerGVisorSandbox:
         actual = (host["Runtime"], host["NetworkMode"], host["ReadonlyRootfs"], info["Config"]["User"],
                   host["Memory"], host["MemorySwap"], host["PidsLimit"], host["NanoCpus"], info["Image"],
                   "ALL" in [cap.upper() for cap in host.get("CapDrop", [])],
-                  any(s.startswith("no-new-privileges") for s in host.get("SecurityOpt", [])),
+                  host.get("SecurityOpt") in (["no-new-privileges"], ["no-new-privileges:true"]),
                   host.get("Tmpfs", {}), host.get("Privileged", False), host.get("PidMode", ""),
                   info["Config"]["AttachStdout"], info["Config"]["AttachStderr"], info["Config"]["OpenStdin"])
         expected = (self.environment.runtime, "none", True, "65534:65534", limits.memory_mib * 1048576,
                     limits.memory_mib * 1048576, limits.pids, int(limits.cpus * 1000000000), self.image_id,
                     True, True, self._expected_tmpfs(), False, "", True, True, True)
-        if actual != expected:
+        if (actual != expected or host.get("CapAdd")
+                or any(host.get(key) == "host" for key in ("IpcMode", "UTSMode", "UsernsMode", "CgroupnsMode"))):
             raise ValueError("candidate containment configuration mismatch")
         self._verify_environment(info["Config"].get("Env", []))
         self._verify_mounts(mounts, candidate)
@@ -216,26 +241,48 @@ class DockerGVisorSandbox:
                 or any(m["Destination"] != "/tmp" for m in mounts if m["Type"] == "tmpfs")):
             raise ValueError("candidate containment configuration mismatch")
 
+    def assert_ready(self):
+        pending = getattr(self, "_pending_cleanup", None)
+        if pending is not None:
+            raise SandboxCleanupRequired(*pending)
+
     def execute(self, candidate, command):
+        return self._evaluate_candidate(candidate, command, None)
+
+    def execute_before(self, candidate, command, deadline: float) -> SandboxResult:
+        """Cap candidate execution at the evaluator's monotonic deadline."""
+        return self._evaluate_candidate(candidate, command, deadline)
+
+    def _evaluate_candidate(self, candidate, command, deadline):
+        self.assert_ready()
         container = None
         result = SandboxResult("invalid", diagnostic="sandbox_invalid", outputs_observed=False)
         removed = False
         try:
-            candidate_id = self._control(*self._create_arguments(candidate, command)).strip()
-            if len(candidate_id) != 64 or any(c not in "0123456789abcdef" for c in candidate_id):
-                raise ValueError("malformed sandbox container identity")
+            arguments = self._create_arguments(candidate, command)
+            if deadline is not None and time.monotonic() >= deadline:
+                return SandboxResult("timeout", diagnostic="budget_expired", outputs_observed=False)
+            try:
+                candidate_id = self._control(*arguments).strip()
+                if len(candidate_id) != 64 or any(c not in "0123456789abcdef" for c in candidate_id):
+                    raise ValueError("malformed sandbox container identity")
+            except BaseException:  # noqa: BLE001 -- creation may have happened even if the response was lost.
+                self._pending_cleanup = (None, Path(candidate))
+                raise SandboxCleanupRequired(*self._pending_cleanup) from None
             container = candidate_id
             self._verify_configuration(container, candidate)
-            result = self._execute(container, command)
+            result = self._execute(container, command, deadline)
         except (OSError, ValueError, KeyError, subprocess.SubprocessError):
             pass
         finally:
             if container is not None:
                 try:
                     self._control("rm", "--force", "--volumes", container)
+                    confirm_container_absent(self._control, container)
                     removed = True
-                except (OSError, ValueError, subprocess.SubprocessError):
-                    pass
+                except BaseException:  # noqa: BLE001 -- interruptions also leave cleanup unconfirmed.
+                    self._pending_cleanup = (container, Path(candidate))
+                    raise SandboxCleanupRequired(*self._pending_cleanup) from None
         return self._retained_result(container, result, removed)
 
     @contextmanager
@@ -251,14 +298,21 @@ class DockerGVisorSandbox:
                     process.kill()
                 process.communicate(timeout=5)
 
-    def _execute(self, container, command):
+    def _execute(self, container, command, deadline=None):
+        started = time.monotonic()
+        command_deadline = started + self.environment.limits.wall_seconds
+        if deadline is not None:
+            command_deadline = min(deadline, command_deadline)
+        if started >= command_deadline:
+            return SandboxResult("timeout", diagnostic="budget_expired", outputs_observed=False)
         with self._attached_process(container) as process:
-            deadline = time.monotonic() + self.environment.limits.wall_seconds
-            startup = _startup_receipt(process, deadline)
+            startup = _startup_receipt(process, command_deadline)
             if startup != START_MARKER:
+                if time.monotonic() >= command_deadline:
+                    return SandboxResult("timeout", stderr=startup, diagnostic="startup_deadline")
                 return SandboxResult("invalid", stderr=startup, diagnostic="startup_unverified")
             outcome, stdout, stderr = _bounded_output(
-                process, b"\0" + command.stdin.encode(), self.environment.limits, deadline=deadline,
+                process, b"\0" + command.stdin.encode(), self.environment.limits, deadline=command_deadline,
             )
             if outcome != "completed":
                 try:

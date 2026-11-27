@@ -24,14 +24,16 @@ from ..work.harness import HarnessCleanup
 from ..work.repository_candidate import CandidateSnapshot
 from ..work.repository_evaluation_models import EvaluatorEnvironment
 from ..work.repository_models import DigestReference, content_digest
-from ..work.repository_sandbox import DockerGVisorSandbox
+from ..work.repository_sandbox import DockerGVisorSandbox, SandboxCleanupRequired
 from ..work.worker_candidate import (
     MAX_WORKER_DEPTH,
     MAX_WORKER_DIRECTORIES,
+    MAX_WORKER_FILE_BYTES,
     MAX_WORKER_FILES,
+    MAX_WORKER_TOTAL_BYTES,
     freeze_stopped_worker,
 )
-from .harness_trace import TraceNormalizer, _canonical
+from .harness_trace import TraceAdmissionDenied, TraceNormalizer, _canonical
 from .pi_admission import (
     PiToolAdmission,
     WorkerPromptAdmission,
@@ -39,10 +41,12 @@ from .pi_admission import (
     worker_path,
 )
 from .pi_assets import CONTROL, PiRuntimeAssets
+from .pi_evaluator_admission import EvaluatorWorkerAdmission
 from .pi_harness import PiCodingHarness, PiPrompt
 from .pi_recovery import (
     PiWorkerCleanupRequired,
     PiWorkerRecovery,
+    confirm_container_absent,
     recover_worker,
     retain_recovery,
 )
@@ -69,6 +73,7 @@ class PiWorkerRequest:
     prompt_admission: WorkerPromptAdmission
     cancel_after: float | None = None
     event_store: EventStore | None = field(default=None, repr=False)
+    evaluator_admission: EvaluatorWorkerAdmission | None = field(default=None, repr=False)
 
 
 def _check_projection_bounds(registry):
@@ -82,6 +87,17 @@ def _check_projection_bounds(registry):
         directories.update("/".join(parts[:index]) for index in range(1, len(parts)))
         if len(directories) > MAX_WORKER_DIRECTORIES:
             raise ValueError("worker projection exceeds bounded directory count")
+
+
+def _projection_size(data, total):
+    if data is None:
+        return total
+    if not isinstance(data, bytes) or len(data) > MAX_WORKER_FILE_BYTES:
+        raise ValueError("worker projection exceeds bounded file size")
+    total += len(data)
+    if total > MAX_WORKER_TOTAL_BYTES:
+        raise ValueError("worker projection exceeds bounded total size")
+    return total
 
 
 def _prepare_control(root, attempt, tools, synthetic):
@@ -121,9 +137,11 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
     def implementation_reference():
         root = Path(__file__).parents[1]
         names = ("adapters/pi_worker.py", "adapters/pi_harness.py", "adapters/pi_admission.py", "adapters/pi_assets.py",
+                 "adapters/pi_evaluator_admission.py", "work/private_evaluator.py", "work/repository_evaluator.py",
                  "adapters/pi_trajectory.py", "adapters/harness_trace.py", "work/harness.py", "work/worker_candidate.py",
                  "work/repository_sandbox.py", "work/repository_git.py", "work/repository_candidate.py",
-                 "resource_policy_models.py", "resource_policy_evaluator.py", "adapters/pi_recovery.py", "adapters/pi_rpc.py")
+                 "resource_policy_models.py", "resource_policy_evaluator.py", "adapters/pi_recovery.py", "adapters/pi_rpc.py",
+                 "adapters/pi_workspace_intent.py")
         manifest = {name: content_digest((root / name).read_bytes()) for name in names}
         manifest.update({"adapters/pi_control/" + p.name: content_digest(p.read_bytes()) for p in CONTROL.glob("*.mjs")})
         return DigestReference(reference="urn:long-haul:pi-gvisor-worker-v1", digest=content_digest(
@@ -174,13 +192,15 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
             raise ValueError("Pi worker command differs from the trusted launcher")
         return info
 
-    def run(self, request: PiWorkerRequest):
-        """Synchronous bounded execution; no caller transcript or control secrets mount."""
-        if self._cleanup_pending:
-            raise PiWorkerCleanupRequired(self.recovery_path)
-        self.assets.verify()
-        normalizer, registry = request.normalizer, request.registry
+    def _validate_request(self, request):
+        normalizer = request.normalizer
         contract, attempt = normalizer.contract, normalizer.attempt
+        if contract.repository_work is None or contract.repository_work.sealed_evaluator is None:
+            raise ValueError("repository worker requires an exact sealed evaluator")
+        if not isinstance(request.evaluator_admission, EvaluatorWorkerAdmission):
+            raise TypeError("sealed evaluator requires trusted worker admission")
+        request.evaluator_admission.authorize(contract, attempt, datetime.now(UTC))
+        self.assets.verify()
         if (not set(contract.capabilities) <= {"read", "edit"} or contract.repository_work.source != request.base.candidate.base
                 or content_digest(contract.model_dump_json().encode()) != attempt.contract_digest
                 or contract.budget.max_tokens_per_attempt is not None
@@ -188,6 +208,17 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
                 or contract.repository_work.toolchain != self.assets.toolchain_reference()
                 or attempt.harness != self.harness_identity(request.synthetic)):
             raise ValueError("unsupported or mismatched exact Pi worker attempt")
+
+    def run(self, request: PiWorkerRequest):
+        """Synchronous bounded execution; no caller transcript or control secrets mount."""
+        pending = getattr(self, "_pending_cleanup", None)
+        if pending is not None:
+            raise SandboxCleanupRequired(*pending)
+        if self._cleanup_pending:
+            raise PiWorkerCleanupRequired(self.recovery_path)
+        self._validate_request(request)
+        normalizer, registry = request.normalizer, request.registry
+        attempt = normalizer.attempt
         control = Path(tempfile.mkdtemp(prefix="long-haul-pi-control-"))
         worker = Path(tempfile.mkdtemp(prefix="long-haul-pi-work-"))
         self._control_root = control
@@ -202,13 +233,16 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
                 shutil.rmtree(worker)
                 self._control_root = None
 
-    def recover(self, receipt_path: Path | None = None):
+    def recover(self, receipt_path: Path | None = None, *, expected_recovery: PiWorkerRecovery | None = None):
         path = receipt_path or self.recovery_path
         if path is None and self._recovery is not None:
             path = self.recovery_path = retain_recovery(self._recovery)
         if path is None or self.recovery_path is not None and path != self.recovery_path:
             raise ValueError("no matching pending worker cleanup")
-        cleanup = recover_worker(self, path)
+        if self._recovery is not None and expected_recovery is not None and expected_recovery != self._recovery:
+            raise ValueError("recovery expectation differs from pending worker")
+        expected = self._recovery if self._recovery is not None else expected_recovery
+        cleanup = recover_worker(self, path, expected)
         self._cleanup_pending = False
         self._recovery = None
         self._control_root = None
@@ -216,14 +250,14 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
 
     @property
     def lease_releasable(self):
-        return not self._cleanup_pending
+        return not self._cleanup_pending and getattr(self, "_pending_cleanup", None) is None
 
     @property
     def pending_recovery(self):
         return self._recovery
 
     @staticmethod
-    def _project(worker, base, registry, normalizer, now):
+    def _authorized_projection(base, registry, normalizer, now):
         contract = normalizer.contract
         _check_projection_bounds(registry)
         guard = PiToolAdmission(normalizer, registry)
@@ -231,11 +265,13 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
         guard._check_roots()
         # Authorize the entire projection before writing any worker-visible bytes.
         projected = {}
+        total_bytes = 0
         for path, admission in registry.items():
             worker_path(path)
             if not contract.permits_path(path):
                 raise ValueError("worker projection outside contract scope")
             data = base.contents.get(path)
+            total_bytes = _projection_size(data, total_bytes)
             expected = admission.derived.content_digest if admission.derived else admission.content_digest
             if (content_digest(data) if data is not None else None) != expected:
                 raise ValueError("worker projection source identity mismatch")
@@ -247,6 +283,12 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
                 for action in (ResourceAction.READ, ResourceAction.AI_AUGMENT):
                     guard._policy(parents, action, now, request_class="projection")
             projected[path] = data
+        guard.remember_projected_inputs()
+        return projected
+
+    @staticmethod
+    def _project(worker, base, registry, normalizer, now):
+        projected = DockerGVisorPiWorker._authorized_projection(base, registry, normalizer, now)
         worker.chmod(0o777)
         for path, data in projected.items():
             target = worker / path
@@ -257,6 +299,7 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
         for directory in worker.rglob("*"):
             if directory.is_dir():
                 directory.chmod(0o777)
+        return projected
 
     def _run(self, request, worker):
         normalizer = request.normalizer
@@ -273,13 +316,7 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
             with self._attached_process(container) as process:
                 harness = self._drive(process, normalizer, request.registry, worker,
                                       PiPrompt(request.prompt, request.prompt_template, request.prompt_admission), request.cancel_after)
-                observed = json.loads(self._control("inspect", container))[0]["State"]
-                if harness.projector.state.terminal is None:
-                    now, tick = datetime.now(UTC), time.monotonic_ns()
-                    if observed.get("OOMKilled"):
-                        harness.projector.interrupt("resource_exhausted", now, tick)
-                    else:
-                        harness.projector.eof(now, tick)
+                self._classify_worker_exit(container, harness)
         finally:
             # Success here is mandatory; failures leave no candidate or resume receipt.
             self._remove_worker(container)
@@ -313,6 +350,15 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
                 request.event_store.append(Event(event_type="observation", source="worker-derivation-v1", payload=derivation))
         return result, harness.projector.events, snapshot
 
+    def _classify_worker_exit(self, container, harness):
+        observed = json.loads(self._control("inspect", container))[0]["State"]
+        if harness.projector.state.terminal is None:
+            now, tick = datetime.now(UTC), time.monotonic_ns()
+            if observed.get("OOMKilled"):
+                harness.projector.interrupt("resource_exhausted", now, tick)
+            else:
+                harness.projector.eof(now, tick)
+
     @staticmethod
     def _validate_candidate(request, worker, guard):
         initial = {path: request.base.contents[path] for path in request.registry if path in request.base.contents}
@@ -321,6 +367,7 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
     def _remove_worker(self, container):
         try:
             self._control("rm", "--force", "--volumes", container)
+            confirm_container_absent(self._control, container)
         except (OSError, ValueError, subprocess.SubprocessError):
             self.recovery_path = retain_recovery(self._recovery)
             raise PiWorkerCleanupRequired(self.recovery_path) from None
@@ -331,13 +378,20 @@ class DockerGVisorPiWorker(DockerGVisorSandbox):
     def _drive(self, process, normalizer, registry, worker, prompt, cancel_after):
         wire = _Wire(process, self.environment.limits.max_output_bytes)
         harness = PiCodingHarness(normalizer, registry, worker, wire.send, wire.receive, prompt)
+        harness.workspace_view = getattr(self, "_workspace_view", harness.workspace_view)
         harness.start(normalizer.attempt)
         start = time.monotonic()
         duration = min(self.environment.limits.wall_seconds, normalizer.contract.budget.wall_seconds)
+        deadline = min(start + duration, getattr(self, "_execution_deadline", start + duration))
+        def confirmation_clock():
+            if time.monotonic() >= deadline:
+                raise TraceAdmissionDenied("worker deadline expired before tool confirmation")
+            return datetime.now(UTC)
+        harness.clock = confirmation_clock
         try:
             while harness.projector.state.terminal is None:
                 now, tick = datetime.now(UTC), time.monotonic_ns()
-                if time.monotonic() - start >= duration:
+                if time.monotonic() >= deadline:
                     harness.projector.interrupt("cancelled" if harness.projector.state.cancel_requested else "timed_out", now, tick)
                     break
                 if cancel_after is not None and time.monotonic() - start >= cancel_after and not harness.projector.state.cancel_requested:

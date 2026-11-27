@@ -24,19 +24,30 @@ def work_contract_fingerprint(contract: WorkContract) -> str:
     return content_digest(canonical_json(contract.model_dump(mode="json")).encode())
 
 
+def evaluator_check_fingerprint(profile, check):
+    """Use keyed identities for private profiles; preserve historical v1 hashes."""
+    from .private_evaluator import PrivateEvaluatorProfile
+    return profile.check_fingerprint(check) if isinstance(profile, PrivateEvaluatorProfile) else check.fingerprint
+
+
 def evaluator_implementation_reference() -> DigestReference:
     import pydantic
+    import pydantic_core
 
     from ..resource_policy_models import canonical_json
     from .repository_models import content_digest
     root = Path(__file__).parent
     files = (
         "repository_evaluation_models.py", "repository_evaluator.py", "repository_candidate.py", "repository_sandbox.py",
-        "contracts.py", "evaluator.py", "repository_models.py", "repository_git.py",
+        "contracts.py", "evaluator.py", "repository_models.py", "repository_git.py", "private_evaluator.py",
+        "repository_evidence_admission.py", "repository_input_admission.py",
     )
     manifest = {name: content_digest((root / name).read_bytes()) for name in files}
-    manifest["../resource_policy_models.py"] = content_digest((root.parent / "resource_policy_models.py").read_bytes())
-    data = canonical_json({"files": manifest, "python": platform.python_version(), "pydantic": pydantic.__version__}).encode()
+    # Public and private evidence admission uses the shared policy implementation.
+    for name in ("resource_policy.py", "resource_policy_models.py", "resource_policy_evaluator.py"):
+        manifest["../" + name] = content_digest((root.parent / name).read_bytes())
+    data = canonical_json({"files": manifest, "python": platform.python_version(), "pydantic": pydantic.__version__,
+                           "pydantic_core": pydantic_core.__version__}).encode()
     return DigestReference(reference="urn:long-haul:repository-evaluator-v1", digest=content_digest(data))
 
 
@@ -344,7 +355,8 @@ def evaluate_repository_packet(contract, packet, candidate, evaluator_profile) -
                               evidence=packet.evidence.predicate_evidence(),
                               reasons=["invalid repository evaluation" if packet.validity == "invalid"
                                        else "stale task, contract, candidate, evaluator or environment identity"])
-    expected = {c.requirement.predicate_id: (c.fingerprint, c.requirement.classification) for c in evaluator_profile.checks}
+    expected = {c.requirement.predicate_id: (evaluator_check_fingerprint(evaluator_profile, c), c.requirement.classification)
+                for c in evaluator_profile.checks}
     actual = {c.predicate_id: (c.check_fingerprint, c.classification) for c in packet.checks}
     if actual != expected:
         raise ValueError("observation does not match the frozen evaluator check")

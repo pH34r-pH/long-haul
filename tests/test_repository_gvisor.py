@@ -5,12 +5,18 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from repository_evaluator_fixture import environment, git, setup
+from repository_evaluator_fixture import (
+    SyntheticEvaluationRunner,
+    environment,
+    git,
+    setup,
+)
 
 from long_haul.work.repository_evaluation_models import CandidateCommand
-from long_haul.work.repository_evaluator import RepositoryEvaluationRunner
 from long_haul.work.repository_models import content_digest
 from long_haul.work.repository_sandbox import DockerGVisorSandbox
+
+RepositoryEvaluationRunner = SyntheticEvaluationRunner
 
 
 @pytest.fixture

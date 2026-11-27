@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextlib import nullcontext
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 
 from ..work.harness import (
     HarnessAttempt,
@@ -35,7 +36,11 @@ class PiCodingHarness:
         self.identity = normalizer.attempt.harness
         self.projector = PiTrajectoryProjector(normalizer, max_pending=1)
         self.guard = PiToolAdmission(normalizer, registry)
+        self.guard.remember_projected_inputs()
         self.worker, self.send, self.receive, self.prompt = worker, send, receive, prompt
+        self.clock = lambda: datetime.now(UTC)
+        # Trusted executor owns the lifetime and consistency of each view.
+        self.workspace_view = lambda: nullcontext(worker)
         self._started = False
         self._responses = {}
         self._native_session = None
@@ -126,29 +131,41 @@ class PiCodingHarness:
                 raise TraceArgumentsInvalid("native interlock arrived before prompt acknowledgement")
             if self.projector.state.cancel_requested:
                 raise TraceAdmissionDenied("cancelled attempt cannot admit another operation")
-            try:
-                self.guard.authorize(record, self.worker, now)
-            except Exception:
-                self.send({"type": "extension_ui_response", "id": record.get("id"), "confirmed": False})
-                raise
-            self.send({"type": "extension_ui_response", "id": record["id"], "confirmed": True})
-            return ()
-        if (kind.startswith("tool_execution") or kind in {"agent_start", "agent_settled"}) and not self._prompt_acknowledged:
+            return self._confirm(record, now)
+        elif (kind.startswith("tool_execution") or kind in {"agent_start", "agent_settled"}) and not self._prompt_acknowledged:
             raise TraceArgumentsInvalid("native execution arrived before admitted prompt acknowledgement")
+        if kind in {"tool_execution_start", "tool_execution_end"}:
+            with self.workspace_view() as worker:
+                return self._workspace_record(record, now, tick, worker)
+        return self.projector.feed(record, now, tick)
+
+    def _confirm(self, record, now):
+        try:
+            with self.workspace_view() as worker:
+                self.guard.authorize(record, worker, now)
+            self.guard.revalidate_confirmation(self.clock())
+        except Exception:
+            self.send({"type": "extension_ui_response", "id": record.get("id"), "confirmed": False})
+            raise
+        self.send({"type": "extension_ui_response", "id": record["id"], "confirmed": True})
+        return ()
+
+    def _workspace_record(self, record, now, tick, worker):
+        kind = record["type"]
         before = after = execution_admission = None
         if kind == "tool_execution_start":
             self.guard.start(record)
-            before = self._workspace_reference()
+            before = self._workspace_reference(worker)
         elif kind == "tool_execution_end":
-            execution_admission = self.guard.end(record, self.worker, now)
-            after = self._workspace_reference()
+            execution_admission = self.guard.end(record, worker, now)
+            after = self._workspace_reference(worker)
         return self.projector.feed(record, now, tick, candidate_before=before, candidate_after=after,
                                    execution_admission=execution_admission)
 
-    def _workspace_reference(self):
+    def _workspace_reference(self, worker):
         from ..work.repository_models import DigestReference, content_digest
         from .harness_trace import _canonical
-        files = {path: content_digest(data) for path, data in regular_contents(self.worker).items()}
+        files = {path: content_digest(data) for path, data in regular_contents(worker).items()}
         return DigestReference(reference="artifact:worker-observed-tree", digest=content_digest(_canonical(files)))
 
     def poll(self, now: datetime, monotonic_ns: int):

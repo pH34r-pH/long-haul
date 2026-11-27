@@ -1,4 +1,5 @@
 """Derived bytes keep every current parent restriction through shared intersection."""
+import os
 from dataclasses import replace
 from datetime import timedelta
 
@@ -7,7 +8,13 @@ from test_harness_trajectory import NOW, end, start
 from test_pi_worker import request, setup_guard
 
 from long_haul.adapters.harness_trace import TraceAdmissionDenied
-from long_haul.adapters.pi_admission import PiToolAdmission
+from long_haul.adapters.pi_admission import (
+    PiToolAdmission,
+    WorkerPolicyBinding,
+    WorkerPromptAdmission,
+    WorkerResourceAdmission,
+)
+from long_haul.adapters.pi_harness import PiCodingHarness
 from long_haul.resource_policy import ResourceLifecycle
 from long_haul.work.repository_models import content_digest
 
@@ -39,6 +46,72 @@ def test_write_read_edit_uses_new_identity_and_retains_exact_parent_policies(tmp
     mutate(guard, attempt, root, call="edit-derived", content="edited\n", tool="edit")
     assert guard.derived["fixture/code.py"].identity.content_digest == content_digest(b"edited\n")
     assert len(guard.derivations) == 2 and registry["fixture/code.py"].profile.model_dump_json() == original
+
+
+def test_conflicting_input_policy_for_same_resource_is_not_overwritten(tmp_path):
+    _, attempt, normalizer, root, registry, _ = setup_guard(tmp_path)
+    first = registry["fixture/code.py"]
+    restricted = first.profile.model_copy(deep=True)
+    restricted.permissions[0].actions = [action for action in restricted.permissions[0].actions if action.value != "derive"]
+    registry["fixture/code.py"] = replace(first, profile=restricted, expected_policy_fingerprint=restricted.fingerprint)
+    (root / "fixture/second.py").write_bytes(b"before\n")
+    registry["fixture/second.py"] = first
+    guard = PiToolAdmission(normalizer, registry)
+    first_read = start("first-read")
+    guard.start(first_read)
+    guard.authorize(request(attempt, first_read, ui="first-read"), root, NOW)
+    guard.end(end("first-read"), root, NOW)
+    second_read = start("second-read", args={"path": "fixture/second.py"})
+    guard.start(second_read)
+    with pytest.raises(TraceAdmissionDenied, match="conflicting parent identity"):
+        guard.authorize(request(attempt, second_read, ui="second-read"), root, NOW)
+    assert guard._inputs[restricted.identity.resource_id].expected_policy_fingerprint == restricted.fingerprint
+
+
+def test_conflicting_prompt_policy_for_same_resource_is_not_overwritten(tmp_path):
+    _, attempt, _, _, registry, guard = setup_guard(tmp_path)
+    original = registry["fixture/code.py"].profile
+    restricted = original.model_copy(deep=True)
+    restricted.permissions[0].actions = [action for action in restricted.permissions[0].actions if action.value != "derive"]
+    def admitted(profile):
+        return WorkerPromptAdmission((WorkerPolicyBinding(profile, profile.fingerprint),), "fingerprint",
+                                     attempt.context_manifest, attempt.digest)
+
+    guard.admit_prompt(admitted(restricted), "fingerprint", NOW)
+    guard.admit_prompt(admitted(restricted), "fingerprint", NOW)
+    with pytest.raises(TraceAdmissionDenied, match="conflicting parent identity"):
+        guard.admit_prompt(admitted(original), "fingerprint", NOW)
+    assert guard._inputs[restricted.identity.resource_id].expected_policy_fingerprint == restricted.fingerprint
+
+
+@pytest.mark.parametrize("content", [b"restricted\n", b""])
+def test_unread_projected_file_still_restricts_derived_writes(tmp_path, content):
+    _, attempt, normalizer, root, registry, _ = setup_guard(tmp_path)
+    restricted = registry["fixture/code.py"].profile.model_copy(deep=True)
+    restricted.identity.resource_id = "urn:fixture:unread-projected"
+    restricted.identity.content_digest = content_digest(content)
+    restricted.permissions[0].actions = [action for action in restricted.permissions[0].actions if action.value != "derive"]
+    (root / "fixture/unread.py").write_bytes(content)
+    registry["fixture/unread.py"] = WorkerResourceAdmission(restricted, restricted.fingerprint,
+                                                            restricted.identity.content_digest)
+    harness = PiCodingHarness(normalizer, registry, root, lambda _: None, lambda: None, lambda _: "task")
+    operation = start("write-unread", "write", {"path": "fixture/code.py", "content": "changed"})
+    harness.guard.start(operation)
+    with pytest.raises(TraceAdmissionDenied):
+        harness.guard.authorize(request(attempt, operation, ui="write-unread"), root, NOW)
+
+
+def test_absent_projected_path_is_not_counted_as_exposed_input(tmp_path):
+    _, attempt, normalizer, root, registry, _ = setup_guard(tmp_path)
+    absent = registry["fixture/code.py"].profile.model_copy(deep=True)
+    absent.identity.resource_id = "urn:fixture:not-projected"
+    absent.identity.content_digest = None
+    absent.permissions[0].actions = [action for action in absent.permissions[0].actions if action.value != "derive"]
+    registry["fixture/absent.py"] = WorkerResourceAdmission(absent, absent.fingerprint, None)
+    harness = PiCodingHarness(normalizer, registry, root, lambda _: None, lambda: None, lambda _: "task")
+    operation = start("write-absent", "write", {"path": "fixture/code.py", "content": "changed"})
+    harness.guard.start(operation)
+    assert harness.guard.authorize(request(attempt, operation, ui="write-absent"), root, NOW)
 
 
 def test_final_projection_rejects_direct_mutation_and_revoked_derivation(tmp_path):
@@ -126,3 +199,20 @@ def test_derived_read_rechecks_parent_retention(tmp_path):
     guard.start(read)
     with pytest.raises(TraceAdmissionDenied):
         guard.authorize(request(attempt, read, ui="later"), root, NOW + timedelta(seconds=2))
+
+
+@pytest.mark.skipif(os.name != "posix", reason="worker filesystem inspection requires POSIX metadata")
+def test_confirmation_rechecks_output_expiry_after_workspace_capture(tmp_path):
+    _, attempt, normalizer, root, registry, _ = setup_guard(tmp_path)
+    binding = registry["fixture/code.py"]
+    output = binding.output_policy
+    output.profile.privacy.retention_until = NOW + timedelta(seconds=1)
+    registry["fixture/code.py"] = replace(binding, output_policy=replace(output,
+        expected_policy_fingerprint=output.profile.fingerprint))
+    guard = PiToolAdmission(normalizer, registry)
+    call = start("write", "write", {"path": "fixture/code.py", "content": "after"})
+    guard.start(call)
+    guard.authorize(request(attempt, call), root, NOW)
+    guard.revalidate_confirmation(NOW)
+    with pytest.raises(TraceAdmissionDenied):
+        guard.revalidate_confirmation(NOW + timedelta(seconds=2))

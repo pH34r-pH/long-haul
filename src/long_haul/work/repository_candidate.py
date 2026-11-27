@@ -1,6 +1,7 @@
 """Freeze exact Git content outside the worker's mutable workspace."""
 from __future__ import annotations
 
+import shutil
 import tempfile
 from collections.abc import Mapping
 from contextlib import contextmanager
@@ -16,6 +17,7 @@ from .repository_evaluation_models import (
 )
 from .repository_git import _GitObjects, git_repository_identity
 from .repository_models import content_digest, repository_path
+from .repository_sandbox import EVALUATOR_CANDIDATE_PREFIX, SandboxCleanupRequired
 
 
 @dataclass(frozen=True)
@@ -24,10 +26,11 @@ class CandidateSnapshot:
     contents: Mapping[str, bytes]
 
     @contextmanager
-    def materialize(self):
+    def materialize(self, *, scratch_root: Path | None = None):
         """Create a fresh executor-owned tree; no worker path is mounted."""
-        with tempfile.TemporaryDirectory(prefix="long-haul-evaluator-") as temporary:
-            root = Path(temporary)
+        root = Path(tempfile.mkdtemp(prefix=EVALUATOR_CANDIDATE_PREFIX, dir=scratch_root))
+        retained = False
+        try:
             for item in self.candidate.files:
                 data = self.contents[item.path]
                 if content_digest(data) != item.digest or len(data) != item.size_bytes:
@@ -42,12 +45,23 @@ class CandidateSnapshot:
             root.chmod(0o555)
             try:
                 yield root
-            finally:
-                # TemporaryDirectory needs writable directories for deterministic teardown.
+            except SandboxCleanupRequired as failure:
+                retained = True
+                try:
+                    root.chmod(0o700)
+                except BaseException:  # noqa: BLE001 -- keep the cleanup hold even if chmod is interrupted.
+                    failure.workspace_mode_restricted = False
+                else:
+                    failure.workspace_mode_restricted = True
+                raise
+        finally:
+            if not retained:
+                # Restore writable directories for deterministic teardown.
                 root.chmod(0o700)
                 for directory in root.rglob("*"):
                     if directory.is_dir():
                         directory.chmod(0o700)
+                shutil.rmtree(root)
 
 
 def freeze_repository_candidate(root: Path, commit: str, contract: WorkContract) -> CandidateSnapshot:

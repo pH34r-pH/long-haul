@@ -17,6 +17,7 @@ MAX_WORKER_FILES = 256
 MAX_WORKER_DIRECTORIES = 256
 MAX_WORKER_DEPTH = 64
 MAX_WORKER_FILE_BYTES = 1048576
+MAX_WORKER_TOTAL_BYTES = 4194304
 
 
 def worker_path(value: str) -> str:
@@ -76,11 +77,11 @@ def regular_contents(root: Path) -> dict[str, bytes]:
                     continue
                 if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1 or metadata.st_size > MAX_WORKER_FILE_BYTES:
                     raise ValueError("worker contains a link, special file, or oversized file")
-                if len(result) >= MAX_WORKER_FILES or total + metadata.st_size > 4194304:
+                if len(result) >= MAX_WORKER_FILES or total + metadata.st_size > MAX_WORKER_TOTAL_BYTES:
                     raise ValueError("worker exceeds bounded candidate size")
                 data = _bounded_regular_read(path, metadata)
                 total += len(data)
-                if total > 4194304 or len(data) > MAX_WORKER_FILE_BYTES:
+                if total > MAX_WORKER_TOTAL_BYTES or len(data) > MAX_WORKER_FILE_BYTES:
                     raise ValueError("worker exceeds bounded candidate size")
                 result[relative] = data
     return result
@@ -118,7 +119,8 @@ def _tree(root, files):
 
 
 def freeze_stopped_worker(source_root: Path, base: CandidateSnapshot, worker: Path,
-                          projected_paths: set[str], contract: WorkContract) -> CandidateSnapshot:
+                          projected_paths: set[str], contract: WorkContract, *,
+                          scratch_root: Path | None = None) -> CandidateSnapshot:
     """Caller must supply the exact successful container-removal receipt first."""
     contents = regular_contents(worker)
     if not set(contents) <= projected_paths:
@@ -137,7 +139,7 @@ def freeze_stopped_worker(source_root: Path, base: CandidateSnapshot, worker: Pa
     # Existing bounded evaluator freeze rechecks the exact base, all objects, file
     # count, byte limits and ancestry. Git sees only trusted arguments and stdin.
     source_objects = _GitObjects(source_root).run("rev-parse", "--path-format=absolute", "--git-path", "objects").decode()
-    with tempfile.TemporaryDirectory(prefix="long-haul-worker-git-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="long-haul-worker-git-", dir=scratch_root) as temporary:
         root = Path(temporary)
         _git(root, "init", "--bare", "-q", "--object-format=" + ("sha256" if len(base.candidate.base.commit) == 64 else "sha1"))
         (root / "objects/info/alternates").write_text(source_objects + "\n")
