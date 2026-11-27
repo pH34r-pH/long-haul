@@ -6,7 +6,7 @@
     "control_issue": "https://github.com/pH34r-pH/long-haul/issues/252",
     "handoff": "docs/programs/issue-251-work-mode-handoff.md",
     "status": "in_progress",
-    "updated_at": "2026-11-27T11:13:15-08:00",
+    "updated_at": "2026-11-27T11:26:15-08:00",
     "active_lanes": [
       {
         "repository": "pH34r-pH/long-haul",
@@ -2703,7 +2703,18 @@
             "remaining": "Ordinary PR CI and required review, canonical publication contract across all surfaces, downstream multimodal admission, and protected publication.",
             "issue_evidence": "https://github.com/pH34r-pH/Portfolio/issues/141#issuecomment-7225042907",
             "multimodal_handoff": "https://github.com/pH34r-pH/long-haul/issues/247#issuecomment-7225045652",
-            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225048061"
+            "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7225048061",
+            "hosted_source_ux": {
+              "observed_at": "2026-11-27T11:26:15-08:00",
+              "status": "source_ux_passed_publication_candidate_in_progress",
+              "source_job": "https://github.com/pH34r-pH/Portfolio/actions/runs/46046280580/job/140666228883",
+              "source_summary": "https://github.com/pH34r-pH/Portfolio/actions/runs/46046280580/artifacts/15225964283",
+              "source_summary_archive_sha256": "cfe596c57ce79f419ea72cec0fb83f0072348b4488ec0567b57871b2274c6562",
+              "passed_audit_categories": 12,
+              "publication_candidate_job": "https://github.com/pH34r-pH/Portfolio/actions/runs/46046280580/job/140697395698",
+              "issue_evidence": "https://github.com/pH34r-pH/Portfolio/issues/141#issuecomment-7226498818",
+              "remaining": "Separate finished-bundle qualification, required PR review, and protected publication."
+            }
           }
         },
         {
@@ -7797,6 +7808,17 @@
       "merge_commit": "fd1e7629b477bd33642880b4d2109bf98c957fff",
       "issue_evidence": "https://github.com/pH34r-pH/the-personal-algorithm/issues/92#issuecomment-7226297926",
       "journal": "https://github.com/pH34r-pH/long-haul/issues/252#issuecomment-7226300416"
+    },
+    {
+      "at": "2026-11-27T11:26:15-08:00",
+      "task": "portfolio-141",
+      "status": "hosted_source_ux_passed_publication_candidate_still_running",
+      "repository": "pH34r-pH/Portfolio",
+      "issue": 141,
+      "issue_state": "open",
+      "pull_request": 147,
+      "checked_head": "c807e8f7c23aa9f34deaf3f51aef693c83a3d9d1",
+      "issue_evidence": "https://github.com/pH34r-pH/Portfolio/issues/141#issuecomment-7226498818"
     }
   ]
 }
