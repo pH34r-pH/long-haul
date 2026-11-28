@@ -49,6 +49,8 @@ Runtime code uses the Pydantic projection in `long_haul.resource_policy`. `profi
 
 The SHACL record shape checks the graph structure of the compact record. A qualified native ODRL rule projection, independent-consumer policy enforcement, and Croissant/SPDX package exports remain open in #248.
 
+The [DCAT distribution projection](resource-policy-dcat.md) describes previously published dataset archives using reviewed publication evidence and the same policy evaluator.
+
 Install `contracts/resource-policy/test-requirements.txt` alongside the development dependencies to run the policy conformance tests locally.
 
 ## Local authority classes
