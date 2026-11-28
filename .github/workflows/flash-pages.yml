@@ -74,6 +74,7 @@ jobs:
               kill -0 "$window_manager"
               node --test \
                 prototypes/flash-vessel/tests/unit.test.mjs \
+                prototypes/flash-vessel/tests/local-workload.test.mjs \
                 prototypes/flash-vessel/tests/browser.test.mjs
             '
 
@@ -110,12 +111,14 @@ jobs:
           mkdir -p "$site"
           cp \
             prototypes/flash-vessel/capability-snapshot.mjs \
+            prototypes/flash-vessel/inference-worker.mjs \
             prototypes/flash-vessel/index.html \
+            prototypes/flash-vessel/local-workload.mjs \
             prototypes/flash-vessel/main.mjs \
             prototypes/flash-vessel/page-visibility.mjs \
             prototypes/flash-vessel/worker.mjs \
             "$site/"
-          expected=$'capability-snapshot.mjs\nindex.html\nmain.mjs\npage-visibility.mjs\nworker.mjs'
+          expected=$'capability-snapshot.mjs\ninference-worker.mjs\nindex.html\nlocal-workload.mjs\nmain.mjs\npage-visibility.mjs\nworker.mjs'
           actual="$(find "$site" -maxdepth 1 -type f -printf '%f\n' | sort)"
           test "$actual" = "$expected"
 
