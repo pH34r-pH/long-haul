@@ -45,6 +45,7 @@ EventType = Literal[
     "work_failure", "work_failure_resolved", "work_artifact_verified", "work_repository_context",
     "evaluation_started", "evaluation_evidence", "evaluation_regression",
     "work_progress_intervention", "work_attempt_handed_back",
+    "work_supervisor_decision",
 ]
 KNOWN_EVENT_TYPES: frozenset[str] = frozenset(get_args(EventType))
 
