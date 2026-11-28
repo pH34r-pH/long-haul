@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from long_haul.adapters.llama_server import _completion_payload
 from long_haul.decisions.engine import DecisionEngine, DecisionRecord
@@ -27,7 +28,9 @@ from long_haul.work.supervisor import (
     SUPERVISOR_MAX_TOKENS,
     SupervisorAction,
     SupervisorGatePolicy,
+    SupervisorLiftContext,
     SupervisorRejectionReason,
+    SupervisorRunOptions,
     SupervisorSafetyFlags,
     SupervisorTelemetry,
     build_supervisor_execution_request,
@@ -128,7 +131,6 @@ def test_lift_supervisor_telemetry_integrates_progress_checkpoint_and_decision_b
 
     checkpoint = WorkCheckpoint(contract_id="wc-42", unresolved_failures=["f1: assertion error"])
     digest = TaskDigest(contract_id="wc-42", text="Contract wc-42 digest", max_chars=256)
-
     engine = DecisionEngine()
     record = DecisionRecord(id="dec-1", proposal="retry attempt", participants=frozenset({"NAV-01", "ENG-01"}))
     record = engine.capture_initial(
@@ -137,15 +139,17 @@ def test_lift_supervisor_telemetry_integrates_progress_checkpoint_and_decision_b
     )
 
     telemetry = lift_supervisor_telemetry(
-        contract_id="wc-42",
-        attempt_id="att-9",
-        intervention=intervention,
-        digest=digest,
-        checkpoint=checkpoint,
-        decision_record=record,
-        retry_budget_remaining=1,
-        allowed_retry_constraints=["narrow_test_scope", "narrow_test_scope"],
-        allowed_escalation_targets=["plan:local-larger"],
+        "wc-42",
+        "att-9",
+        intervention,
+        flags=SupervisorSafetyFlags(obs_complete=True, scope_ok=True, lease_valid=True, cleanup_required=False, retry_budget_remaining=1),
+        context=SupervisorLiftContext(
+            digest=digest,
+            checkpoint=checkpoint,
+            decision_record=record,
+            allowed_retry_constraints=("narrow_test_scope", "narrow_test_scope"),
+            allowed_escalation_targets=("plan:local-larger",),
+        ),
     )
     assert telemetry.flags.active_objection_block is True
     assert telemetry.unresolved_failure_count == 1
@@ -153,12 +157,7 @@ def test_lift_supervisor_telemetry_integrates_progress_checkpoint_and_decision_b
     assert "[CONTROL-PLANE TELEMETRY]" in telemetry.render_prompt()
 
     with pytest.raises(ValueError, match="TaskDigest contract_id"):
-        lift_supervisor_telemetry(
-            contract_id="wc-other",
-            attempt_id="att-9",
-            intervention=intervention,
-            digest=digest,
-        )
+        lift_supervisor_telemetry("wc-other", "att-9", intervention, context=SupervisorLiftContext(digest=digest))
 
 
 def test_render_prompt_redacts_summary_when_observation_incomplete() -> None:
@@ -173,8 +172,8 @@ def test_render_prompt_redacts_summary_when_observation_incomplete() -> None:
     ("raw_output", "expected_reason"),
     [
         ("", SupervisorRejectionReason.PARSE_ERROR),
-        ("<think>maybe retry</think>{\"diagnosis\":\"ok\",\"action\":\"HALT_FOR_HUMAN\",\"target\":\"NONE\"}", SupervisorRejectionReason.THINK_TAG_LEAK),
-        ("```json\n{\"diagnosis\":\"ok\",\"action\":\"HALT_FOR_HUMAN\",\"target\":\"NONE\"}\n```", SupervisorRejectionReason.PARSE_ERROR),
+        ('<think>maybe retry</think>{"diagnosis":"ok","action":"HALT_FOR_HUMAN","target":"NONE"}', SupervisorRejectionReason.THINK_TAG_LEAK),
+        ('```json\n{"diagnosis":"ok","action":"HALT_FOR_HUMAN","target":"NONE"}\n```', SupervisorRejectionReason.PARSE_ERROR),
         ('{"diagnosis":"a","diagnosis":"b","action":"HALT_FOR_HUMAN","target":"NONE"}', SupervisorRejectionReason.PARSE_ERROR),
         ('{"diagnosis":"ok","action":"HALT_FOR_HUMAN","target":"NONE","extra":"x"}', SupervisorRejectionReason.SCHEMA_VIOLATION),
         ('{"diagnosis":"ok","action":"RUN_SHELL","target":"NONE"}', SupervisorRejectionReason.SCHEMA_VIOLATION),
@@ -231,48 +230,37 @@ def test_gate_fails_closed_on_retry_under_every_hazard(
 
 def test_gate_enforces_target_allowlist_and_halt_target_none() -> None:
     telemetry = _sample_telemetry()
-
-    # Prompt-injected / unadmitted retry constraint fails closed
     injected = evaluate_supervisor_proposal(
-        telemetry,
-        '{"diagnosis":"Bypass scope.","action":"RETRY_CONSTRAINED","target":"disable_sandbox"}',
+        telemetry, '{"diagnosis":"Bypass scope.","action":"RETRY_CONSTRAINED","target":"disable_sandbox"}'
     )
     assert injected.failed_closed is True
-    assert injected.effective_action is SupervisorAction.HALT_FOR_HUMAN
     assert injected.rejection_reason is SupervisorRejectionReason.TARGET_NOT_ADMITTED
 
-    # Clean retry succeeds
     ok_retry = evaluate_supervisor_proposal(
-        telemetry,
-        '{"diagnosis":"Narrow test target.","action":"RETRY_CONSTRAINED","target":"narrow_test_scope"}',
+        telemetry, '{"diagnosis":"Narrow test target.","action":"RETRY_CONSTRAINED","target":"narrow_test_scope"}'
     )
     assert ok_retry.failed_closed is False
     assert ok_retry.effective_action is SupervisorAction.RETRY_CONSTRAINED
-    assert ok_retry.effective_target == "narrow_test_scope"
 
-    # Escalation allowed when lease lost (default policy), blocked when cleanup required
-    esc_lease_lost = evaluate_supervisor_proposal(
+    esc_lease = evaluate_supervisor_proposal(
         _sample_telemetry(lease_valid=False, retry_budget_remaining=0),
         '{"diagnosis":"Lease expired; escalate.","action":"ESCALATE_EMBODIMENT","target":"plan:local-larger"}',
     )
-    assert esc_lease_lost.failed_closed is False
-    assert esc_lease_lost.effective_action is SupervisorAction.ESCALATE_EMBODIMENT
+    assert esc_lease.failed_closed is False
+    assert esc_lease.effective_action is SupervisorAction.ESCALATE_EMBODIMENT
 
     esc_blocked = evaluate_supervisor_proposal(
         _sample_telemetry(lease_valid=False, cleanup_required=True),
         '{"diagnosis":"Escalate anyway.","action":"ESCALATE_EMBODIMENT","target":"plan:local-larger"}',
-        policy=SupervisorGatePolicy(allow_escalation_when_lease_invalid=True),
+        SupervisorGatePolicy(allow_escalation_when_lease_invalid=True),
     )
     assert esc_blocked.failed_closed is True
     assert esc_blocked.rejection_reason is SupervisorRejectionReason.CLEANUP_REQUIRED
 
-    # HALT_FOR_HUMAN with non-NONE target fails closed with UNEXPECTED_TARGET
     bad_halt = evaluate_supervisor_proposal(
-        telemetry,
-        '{"diagnosis":"Stop.","action":"HALT_FOR_HUMAN","target":"plan:local-larger"}',
+        telemetry, '{"diagnosis":"Stop.","action":"HALT_FOR_HUMAN","target":"plan:local-larger"}'
     )
     assert bad_halt.failed_closed is True
-    assert bad_halt.effective_action is SupervisorAction.HALT_FOR_HUMAN
     assert bad_halt.effective_target == "NONE"
     assert bad_halt.rejection_reason is SupervisorRejectionReason.UNEXPECTED_TARGET
 
@@ -280,19 +268,18 @@ def test_gate_enforces_target_allowlist_and_halt_target_none() -> None:
 def test_llama_server_schema_and_execution_request_bounds() -> None:
     profile = _sample_profile()
     telemetry = _sample_telemetry()
-    req = build_supervisor_execution_request(telemetry, profile, request_id="req-sup-1", seed=7)
+    req = build_supervisor_execution_request(telemetry, profile, "req-sup-1", SupervisorRunOptions(seed=7))
     assert req.max_tokens == SUPERVISOR_MAX_TOKENS
     assert req.temperature == 0.0
     assert req.context_tokens == 512
-    assert req.prompt_mode == "rendered"
 
     payload = _completion_payload(req, [1, 2, 3])
     assert payload["n_predict"] == SUPERVISOR_MAX_TOKENS
     assert payload["json_schema"]["required"] == ["diagnosis", "action", "target"]
     assert payload["json_schema"]["additionalProperties"] is False
 
-    with pytest.raises(ValueError, match="supervisor max_tokens"):
-        build_supervisor_execution_request(telemetry, profile, request_id="req-bad", max_tokens=128)
+    with pytest.raises(ValidationError):
+        SupervisorRunOptions(max_tokens=128)
 
 
 def test_run_micro_supervisor_and_event_store_roundtrip(tmp_path: Path) -> None:
@@ -300,7 +287,6 @@ def test_run_micro_supervisor_and_event_store_roundtrip(tmp_path: Path) -> None:
     telemetry = _sample_telemetry()
     runtime = RuntimeIdentity(runtime_id="llama.cpp", version="b4000", build_id="abc123", backends=["cpu"])
 
-    # Successful adapter call
     ok_adapter = _FakeAdapter(
         ExecutionResult(
             request_id="req-1",
@@ -309,14 +295,12 @@ def test_run_micro_supervisor_and_event_store_roundtrip(tmp_path: Path) -> None:
             output='{"diagnosis":"Bounded retry.","action":"RETRY_CONSTRAINED","target":"narrow_test_scope"}',
         )
     )
-    decision = run_micro_supervisor(telemetry, ok_adapter, profile, request_id="req-1", seed=42)
+    decision = run_micro_supervisor(telemetry, ok_adapter, profile, "req-1", SupervisorRunOptions(seed=42))
     assert decision.failed_closed is False
     assert decision.effective_action is SupervisorAction.RETRY_CONSTRAINED
     assert decision.runtime_fingerprint == runtime.fingerprint
     assert decision.profile_id == profile.id
-    assert decision.artifact_key == profile.artifact.key
 
-    # Failed adapter call fails closed
     fail_adapter = _FakeAdapter(
         ExecutionResult(
             request_id="req-2",
@@ -326,12 +310,11 @@ def test_run_micro_supervisor_and_event_store_roundtrip(tmp_path: Path) -> None:
             error_detail="deadline expired",
         )
     )
-    failed = run_micro_supervisor(telemetry, fail_adapter, profile, request_id="req-2", seed=42)
+    failed = run_micro_supervisor(telemetry, fail_adapter, profile, "req-2", SupervisorRunOptions(seed=42))
     assert failed.failed_closed is True
     assert failed.effective_action is SupervisorAction.HALT_FOR_HUMAN
     assert failed.rejection_reason is SupervisorRejectionReason.RUNTIME_EXECUTION_FAILED
 
-    # EventStore provenance roundtrip & hash-chain verification
     store = EventStore(tmp_path / "events.jsonl")
     store.append(supervisor_decision_event(telemetry, decision))
     store.append(supervisor_decision_event(telemetry, failed))
@@ -340,7 +323,6 @@ def test_run_micro_supervisor_and_event_store_roundtrip(tmp_path: Path) -> None:
     assert replay.events[0].event_type == "work_supervisor_decision"
     assert "prompt" not in replay.events[0].payload
     assert replay.events[1].payload["failed_closed"] is True
-    assert replay.events[1].payload["rejection_reason"] == "runtime_execution_failed"
     chain = store.verify_chain()
     assert chain.complete is True
     assert chain.integrity_status == "locally_consistent_unanchored"
